@@ -1,0 +1,18 @@
+#!/bin/bash
+#SBATCH --time=65
+#SBATCH --job-name=eval_d4v2_23
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=2
+#SBATCH --array=8,9
+#SBATCH --mem=31750
+
+container="d4v2_23"
+
+source $HOME/feature_metrics/performance/common_start.sh $container
+
+timeout 3600 srun --container-image=${container_path}  --container-name=${container}:no_exec \
+   --container-mounts=/etc/slurm/task_prolog:/etc/slurm/task_prolog,/scratch:/scratch,$TMPDIR/in:/in,$TMPDIR/out:/out \
+  --no-container-entrypoint /app/measure_d4v2_23.sh input.dimacs
+retValue=$?
+
+source $HOME/feature_metrics/performance/common_end.sh $retValue
