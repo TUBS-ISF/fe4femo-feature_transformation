@@ -1,5 +1,5 @@
-config=$HOME/feature_metrics/performance/config.txt
-inputpath=$HOME/feature_metrics/performance/feature-model-benchmark/feature_models
+config=$HOME/fe4femo/runtime_measurements/SLURM_scripts/config.txt
+inputpath=$HOME/fe4femo/runtime_measurements/feature-model-benchmark/feature_models
 
 no=$MODELNO
 input=$(awk -v ArrayTaskID=$no '$1==ArrayTaskID {print $2}' $config)
@@ -8,7 +8,7 @@ echo -e "JOB_ID=${SLURM_JOB_ID}"
 echo -e "MODEL_NUMBER=${no}"
 echo -e "MODEL_PATH=${input}"
 
-container_path=$HOME/feature_metrics/performance/enroot/$(echo "${1}_i.sqsh")
+container_path=$HOME/fe4femo/runtime_measurements/container/enroot/$(echo "${1}_i.sqsh")
 
 echo -e "CONTAINER=${container_path}"
 
