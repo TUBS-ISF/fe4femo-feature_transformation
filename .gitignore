@@ -1,3 +1,7 @@
+runtime_measurements/out*
+runtime_measurements/container/enroot/
+
+
 # Created by https://www.toptal.com/developers/gitignore/api/intellij,java,python,pycharm,gradle
 # Edit at https://www.toptal.com/developers/gitignore?templates=intellij,java,python,pycharm,gradle
 
