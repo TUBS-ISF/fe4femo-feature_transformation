@@ -1,0 +1,3 @@
+[submodule "runtime_measurements/feature-model-benchmark"]
+	path = runtime_measurements/feature-model-benchmark
+	url = https://github.com/SoftVarE-Group/feature-model-benchmark.git
