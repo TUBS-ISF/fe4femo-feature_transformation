@@ -3,7 +3,7 @@
 #SBATCH --job-name=eval_d4v2_23
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
-#SBATCH --mem=31750
+#SBATCH --mem=63750
 
 container="d4v2_23"
 
