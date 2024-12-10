@@ -4,3 +4,6 @@
 [submodule "FeatureExtraction/external/revisiting_satzilla"]
 	path = FeatureExtraction/external/revisiting_satzilla
 	url = https://github.com/RSD6170/revisiting_satzilla.git
+[submodule "FeatureExtraction/external/SATfeatPy"]
+	path = FeatureExtraction/external/SATfeatPy
+	url = https://github.com/RSD6170/SATfeatPy.git
