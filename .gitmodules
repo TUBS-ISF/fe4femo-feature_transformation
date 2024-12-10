@@ -1,3 +1,6 @@
 [submodule "runtime_measurements/feature-model-benchmark"]
 	path = runtime_measurements/feature-model-benchmark
 	url = https://github.com/SoftVarE-Group/feature-model-benchmark.git
+[submodule "FeatureExtraction/external/revisiting_satzilla"]
+	path = FeatureExtraction/external/revisiting_satzilla
+	url = https://github.com/RSD6170/revisiting_satzilla.git
