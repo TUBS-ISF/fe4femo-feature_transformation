@@ -35,6 +35,7 @@ public abstract class Analysis {
             } catch (InterruptedException e) {
                 LOGGER.info("Interrupted on Wrapper Future {} of FM instance {}", f, instance, e);
                 Thread.currentThread().interrupt();
+                break;
             } catch (ExecutionException e) {
                 LOGGER.error("Error in Wrapper Future of FM {} on future {}", instance, f, e);
             }
@@ -47,7 +48,7 @@ public abstract class Analysis {
         Instant startTime = Instant.now();
         Future<IntraStepResult> future = null;
         try {
-            future = commonExecutor.submit(() -> analysisStep.analyze(instance, perStepTimeout));
+            future = commonExecutor.submit(() -> analysisStep.analyze(instance, perStepTimeout, this));
             IntraStepResult intraStepResult = future.get(perStepTimeout, TimeUnit.SECONDS);
             Instant endTime = Instant.now();
             return new Result(name, intraStepResult, Duration.between(startTime, endTime));
