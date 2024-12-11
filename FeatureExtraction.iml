@@ -5,8 +5,9 @@
     <content url="file://$MODULE_DIR$/FeatureExtraction">
       <excludeFolder url="file://$MODULE_DIR$/FeatureExtraction/.gradle" />
       <excludeFolder url="file://$MODULE_DIR$/FeatureExtraction/build" />
+      <excludeFolder url="file://$MODULE_DIR$/FeatureExtraction/external/SATfeatPy/.idea" />
     </content>
-    <orderEntry type="jdk" jdkName="21" jdkType="JavaSDK" />
+    <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
