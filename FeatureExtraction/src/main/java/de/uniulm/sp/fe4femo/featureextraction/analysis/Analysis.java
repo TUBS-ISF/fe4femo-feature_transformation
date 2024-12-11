@@ -24,7 +24,7 @@ public abstract class Analysis {
     }
 
 
-    public List<Result> analyseFM(FMInstance instance, int perStepTimeout){
+    public List<Result> analyseFM(FMInstance instance, int perStepTimeout) throws InterruptedException {
         LOGGER.info("Started analysis {} on FM {}", this, instance);
 
         List<Result> results = new ArrayList<>(analysisSteps.size());
@@ -34,8 +34,7 @@ public abstract class Analysis {
                 results.add(f.get());
             } catch (InterruptedException e) {
                 LOGGER.info("Interrupted on Wrapper Future {} of FM instance {}", f, instance, e);
-                Thread.currentThread().interrupt();
-                break;
+                throw new InterruptedException();
             } catch (ExecutionException e) {
                 LOGGER.error("Error in Wrapper Future of FM {} on future {}", instance, f, e);
             }

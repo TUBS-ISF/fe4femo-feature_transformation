@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface AnalysisStep {
 
-    IntraStepResult analyze(FMInstance fmInstance, int timeout, Analysis parentAnalysis);
+    IntraStepResult analyze(FMInstance fmInstance, int timeout, Analysis parentAnalysis) throws InterruptedException;
 
     List<String> getAnalysesNames();
 
