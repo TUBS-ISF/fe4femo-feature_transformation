@@ -63,7 +63,7 @@ public class AnalysisSatzilla extends Analysis {
         @Override
         public IntraStepResult analyze(FMInstance fmInstance, int timeout, Analysis parentAnalysis) throws InterruptedException {
             ExecutableHelper.ExternalResult result = ExecutableHelper.executeExternal(getCommand(part, fmInstance.getDimacsPath()), timeout);
-            switch (result.status()){
+            return switch (result.status()){
                 case SUCCESS -> {
                     LOGGER.info("SATzilla step {} executed successfully", part);
                     String[] lines = result.output().lines().toArray(String[]::new);
@@ -77,18 +77,17 @@ public class AnalysisSatzilla extends Analysis {
                             LOGGER.error("Parser error while parsing feature {} with value {}", featureNames[i], featureValues[i], e);
                         }
                     }
-                    return new IntraStepResult(values, result.status());
+                    yield new IntraStepResult(values, result.status());
                 }
                 case TIMEOUT, MEMOUT -> {
                     LOGGER.info("SATzilla step {} {}", part, result.status());
-                    return new IntraStepResult(Map.of(), result.status());
+                    yield new IntraStepResult(Map.of(), result.status());
                 }
                 case ERROR -> {
                     LOGGER.warn("SATzilla step {} error with output {}", part, result.output());
-                    return new IntraStepResult(Map.of(), result.status());
+                    yield new IntraStepResult(Map.of(), result.status());
                 }
-            }
-
+            };
         }
 
         @Override
