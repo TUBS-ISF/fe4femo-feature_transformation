@@ -1,5 +1,6 @@
 plugins {
     id("java")
+    application
 }
 
 group = "de.uniulm.sp.fe4femo.featureextraction"
@@ -9,19 +10,23 @@ repositories {
     mavenCentral()
 }
 
-val log4japi = "2.24.2"
-val log4jcore = "2.24.2"
+val log4j = "2.24.2"
 
 dependencies {
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
 
     // https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-api
-    implementation("org.apache.logging.log4j:log4j-api:$log4japi")
+    implementation("org.apache.logging.log4j:log4j-api:$log4j")
     // https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core
-    runtimeOnly("org.apache.logging.log4j:log4j-core:$log4jcore")
-    runtimeOnly("org.apache.logging.log4j:log4j-layout-template-json")
+    runtimeOnly("org.apache.logging.log4j:log4j-core:$log4j")
+    runtimeOnly("org.apache.logging.log4j:log4j-layout-template-json:$log4j")
 
+}
+
+application {
+    mainClass = "de.uniulm.sp.fe4femo.featureextraction.ExtractionHandler"
+    //TODO applicationDefaultJvmArgs = listOf("-Djava.io.tmpdir=\$TMPDIR")
 }
 
 tasks.test {

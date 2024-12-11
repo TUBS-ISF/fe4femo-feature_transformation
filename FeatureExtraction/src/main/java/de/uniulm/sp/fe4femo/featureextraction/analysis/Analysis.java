@@ -48,7 +48,7 @@ public abstract class Analysis {
         Future<IntraStepResult> future = null;
         try {
             future = commonExecutor.submit(() -> analysisStep.analyze(instance, perStepTimeout, this));
-            IntraStepResult intraStepResult = future.get(perStepTimeout, TimeUnit.SECONDS);
+            IntraStepResult intraStepResult = future.get(perStepTimeout+1, TimeUnit.SECONDS);
             Instant endTime = Instant.now();
             return new Result(name, intraStepResult, Duration.between(startTime, endTime));
         } catch (ExecutionException e) {
