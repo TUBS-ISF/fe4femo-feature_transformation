@@ -1,4 +1,4 @@
-package de.uniulm.sp.fe4femo.featureextraction.analyses.satfeatpy;
+package de.uniulm.sp.fe4femo.featureextraction.analyses;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;

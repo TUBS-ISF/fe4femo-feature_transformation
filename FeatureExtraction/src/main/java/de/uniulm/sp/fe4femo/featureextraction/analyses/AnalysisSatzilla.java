@@ -1,4 +1,4 @@
-package de.uniulm.sp.fe4femo.featureextraction.analyses.satzilla;
+package de.uniulm.sp.fe4femo.featureextraction.analyses;
 
 import de.uniulm.sp.fe4femo.featureextraction.FMInstance;
 import de.uniulm.sp.fe4femo.featureextraction.analysis.Analysis;
@@ -8,7 +8,6 @@ import de.uniulm.sp.fe4femo.featureextraction.analysis.IntraStepResult;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
