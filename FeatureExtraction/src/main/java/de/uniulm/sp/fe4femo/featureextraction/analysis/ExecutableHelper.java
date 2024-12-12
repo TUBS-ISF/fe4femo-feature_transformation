@@ -1,17 +1,19 @@
 package de.uniulm.sp.fe4femo.featureextraction.analysis;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 public class ExecutableHelper {
 
     //adapted from https://github.com/SundermannC/feature-model-batch-analysis/blob/main/src/main/java/org/collection/fm/util/BinaryRunner.java
-    public static ExternalResult executeExternal(String[] commands, int timeout) throws InterruptedException {
+    public static ExternalResult executeExternal(String[] commands, int timeout, Path workingDir) throws InterruptedException {
         Process ps = null;
         try {
-            ps = new ProcessBuilder(commands).redirectErrorStream(true).start();
+            ps = new ProcessBuilder(commands).redirectErrorStream(true).directory(workingDir.toFile()).start();
             long pid = ps.pid();
             if (!ps.waitFor(timeout, TimeUnit.SECONDS)) {
                 killProcesses(ps.toHandle());

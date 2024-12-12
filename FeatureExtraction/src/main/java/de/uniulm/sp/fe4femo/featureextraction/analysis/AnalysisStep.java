@@ -4,7 +4,7 @@ import de.uniulm.sp.fe4femo.featureextraction.FMInstance;
 
 public interface AnalysisStep {
 
-    IntraStepResult analyze(FMInstance fmInstance, int timeout, Analysis parentAnalysis) throws InterruptedException;
+    IntraStepResult analyze(FMInstance fmInstance, int timeout) throws InterruptedException;
 
     String[] getAnalysesNames();
 

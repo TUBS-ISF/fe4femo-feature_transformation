@@ -11,6 +11,7 @@ repositories {
 }
 
 val log4j = "2.24.2"
+val jackson = "2.18.2"
 
 dependencies {
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
@@ -21,6 +22,15 @@ dependencies {
     // https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core
     runtimeOnly("org.apache.logging.log4j:log4j-core:$log4j")
     runtimeOnly("org.apache.logging.log4j:log4j-layout-template-json:$log4j")
+
+    // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core
+    implementation("com.fasterxml.jackson.core:jackson-core:$jackson")
+    // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind
+    implementation("com.fasterxml.jackson.core:jackson-databind:$jackson")
+    // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-annotations
+    implementation("com.fasterxml.jackson.core:jackson-annotations:$jackson")
+
+
 
 }
 

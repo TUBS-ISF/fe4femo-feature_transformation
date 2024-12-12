@@ -18,15 +18,12 @@ import java.util.concurrent.Executors;
 
 public class AnalysisSatzilla extends Analysis {
 
-
     protected AnalysisSatzilla() {
         super("SATZilla2024",
                 Executors.newSingleThreadExecutor(),
                 getAnalysisSteps()
         );
     }
-
-
 
     private static List<AnalysisStep> getAnalysisSteps(){
         List<AnalysisStep> analysisSteps = new ArrayList<>();
@@ -61,21 +58,17 @@ public class AnalysisSatzilla extends Analysis {
         }
 
         @Override
-        public IntraStepResult analyze(FMInstance fmInstance, int timeout, Analysis parentAnalysis) throws InterruptedException {
-            ExecutableHelper.ExternalResult result = ExecutableHelper.executeExternal(getCommand(part, fmInstance.getDimacsPath()), timeout);
+        public IntraStepResult analyze(FMInstance fmInstance, int timeout) throws InterruptedException {
+            ExecutableHelper.ExternalResult result = ExecutableHelper.executeExternal(getCommand(part, fmInstance.getDimacsPath()), timeout, Path.of("external/revisiting_satzilla/SAT-features-competition2024"));
             return switch (result.status()){
                 case SUCCESS -> {
                     LOGGER.info("SATzilla step {} executed successfully", part);
                     String[] lines = result.output().lines().toArray(String[]::new);
                     String[] featureNames = lines[lines.length-2].split(",");
                     String[] featureValues = lines[lines.length-1].split(",");
-                    Map<String, BigDecimal> values = new HashMap<>();
+                    Map<String, String> values = new HashMap<>();
                     for (int i = 0; i < featureNames.length; i++) {
-                        try {
-                            values.put(featureNames[i], new BigDecimal(featureValues[i]));
-                        } catch (NumberFormatException e) {
-                            LOGGER.error("Parser error while parsing feature {} with value {}", featureNames[i], featureValues[i], e);
-                        }
+                        values.put(featureNames[i], featureValues[i]);
                     }
                     yield new IntraStepResult(values, result.status());
                 }
