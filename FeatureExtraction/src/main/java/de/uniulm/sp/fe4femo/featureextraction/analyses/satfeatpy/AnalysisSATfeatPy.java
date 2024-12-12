@@ -61,7 +61,7 @@ public class AnalysisSATfeatPy extends Analysis {
 
         @Override
         public IntraStepResult analyze(FMInstance fmInstance, int timeout) throws InterruptedException {
-            ExecutableHelper.ExternalResult result = ExecutableHelper.executeExternal(getCommand(part, fmInstance.getDimacsPath()), timeout, Path.of("external/SATfeatPy"));
+            ExecutableHelper.ExternalResult result = ExecutableHelper.executeExternal(getCommand(part, fmInstance.dimacsPath()), timeout, Path.of("external/SATfeatPy"));
             return switch (result.status()){
                 case SUCCESS -> {
                     LOGGER.info("SATfeatPy step {} executed successfully", part);

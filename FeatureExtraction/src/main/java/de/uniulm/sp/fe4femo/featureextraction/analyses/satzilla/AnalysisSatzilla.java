@@ -59,7 +59,7 @@ public class AnalysisSatzilla extends Analysis {
 
         @Override
         public IntraStepResult analyze(FMInstance fmInstance, int timeout) throws InterruptedException {
-            ExecutableHelper.ExternalResult result = ExecutableHelper.executeExternal(getCommand(part, fmInstance.getDimacsPath()), timeout, Path.of("external/revisiting_satzilla/SAT-features-competition2024"));
+            ExecutableHelper.ExternalResult result = ExecutableHelper.executeExternal(getCommand(part, fmInstance.dimacsPath()), timeout, Path.of("external/revisiting_satzilla/SAT-features-competition2024"));
             return switch (result.status()){
                 case SUCCESS -> {
                     LOGGER.info("SATzilla step {} executed successfully", part);

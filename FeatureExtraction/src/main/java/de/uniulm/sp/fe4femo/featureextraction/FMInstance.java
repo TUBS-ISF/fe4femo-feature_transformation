@@ -2,13 +2,7 @@ package de.uniulm.sp.fe4femo.featureextraction;
 
 import java.nio.file.Path;
 
-public record FMInstance() {
+public record FMInstance(Path dimacsPath, Path fmPath) {
 
-    public Path getDimacsPath() {
-        //TODO
-        return null;
-    }
-
-
-    //TODO insert paths for FM and Dimacs and create at beginning
+    //TODO insert paths for FM and Dimacs and create at beginning --> Factory
 }
