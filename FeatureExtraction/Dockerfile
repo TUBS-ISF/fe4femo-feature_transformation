@@ -5,9 +5,9 @@ COPY external/SATfeatPy/environment.yml satfeatpy.yml
 
 RUN conda install -c conda-forge conda-pack
 
-RUN conda env create -f satfeatpy.yml
-RUN conda-pack -j -1 -n fe_SATfeatPy -o /venv_SATfeatPy --format no-archive
-RUN /venv_SATfeatPy/bin/conda-unpack
+RUN conda env create -f satfeatpy.yml &&\
+    conda-pack -j -1 -n fe_SATfeatPy -o /venv_SATfeatPy --format no-archive &&\
+    /venv_SATfeatPy/bin/conda-unpack
 
 FROM gradle:8.11.1-jdk21-jammy AS builderJava
 
