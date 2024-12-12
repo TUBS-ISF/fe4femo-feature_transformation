@@ -1,6 +1,7 @@
 plugins {
     id("java")
     application
+    id("com.gradleup.shadow") version "8.3.5"
 }
 
 group = "de.uniulm.sp.fe4femo.featureextraction"
@@ -8,6 +9,7 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
+    gradlePluginPortal()
 }
 
 val log4j = "2.24.2"
@@ -30,6 +32,7 @@ dependencies {
     // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-annotations
     implementation("com.fasterxml.jackson.core:jackson-annotations:$jackson")
 
+    implementation(files("external/featjar/featjar-1.0-SNAPSHOT-all.jar"))
 
 
 }
