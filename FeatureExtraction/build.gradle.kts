@@ -6,6 +6,7 @@ plugins {
 
 group = "de.uniulm.sp.fe4femo.featureextraction"
 version = "1.0-SNAPSHOT"
+java.sourceCompatibility = JavaVersion.VERSION_21
 
 repositories {
     mavenCentral()
@@ -33,7 +34,7 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-annotations:$jackson")
 
     implementation(files("external/featjar/featjar-1.0-SNAPSHOT-all.jar"))
-
+    implementation(project(":feature-model-batch-analysis"))
 
 }
 
