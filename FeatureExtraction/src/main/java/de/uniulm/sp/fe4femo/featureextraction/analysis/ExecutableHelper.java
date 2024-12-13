@@ -1,5 +1,8 @@
 package de.uniulm.sp.fe4femo.featureextraction.analysis;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -9,6 +12,12 @@ import java.util.concurrent.TimeUnit;
 
 public class ExecutableHelper {
 
+    private static final Logger LOGGER = LogManager.getLogger();
+
+    private ExecutableHelper() {
+        // hide
+    }
+
     //adapted from https://github.com/SundermannC/feature-model-batch-analysis/blob/main/src/main/java/org/collection/fm/util/BinaryRunner.java
     public static ExternalResult executeExternal(String[] commands, int timeout, Path workingDir) throws InterruptedException {
         Process ps = null;
@@ -17,7 +26,6 @@ public class ExecutableHelper {
             long pid = ps.pid();
             if (!ps.waitFor(timeout, TimeUnit.SECONDS)) {
                 killProcesses(ps.toHandle());
-
                 return new ExternalResult("", StatusEnum.TIMEOUT);
             }
 
