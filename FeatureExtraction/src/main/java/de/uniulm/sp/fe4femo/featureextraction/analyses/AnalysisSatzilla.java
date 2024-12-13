@@ -17,7 +17,7 @@ import java.util.concurrent.Executors;
 
 public class AnalysisSatzilla extends Analysis {
 
-    protected AnalysisSatzilla() {
+    public AnalysisSatzilla() {
         super("SATZilla2024",
                 Executors.newSingleThreadExecutor(),
                 getAnalysisSteps()

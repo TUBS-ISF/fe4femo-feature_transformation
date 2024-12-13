@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 public abstract class Analysis {
 
@@ -28,10 +29,16 @@ public abstract class Analysis {
         LOGGER.info("Started analysis {} on FM {}", this, instance);
 
         List<Result> results = new ArrayList<>(analysisSteps.size());
-        List<Future<Result>> futures = analysisSteps.stream().map(e -> executor.submit(() -> limitRuntime(instance, perStepTimeout, e))).toList();
-        for (Future<Result> f : futures) {
+        List<Identifiable> futures = analysisSteps.stream().map(e -> new Identifiable(e, executor.submit(() -> limitRuntime(instance, perStepTimeout, e)))).toList();
+        for (Identifiable f : futures) {
             try {
-                results.add(f.get());
+                Result result = f.futureResult().get();
+
+                //add mark for missing values
+                Map<String, String> featureValues = new HashMap<>(result.featureValues());
+                Arrays.stream(f.analysisStep.getAnalysesNames()).forEach(e -> featureValues.putIfAbsent(e, "<NA>"));
+
+                results.add(new Result(result.analysisName(), featureValues, result.statusEnum(), result.duration()));
             } catch (InterruptedException e) {
                 LOGGER.info("Interrupted on Wrapper Future {} of FM instance {}", f, instance, e);
                 throw new InterruptedException();
@@ -63,6 +70,10 @@ public abstract class Analysis {
             return new Result(name, Map.of(), StatusEnum.TIMEOUT, Duration.between(startTime, Instant.now()));
         }
         return new Result(name, Map.of(), StatusEnum.ERROR, Duration.between(startTime, Instant.now()));
+    }
+
+    private record Identifiable (AnalysisStep analysisStep, Future<Result> futureResult) {
+
     }
 
 }

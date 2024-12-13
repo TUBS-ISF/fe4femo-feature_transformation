@@ -27,6 +27,8 @@ WORKDIR /app
 
 COPY  external/revisiting_satzilla/SAT-features-competition2024/ /app/external/revisiting_satzilla/SAT-features-competition2024/
 
+COPY external/feature-model-batch-analysis/solver/ /app/external/feature-model-batch-analysis/solver/
+
 COPY external/SATfeatPy/feature_computation /app/external/SATfeatPy/feature_computation
 COPY external/SATfeatPy/sat_instance /app/external/SATfeatPy/sat_instance
 COPY external/SATfeatPy/SatELite/SatELite_v1.0_linux /app/external/SATfeatPy/SatELite/SatELite_v1.0_linux

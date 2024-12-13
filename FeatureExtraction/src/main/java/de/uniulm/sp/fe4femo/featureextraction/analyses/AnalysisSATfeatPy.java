@@ -3,6 +3,7 @@ package de.uniulm.sp.fe4femo.featureextraction.analyses;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import de.uniulm.sp.fe4femo.featureextraction.FMInstance;
 import de.uniulm.sp.fe4femo.featureextraction.analysis.*;
 import org.apache.logging.log4j.LogManager;
@@ -19,7 +20,7 @@ import java.util.concurrent.Executors;
 public class AnalysisSATfeatPy extends Analysis {
 
 
-    protected AnalysisSATfeatPy(String name, ExecutorService executor, List<AnalysisStep> analysisSteps) {
+    public AnalysisSATfeatPy() {
         super("SATfeatPy", Executors.newSingleThreadExecutor(), getAnalysisSteps());
     }
 
@@ -43,7 +44,7 @@ public class AnalysisSATfeatPy extends Analysis {
     public static class SATfeatPyStep implements AnalysisStep {
         private static final Logger LOGGER = LogManager.getLogger();
 
-        private final ObjectMapper objectMapper = new ObjectMapper();
+        private final ObjectMapper objectMapper = JsonMapper.builder().findAndAddModules().build();
         private final TypeReference<HashMap<String, String>> typeRef = new TypeReference<>() {};
 
         private final String part;
@@ -87,14 +88,15 @@ public class AnalysisSATfeatPy extends Analysis {
         }
 
         private static String[] getCommand(String part, Path dimacsPath){
-            String[] command = new String[6];
-            command[0] = Path.of("/home/ubuntu/.conda/envs/fe_SATfeatPy/bin/python").toAbsolutePath().toString(); //TODO fix and adapt for docker
-            command[1] = "--subset";
-            command[2] = part;
-            command[3] = "--tmp_path";
-            command[4] = "/tmp/"; //TODO fix for Docker
-            command[5] = dimacsPath.toString();
-            return command;
+            return new String[]{
+                    Path.of("/venv_SATfeatPy/bin/python").toAbsolutePath().toString(),
+                    Path.of("external/SATfeatPy/generate_features.py").toAbsolutePath().toString(),
+                    "--subset",
+                    part,
+                    "--tmp_path",
+                    System.getProperty("java.io.tmpdir"),
+                    dimacsPath.toString()
+            };
         }
     }
 
