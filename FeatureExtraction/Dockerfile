@@ -35,4 +35,4 @@ COPY external/SATfeatPy/generate_features.py /app/external/SATfeatPy/generate_fe
 
 
 COPY --from=builderJava /app/build/libs/FeatureExtraction-1.0-SNAPSHOT-all.jar fe.jar
-ENTRYPOINT ["java", "-jar", "fe.jar"]
+ENTRYPOINT ["java", "-jar", "-Djava.io.tmpdir=/out/", "fe.jar"]

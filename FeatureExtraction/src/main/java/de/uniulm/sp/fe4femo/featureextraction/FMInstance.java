@@ -1,8 +1,10 @@
 package de.uniulm.sp.fe4femo.featureextraction;
 
+import de.ovgu.featureide.fm.core.analysis.cnf.formula.FeatureModelFormula;
+import de.ovgu.featureide.fm.core.base.IFeatureModel;
+
 import java.nio.file.Path;
 
-public record FMInstance(Path dimacsPath, Path fmPath) {
+public record FMInstance(Path fmPath, Path dimacsPath, IFeatureModel featureModel, FeatureModelFormula fmFormula) {
 
-    //TODO insert paths for FM and Dimacs and create at beginning --> Factory
 }
