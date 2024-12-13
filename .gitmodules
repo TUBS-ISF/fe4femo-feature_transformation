@@ -7,3 +7,6 @@
 [submodule "FeatureExtraction/external/SATfeatPy"]
 	path = FeatureExtraction/external/SATfeatPy
 	url = https://github.com/RSD6170/SATfeatPy.git
+[submodule "FeatureExtraction/external/feature-model-batch-analysis"]
+	path = FeatureExtraction/external/feature-model-batch-analysis
+	url = https://github.com/RSD6170/feature-model-batch-analysis.git
