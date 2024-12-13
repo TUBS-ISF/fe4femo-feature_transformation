@@ -33,7 +33,7 @@ dependencies {
     // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-annotations
     implementation("com.fasterxml.jackson.core:jackson-annotations:$jackson")
 
-    implementation(files("external/featjar/featjar-1.0-SNAPSHOT-all.jar"))
+    //implementation(files("external/featjar/featjar-1.0-SNAPSHOT-all.jar"))
     implementation(project(":feature-model-batch-analysis"))
 
 }
