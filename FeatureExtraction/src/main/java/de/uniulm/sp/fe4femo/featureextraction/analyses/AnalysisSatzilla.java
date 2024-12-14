@@ -9,7 +9,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 
 public class AnalysisSatzilla extends Analysis {
@@ -17,11 +20,11 @@ public class AnalysisSatzilla extends Analysis {
     public AnalysisSatzilla() {
         super("SATZilla2024",
                 Executors.newSingleThreadExecutor(),
-                getAnalysisSteps("SATZilla2024")
+                getAnalysisSteps()
         );
     }
 
-    private static List<AnalysisStep> getAnalysisSteps(String parentName){
+    private static List<AnalysisStep> getAnalysisSteps(){
         List<AnalysisStep> analysisSteps = new ArrayList<>();
         
         String[] parts = new String[]{"-base", "-sp", "-dia", "-cl", "-unit", "-ls", "-lobjois"};
@@ -34,8 +37,6 @@ public class AnalysisSatzilla extends Analysis {
                 new String[]{"saps_BestSolution_Mean", "saps_BestSolution_CoeffVariance", "saps_FirstLocalMinStep_Mean", "saps_FirstLocalMinStep_CoeffVariance", "saps_FirstLocalMinStep_Median", "saps_FirstLocalMinStep_Q.10", "saps_FirstLocalMinStep_Q.90", "saps_BestAvgImprovement_Mean", "saps_BestAvgImprovement_CoeffVariance", "saps_FirstLocalMinRatio_Mean", "saps_FirstLocalMinRatio_CoeffVariance", "ls-saps-featuretime", "gsat_BestSolution_Mean", "gsat_BestSolution_CoeffVariance", "gsat_FirstLocalMinStep_Mean", "gsat_FirstLocalMinStep_CoeffVariance", "gsat_FirstLocalMinStep_Median", "gsat_FirstLocalMinStep_Q.10", "gsat_FirstLocalMinStep_Q.90", "gsat_BestAvgImprovement_Mean", "gsat_BestAvgImprovement_CoeffVariance", "gsat_FirstLocalMinRatio_Mean", "gsat_FirstLocalMinRatio_CoeffVariance", "ls-gsat-featuretime", "solved"},
                 new String[]{"lobjois-mean-depth-over-vars", "lobjois-log-num-nodes-over-vars", "lobjois-featuretime", "solved"}
         );
-
-        names = names.stream().map(array -> Arrays.stream(array).map(e -> parentName + "/" + e).toArray(String[]::new)).toList();
         for (int i = 0; i < parts.length; i++) {
             analysisSteps.add(new SATzillaStep(parts[i], names.get(i)));
         }
