@@ -74,7 +74,7 @@ public class AnalysisFMBA extends Analysis {
 
         @Override
         public String[] getAnalysesNames() {
-            return new String[]{analysis.getLabel()};
+            return new String[]{"FMBA/" + analysis.getLabel()};
         }
 
         @Override
