@@ -1,15 +1,26 @@
-FROM continuumio/miniconda3:24.9.2-0 AS builderPy
+FROM continuumio/miniconda3:24.9.2-0 AS satfeatpy
 
 WORKDIR /app
-COPY external/SATfeatPy/environment.yml satfeatpy.yml
 
 RUN conda install -c conda-forge conda-pack
 
+COPY external/SATfeatPy/environment.yml satfeatpy.yml
 RUN conda env create -f satfeatpy.yml &&\
     conda-pack -j -1 -n fe_SATfeatPy -o /venv_SATfeatPy --format no-archive &&\
     /venv_SATfeatPy/bin/conda-unpack
 
-FROM gradle:8.11.1-jdk21-jammy AS builderJava
+FROM continuumio/miniconda3:24.9.2-0 AS fmchara
+
+WORKDIR /app
+
+RUN conda install -c conda-forge conda-pack
+
+COPY external/fm_characterization/environment.yml fmchara.yml
+RUN conda env create -f fmchara.yml &&\
+    conda-pack -j -1 -n fm_characterization -o /venv_fm_chara --format no-archive &&\
+    /venv_fm_chara/bin/conda-unpack
+
+FROM gradle:8.11.1-jdk21-jammy AS java
 
 WORKDIR /app
 COPY . .
@@ -21,7 +32,8 @@ RUN mkdir /out/ && mkdir /in/
 
 ENV TMPDIR=/out/
 
-COPY --from=builderPy /venv_SATfeatPy/ /venv_SATfeatPy/
+COPY --from=satfeatpy /venv_SATfeatPy/ /venv_SATfeatPy/
+COPY --from=fmchara /venv_fm_chara/ /venv_fm_chara/
 
 WORKDIR /app
 
@@ -35,6 +47,9 @@ COPY external/SATfeatPy/SatELite/SatELite_v1.0_linux /app/external/SATfeatPy/Sat
 COPY external/SATfeatPy/ubcsat/ubcsat_linux /app/external/SATfeatPy/ubcsat/ubcsat_linux
 COPY external/SATfeatPy/generate_features.py /app/external/SATfeatPy/generate_features.py
 
+COPY external/fm_characterization/fm_characterization /app/external/fm_characterization/fm_characterization
+COPY external/fm_characterization/main_characterization.py /app/external/fm_characterization/main_characterization.py
 
-COPY --from=builderJava /app/build/libs/FeatureExtraction-1.0-SNAPSHOT-all.jar fe.jar
+
+COPY --from=java /app/build/libs/FeatureExtraction-1.0-SNAPSHOT-all.jar fe.jar
 ENTRYPOINT ["java", "-jar", "-Djava.io.tmpdir=/out/", "fe.jar"]
