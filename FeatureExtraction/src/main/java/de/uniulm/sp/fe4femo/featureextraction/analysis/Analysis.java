@@ -35,8 +35,9 @@ public abstract class Analysis {
                 Result result = f.futureResult().get();
 
                 //add mark for missing values
-                Map<String, String> featureValues = new HashMap<>(result.featureValues());
-                Arrays.stream(f.analysisStep.getAnalysesNames()).forEach(e -> featureValues.putIfAbsent(e, "<NA>"));
+                Map<String, String> featureValues = HashMap.newHashMap(result.featureValues().size());
+                result.featureValues().forEach((k,v) -> featureValues.put(result.analysisName()+"/"+k, v));
+                Arrays.stream(f.analysisStep.getAnalysesNames()).forEach(e -> featureValues.putIfAbsent(result.analysisName()+"/"+e, "<NA>"));
 
                 results.add(new Result(result.analysisName(), featureValues, result.statusEnum(), result.duration()));
             } catch (InterruptedException e) {
