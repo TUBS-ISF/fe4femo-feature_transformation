@@ -5,9 +5,9 @@ import de.ovgu.featureide.fm.core.base.IFeatureModel;
 
 import java.nio.file.Path;
 
-public record FMInstance(Path fmPath, Path dimacsPath, IFeatureModel featureModel, FeatureModelFormula fmFormula) {
+public record FMInstance(Path originalPath, Path dimacsPath, Path uvlPath, Path xmlPath, IFeatureModel featureModel, FeatureModelFormula fmFormula) {
     @Override
     public String toString() {
-        return fmPath.toString();
+        return originalPath.toString();
     }
 }

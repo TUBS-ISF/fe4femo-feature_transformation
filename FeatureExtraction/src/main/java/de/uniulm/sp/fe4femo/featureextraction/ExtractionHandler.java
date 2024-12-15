@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import de.uniulm.sp.fe4femo.featureextraction.analyses.AnalysisFMBA;
+import de.uniulm.sp.fe4femo.featureextraction.analyses.AnalysisFMChara;
 import de.uniulm.sp.fe4femo.featureextraction.analyses.AnalysisSATfeatPy;
 import de.uniulm.sp.fe4femo.featureextraction.analyses.AnalysisSatzilla;
 import de.uniulm.sp.fe4femo.featureextraction.analysis.Analysis;
@@ -29,7 +30,8 @@ public class ExtractionHandler {
     private static List<Analysis> analyses = List.of(
             new AnalysisFMBA(),
             new AnalysisSATfeatPy(),
-            new AnalysisSatzilla()
+            new AnalysisSatzilla(),
+            new AnalysisFMChara()
     );
 
     public static void main(String[] args) throws InterruptedException {
