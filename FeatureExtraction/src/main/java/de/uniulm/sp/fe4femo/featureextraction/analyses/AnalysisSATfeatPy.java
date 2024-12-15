@@ -17,6 +17,9 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * @see <a href="https://github.com/RSD6170/SATfeatPy">https://github.com/RSD6170/SATfeatPy</a>
+ */
 public class AnalysisSATfeatPy extends Analysis {
 
 

@@ -15,6 +15,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 
+/**
+ * @see <a href="https://github.com/RSD6170/revisiting_satzilla">https://github.com/RSD6170/revisiting_satzilla</a>
+ */
 public class AnalysisSatzilla extends Analysis {
 
     public AnalysisSatzilla() {

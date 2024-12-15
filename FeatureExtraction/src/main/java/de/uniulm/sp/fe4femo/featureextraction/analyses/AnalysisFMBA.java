@@ -15,6 +15,9 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.Executors;
 
+/**
+ * @see <a href="https://github.com/RSD6170/feature-model-batch-analysis">https://github.com/RSD6170/feature-model-batch-analysis</a>
+ */
 public class AnalysisFMBA extends Analysis {
 
     private static final Logger LOGGER = LogManager.getLogger();
