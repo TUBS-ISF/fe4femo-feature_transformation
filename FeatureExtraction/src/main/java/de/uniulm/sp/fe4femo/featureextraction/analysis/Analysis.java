@@ -26,10 +26,14 @@ public abstract class Analysis {
 
 
     public List<Result> analyseFM(FMInstance instance, int perStepTimeout) throws InterruptedException {
+        return analyseFM(instance, perStepTimeout, perStepTimeout + 1);
+    }
+
+    public List<Result> analyseFM(FMInstance instance, int perStepTimeout, int outerTimeout) throws InterruptedException {
         LOGGER.info("Started analysis {} on FM {}", this, instance);
 
         List<Result> results = new ArrayList<>(analysisSteps.size());
-        List<Identifiable> futures = analysisSteps.stream().map(e -> new Identifiable(e, executor.submit(() -> limitRuntime(instance, perStepTimeout, e)))).toList();
+        List<Identifiable> futures = analysisSteps.stream().map(e -> new Identifiable(e, executor.submit(() -> limitRuntime(instance, perStepTimeout, outerTimeout, e)))).toList();
         for (Identifiable f : futures) {
             try {
                 Result result = f.futureResult().get();
@@ -50,13 +54,13 @@ public abstract class Analysis {
         return results;
     }
 
-    protected Result limitRuntime(FMInstance instance, int perStepTimeout, AnalysisStep analysisStep) {
+    protected Result limitRuntime(FMInstance instance, int perStepTimeout, int outerTimeout, AnalysisStep analysisStep) {
         ExecutorService commonExecutor = ForkJoinPool.commonPool();
         Instant startTime = Instant.now();
         Future<IntraStepResult> future = null;
         try {
             future = commonExecutor.submit(() -> analysisStep.analyze(instance, perStepTimeout));
-            IntraStepResult intraStepResult = future.get(perStepTimeout+1, TimeUnit.SECONDS);
+            IntraStepResult intraStepResult = future.get(outerTimeout, TimeUnit.SECONDS);
             Instant endTime = Instant.now();
             return new Result(name, intraStepResult, Duration.between(startTime, endTime));
         } catch (ExecutionException e) {

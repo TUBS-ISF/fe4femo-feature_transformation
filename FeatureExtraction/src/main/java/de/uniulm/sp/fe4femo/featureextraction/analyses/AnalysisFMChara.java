@@ -1,9 +1,5 @@
 package de.uniulm.sp.fe4femo.featureextraction.analyses;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import de.uniulm.sp.fe4femo.featureextraction.FMInstance;
 import de.uniulm.sp.fe4femo.featureextraction.analysis.*;
 import org.apache.logging.log4j.LogManager;
@@ -11,7 +7,6 @@ import org.apache.logging.log4j.Logger;
 
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
@@ -22,6 +17,11 @@ public class AnalysisFMChara extends Analysis {
 
     public AnalysisFMChara() {
         super("FM_Characterization", Executors.newSingleThreadExecutor(), getAnalysisSteps());
+    }
+
+    @Override
+    public List<Result> analyseFM(FMInstance instance, int perStepTimeout) throws InterruptedException {
+        return super.analyseFM(instance, perStepTimeout, (perStepTimeout * 2) + 2);
     }
 
     private static List<AnalysisStep> getAnalysisSteps() {
@@ -133,7 +133,9 @@ public class AnalysisFMChara extends Analysis {
                 "ANALYSIS/Configuration_distribution/Range/value"
         };
 
-        return List.of(new FMCharaStep("total", names));
+        return List.of(new FMCharaStep("FM_Characterization_Step", names));
+
+
     }
 
     public static class FMCharaStep implements AnalysisStep {
@@ -154,32 +156,60 @@ public class AnalysisFMChara extends Analysis {
 
         @Override
         public IntraStepResult analyze(FMInstance fmInstance, int timeout) throws InterruptedException {
-            ExecutableHelper.ExternalResult result = ExecutableHelper.executeExternal(getCommand(part, fmInstance.xmlPath()), timeout, Path.of("external/fm_characterization"));
+            ExecutableHelper.ExternalResult result = ExecutableHelper.executeExternal(getCommand(part, fmInstance.xmlPath(), true), timeout, Path.of("external/fm_characterization"));
             return switch (result.status()){
                 case SUCCESS -> {
-                    LOGGER.info("FM_Characterization step {} executed successfully", part);
+                    LOGGER.info("Expensive FM_Characterization step executed successfully");
                     yield new IntraStepResult(
-                            result.output().lines()
-                                    .dropWhile(e -> ! Objects.equals("###---###", e)).skip(1)
-                                    .map(e -> e.split(" ", 2))
-                                    .collect(Collectors.toMap(e -> e[0], e -> e[1])),
+                            parseOutput(result),
                             StatusEnum.SUCCESS);
                 }
                 case TIMEOUT, MEMOUT -> {
-                    LOGGER.info("FM_Characterization step {} {}", part, result.status());
+                    LOGGER.info("Expensive FM_Characterization step {}", result.status());
+                    LOGGER.info("Trying easy FM_Characterization step");
+
+                    yield analyzeEasy(fmInstance, timeout);
+                }
+                case ERROR -> {
+                    LOGGER.warn("Expensive FM_Characterization step error with output {}", result.output());
+                    LOGGER.info("Trying easy FM_Characterization step");
+                    yield analyzeEasy(fmInstance, timeout);
+                }
+            };
+        }
+
+        private IntraStepResult analyzeEasy(FMInstance fmInstance, int timeout) throws InterruptedException{
+            ExecutableHelper.ExternalResult result = ExecutableHelper.executeExternal(getCommand(part, fmInstance.xmlPath(), false), timeout, Path.of("external/fm_characterization"));
+            return switch (result.status()){
+                case SUCCESS -> {
+                    LOGGER.info("Easy FM_Characterization step executed successfully");
+                    yield new IntraStepResult(
+                            parseOutput(result),
+                            StatusEnum.SUCCESS);
+                }
+                case TIMEOUT, MEMOUT -> {
+                    LOGGER.info("Easy FM_Characterization step {}", result.status());
                     yield new IntraStepResult(Map.of(), result.status());
                 }
                 case ERROR -> {
-                    LOGGER.warn("FM_Characterization step {} error with output {}", part, result.output());
+                    LOGGER.warn("Easy FM_Characterization step error with output {}", result.output());
                     yield new IntraStepResult(Map.of(), result.status());
                 }
             };
         }
 
-        private static String[] getCommand(String part, Path modelPath){
+        private static Map<String, String> parseOutput(ExecutableHelper.ExternalResult result) {
+            return result.output().lines()
+                    .dropWhile(e -> !Objects.equals("###---###", e)).skip(1)
+                    .map(e -> e.split(" ", 2))
+                    .collect(Collectors.toMap(e -> e[0], e -> e[1]));
+        }
+
+        private static String[] getCommand(String part, Path modelPath, boolean isExpensive){
             return new String[]{
                     Path.of("/venv_fm_chara/bin/python").toAbsolutePath().toString(),
                     Path.of("external/fm_characterization/main_characterization.py").toAbsolutePath().toString(),
+                    isExpensive ? "--expensive" : " ",
                     modelPath.toString()
             };
         }
