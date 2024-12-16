@@ -1,14 +1,10 @@
 package de.uniulm.sp.fe4femo.featureextraction.analyses;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import de.uniulm.sp.fe4femo.featureextraction.FMInstance;
 import de.uniulm.sp.fe4femo.featureextraction.analysis.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.collection.fm.analyses.*;
-import org.collection.fm.handler.SatzillaHandler;
 import org.collection.fm.util.AnalysisCacher;
 
 import java.nio.file.Path;
@@ -26,9 +22,24 @@ public class AnalysisFMBA extends Analysis {
         super("FMBA", Executors.newSingleThreadExecutor(), getAnalysisSteps());
     }
 
+    @Override
+    public List<Result> analyseFM(FMInstance instance, int perStepTimeout) throws InterruptedException {
+        return super.analyseFM(instance, perStepTimeout, (perStepTimeout * 4)+4);
+    }
+
     private static List<AnalysisStep> getAnalysisSteps() {
-        AnalysisCacher analysisCacher = new AnalysisCacher();
-        List<IFMAnalysis> analysisSteps = List.of(
+        List<AnalysisStep> list = new ArrayList<>();
+
+        AnalysisCacher reusableCacher = new AnalysisCacher();
+        List<IFMAnalysis> multiAnalysisStep = List.of(
+                new NumberOfCoreFeatures(reusableCacher),
+                new NumberOfDeadFeatures(reusableCacher),
+                new RatioOfOptionalFeatures(reusableCacher),
+                new NumberOfOptionalFeatures(reusableCacher)
+        );
+        list.add(new FMBASMultiStep(multiAnalysisStep));
+
+        List<IFMAnalysis> singleAnalysisSteps = List.of(
                 new NumberOfFeatures(),
                 new NumberOfLeafFeatures(),
                 new NumberOfTopFeatures(),
@@ -36,8 +47,6 @@ public class AnalysisFMBA extends Analysis {
                 new AverageConstraintSize(),
                 new CtcDensity(),
                 new FeaturesInConstraintsDensity(),
-                new NumberOfTautologies(analysisCacher),
-                new NumberOfRedundantConstraints(analysisCacher),
                 new TreeDepth(),
                 new AverageNumberOfChilden(),
                 new NumberOfAlternatives(),
@@ -49,29 +58,61 @@ public class AnalysisFMBA extends Analysis {
                 new ClauseDensity(),
                 new ConnectivityDensity(),
                 new VoidModel(),
-                new NumberOfCoreFeatures(analysisCacher),
-                new NumberOfDeadFeatures(analysisCacher),
-                new RatioOfOptionalFeatures(analysisCacher),
-                new NumberOfFalseOptionalFeatures(analysisCacher),
-                new NumberOfOptionalFeatures(analysisCacher),
                 new NumberOfValidConfigurationsLog(),
                 new SimpleCyclomaticComplexity(),
-                new IndependentCyclomaticComplexity()
+                new IndependentCyclomaticComplexity(),
+
+                new NumberOfTautologies(new AnalysisCacher()), // keep separate as unclear whether fully caches
+                new NumberOfRedundantConstraints(new AnalysisCacher()),
+                new NumberOfFalseOptionalFeatures(new AnalysisCacher())
         );
-        List<AnalysisStep> list = new ArrayList<>();
-        for (IFMAnalysis analysisStep : analysisSteps) {
-            list.add(new FMBAStep(analysisStep));
+        for (IFMAnalysis analysisStep : singleAnalysisSteps) {
+            list.add(new FMBASingleStep(analysisStep));
         }
         return list;
     }
 
 
-    public static class FMBAStep implements AnalysisStep {
+    public static class FMBASMultiStep implements AnalysisStep {
+        private static final Logger LOGGER = LogManager.getLogger();
+
+        private final List<IFMAnalysis> analyses;
+
+        public FMBASMultiStep(List<IFMAnalysis> analyses) {
+            this.analyses = analyses;
+        }
+
+        @Override
+        public String[] getAnalysesNames() {
+            return analyses.stream().map(IFMAnalysis::getLabel).toArray(String[]::new);
+        }
+
+        @Override
+        public IntraStepResult analyze(FMInstance fmInstance, int timeout) throws InterruptedException {
+            Map<String, String> results = new HashMap<>();
+            for (IFMAnalysis analysisStep : analyses) {
+                String result = analysisStep.getResult(fmInstance.featureModel(), fmInstance.fmFormula(), timeout, Path.of("external/feature-model-batch-analysis"));
+                    if (result.equals("?")){
+                        LOGGER.warn("Error or timeout in FMBA {}", analysisStep::getLabel);
+                    }
+                    else {
+                        LOGGER.info("Analysed FMBA {} successfully", analysisStep::getLabel);
+                        results.put(analysisStep.getLabel(), result);
+                    }
+            }
+            if (results.isEmpty()) return new IntraStepResult(results, StatusEnum.ERROR);
+            else return new IntraStepResult(results, StatusEnum.SUCCESS);
+
+        }
+
+    }
+
+    public static class FMBASingleStep implements AnalysisStep {
         private static final Logger LOGGER = LogManager.getLogger();
 
         private final IFMAnalysis analysis;
 
-        public FMBAStep(IFMAnalysis analysis) {
+        public FMBASingleStep(IFMAnalysis analysis) {
             this.analysis = analysis;
         }
 
