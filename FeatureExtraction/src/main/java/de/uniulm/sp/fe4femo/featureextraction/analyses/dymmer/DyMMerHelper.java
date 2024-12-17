@@ -151,8 +151,8 @@ public class DyMMerHelper {
             for (IFeature feature : constraint.getContainedFeatures()) {
                 if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
                 List<IFeature> constraintCopy = constraint.getContainedFeatures().stream()
-                        .filter(e -> Objects.equals(e, feature))
-                        .filter(e -> Objects.equals(feature.getStructure().getParent(), e.getStructure()))
+                        .filter(e -> ! Objects.equals(e, feature))
+                        .filter(e -> ! Objects.equals(feature.getStructure().getParent(), e.getStructure()))
                         .toList();
                 connectedFeatures.putIfAbsent(feature, new HashSet<>());
                 connectedFeatures.get(feature).addAll(constraintCopy);
