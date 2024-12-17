@@ -363,7 +363,7 @@ public class DyMMerHelper {
     }
 
 
-    public double getVariabilityRation(FMInstance fmInstance) throws InterruptedException {
+    public double getVariabilityRatio(FMInstance fmInstance) throws InterruptedException {
         checkInstance(fmInstance);
         if (variablityRatio < 0) {
             long sum = fmInstance.featureModel().getFeatures().stream().mapToInt(e -> e.getStructure().getChildrenCount()).sum();

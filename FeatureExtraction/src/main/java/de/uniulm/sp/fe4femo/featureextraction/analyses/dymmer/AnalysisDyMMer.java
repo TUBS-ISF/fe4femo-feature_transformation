@@ -270,7 +270,7 @@ public class AnalysisDyMMer extends Analysis {
                     @Override
                     protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
                         return new IntraStepResult(
-                                Map.of(getAnalysesNames()[0], String.valueOf(helper.getVariabilityRation(fmInstance))),
+                                Map.of(getAnalysesNames()[0], String.valueOf(helper.getVariabilityRatio(fmInstance))),
                                 StatusEnum.SUCCESS
                         );
                     }
