@@ -276,7 +276,7 @@ public class DyMMerHelper {
     protected long getSingleCyclicDependentFeatures(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (singleCyclicDependentFeatures < 0){
-            computeConstrainedFeatures(fmInstance.featureModel());
+            if (constrainedFeatures == null) computeConstrainedFeatures(fmInstance.featureModel());
             singleCyclicDependentFeatures = fmInstance.featureModel().getFeatures().stream()
                     .filter(e -> e.getStructure().isAlternative() || (e.getStructure().getParent() != null && e.getStructure().getParent().isAlternative()))
                     .count();
@@ -286,7 +286,7 @@ public class DyMMerHelper {
     protected long getMultiCyclicDependentFeatures(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (multiCyclicDependentFeatures < 0){
-            computeConstrainedFeatures(fmInstance.featureModel());
+            if (constrainedFeatures == null) computeConstrainedFeatures(fmInstance.featureModel());
             multiCyclicDependentFeatures = fmInstance.featureModel().getFeatures().stream()
                     .filter(e -> e.getStructure().isOr() || (e.getStructure().getParent() != null && e.getStructure().getParent().isOr()))
                     .count();
