@@ -7,6 +7,7 @@ import de.uniulm.sp.fe4femo.featureextraction.analyses.AnalysisFMBA;
 import de.uniulm.sp.fe4femo.featureextraction.analyses.AnalysisFMChara;
 import de.uniulm.sp.fe4femo.featureextraction.analyses.AnalysisSATfeatPy;
 import de.uniulm.sp.fe4femo.featureextraction.analyses.AnalysisSatzilla;
+import de.uniulm.sp.fe4femo.featureextraction.analyses.dymmer.AnalysisDyMMer;
 import de.uniulm.sp.fe4femo.featureextraction.analysis.Analysis;
 import de.uniulm.sp.fe4femo.featureextraction.analysis.Result;
 import de.uniulm.sp.fe4femo.featureextraction.analysis.StatusEnum;
@@ -25,14 +26,17 @@ import java.util.stream.Stream;
 public class ExtractionHandler {
 
     private static final Logger LOGGER = LogManager.getLogger();
-    private final static ObjectMapper objectMapper = JsonMapper.builder().findAndAddModules().build();
+    private static final ObjectMapper objectMapper = JsonMapper.builder().findAndAddModules().build();
 
-    private static List<Analysis> analyses = List.of(
-            new AnalysisFMBA(),
-            new AnalysisSATfeatPy(),
-            new AnalysisSatzilla(),
-            new AnalysisFMChara()
-    );
+    private static List<Analysis> createAnalyses () {
+        return List.of(
+                new AnalysisFMBA(),
+                new AnalysisSATfeatPy(),
+                new AnalysisSatzilla(),
+                new AnalysisFMChara(),
+                new AnalysisDyMMer()
+        );
+    }
 
     public static void main(String[] args) throws InterruptedException {
         FMUtils.installLibraries();
@@ -41,7 +45,7 @@ public class ExtractionHandler {
         try {
             Path featureModelPath = Path.of(args[0]);
             FMInstance featureModel = FMInstanceFactory.createFMInstance(featureModelPath).orElseThrow();
-            List<Result> results = analyseFM(analyses, featureModel, Integer.parseInt(args[1]));
+            List<Result> results = analyseFM(createAnalyses(), featureModel, Integer.parseInt(args[1]));
             printResultsToConsole(results);
             System.exit(0);
         } catch (InvalidPathException e) {
