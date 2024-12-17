@@ -12,7 +12,6 @@ import de.ovgu.featureide.fm.core.job.monitor.NullMonitor;
 import de.uniulm.sp.fe4femo.featureextraction.FMInstance;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class DyMMerHelper {
@@ -32,18 +31,16 @@ public class DyMMerHelper {
     private double variablityRatio;
     private long noFeaturesConstraintRefExceptParent;
     private double meanRefdFeaturesInConstraintsExceptParentPerFeature;
+    private long noEdgesConnectivity;
     private long noFeaturesWithChildren;
 
     private long orGroups;
     private long xorGroups;
-    private ArrayList<Integer> childCounts = new ArrayList<>();
     private double branchingFactorMedian;
     private double branchingFactorMean;
     private int branchingFactorMax;
     private Set<IFeature> constrainedFeatures = null;
     private int rootCount;
-    private long weirdMandatory;
-    private long weirdOptional;
     private long singleCyclicDependentFeatures;
     private long multiCyclicDependentFeatures;
     private long childCountXor;
@@ -70,18 +67,16 @@ public class DyMMerHelper {
         variablityRatio = -1;
         noFeaturesConstraintRefExceptParent = -1;
         meanRefdFeaturesInConstraintsExceptParentPerFeature = -1;
+        noEdgesConnectivity = -1;
         noFeaturesWithChildren = -1;
 
         orGroups = -1;
         xorGroups = -1;
-        childCounts.clear();
         branchingFactorMedian = -1;
         branchingFactorMean = -1;
         branchingFactorMax = -1;
         constrainedFeatures = null;
         rootCount = -1;
-        weirdMandatory = -1;
-        weirdOptional = -1;
         singleCyclicDependentFeatures = -1;
         multiCyclicDependentFeatures = -1;
         childCountXor = -1;
@@ -117,15 +112,14 @@ public class DyMMerHelper {
     private void generateLeafChildrenStats(IFeatureModel featureModel) throws InterruptedException{
         List<IFeature> leafFeatureList = featureModel.getFeatures().stream().filter(e -> ! e.getStructure().hasChildren()).toList();
         leafFeatures = leafFeatureList.size();
-        long sum = 0;
-        long count = 0;
+        List<Long> treeDepths = new ArrayList<>(leafFeatureList.size());
         for (IFeature iFeature : leafFeatureList) {
             if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
-            long featureDepth = getFeatureDepth(iFeature.getStructure());
-            sum += featureDepth;
-            count++;
+            treeDepths.add(getFeatureDepth(iFeature.getStructure()));
         }
-        meanDepth = count > 0 ? (double) sum / count : 0.0;
+        meanDepth = treeDepths.stream().mapToLong(i -> i).average().orElse(0.0);
+        maxDepth = treeDepths.stream().mapToLong(i -> i).max().orElse(0);
+        medianDepth = getMedian(treeDepths);
     }
 
     private static long getFeatureDepth(IFeatureStructure feature) {
@@ -133,83 +127,20 @@ public class DyMMerHelper {
         return getFeatureDepth(feature.getParent()) + 1;
     }
 
-    private static long getTreeDepthRecursive(IFeatureStructure structure) {
-        List<Long> depthOfChildren = new ArrayList<>();
-        if (structure.getChildrenCount() == 0) {
-            return 1;
-        }
-        for(IFeatureStructure child : structure.getChildren()) {
-            if (Thread.currentThread().isInterrupted()) break;
-            depthOfChildren.add(getTreeDepthRecursive(child));
-        }
-        return Collections.max(depthOfChildren) + 1;
-    }
-
     private void computeConstrainedFeatures(IFeatureModel featureModel) {
         constrainedFeatures = featureModel.getConstraints().stream().flatMap(e -> e.getContainedFeatures().stream()).collect(Collectors.toSet());
     }
 
-    // https://github.com/anderson-uchoa/DyMMer/blob/cef913244aa2daeb3d41039b2595c7ff19f098a9/src/br/ufc/lps/splar/core/fm/FeatureModelStatistics.java#L59
-    private void createStatistics(IFeatureModel featureModel) {
-        childCounts.clear();
-        rootCount = 0;
-        weirdMandatory = 0;
-        weirdOptional = 0;
-        xorGroups = 0;
-        orGroups = 0;
-        singleCyclicDependentFeatures = 0;
-        multiCyclicDependentFeatures = 0;
-        childCountOr = 0;
-        childCountXor = 0;
-        groupedXor = 0;
-        groupedOr = 0;
-        if(Objects.isNull(constrainedFeatures)) computeConstrainedFeatures(featureModel);
-
-        for (IFeature feature : featureModel.getFeatures()) {
-            if (Thread.currentThread().isInterrupted()) break;
-            IFeatureStructure featureNode = feature.getStructure();
-            IFeatureStructure parent = featureNode.getParent();
-
-            childCounts.add(featureNode.getChildrenCount());
-
-            if (featureNode.isRoot()){
-                rootCount++;
-            } else if (featureNode.isOr() || featureNode.isAlternative() || parent.isOr() || parent.isAlternative()) {
-                if (featureNode.hasChildren()) {
-                    if (featureNode.isAlternative()) {
-                        childCountXor += featureNode.getChildrenCount();
-                        xorGroups++;
-                        if (constrainedFeatures.contains(feature)) singleCyclicDependentFeatures++;
-                    } else if (featureNode.isOr()) {
-                        childCountOr += featureNode.getChildrenCount();
-                        orGroups++;
-                        if (constrainedFeatures.contains(feature)) multiCyclicDependentFeatures++;
-                    }
-                } else {
-                    if (parent.isAlternative()) {
-                        groupedXor++;
-                        if (constrainedFeatures.contains(feature)) singleCyclicDependentFeatures++;
-                    } else if (parent.isOr()) {
-                        groupedOr++;
-                        if (constrainedFeatures.contains(feature)) multiCyclicDependentFeatures++;
-                    }
-                }
-            } else {
-                if (featureNode.isMandatory()) weirdMandatory++;
-                else weirdOptional++;
-            }
-
-        }
-
-
+    private void generateBranchingFactors(IFeatureModel featureModel) {
+        List<Integer> childCounts = featureModel.getFeatures().stream().map(IFeature::getStructure).mapToInt(IFeatureStructure::getChildrenCount).boxed().toList();
         IntSummaryStatistics childrenStatistics = childCounts.stream().mapToInt(i -> i ).summaryStatistics();
         branchingFactorMax = childrenStatistics.getMax();
         branchingFactorMean = childrenStatistics.getAverage();
-        branchingFactorMedian = getMedian(childCounts);
+        branchingFactorMedian = getMedian(childCounts.stream().mapToLong(i -> i).boxed().toList());
     }
 
-    private static double getMedian(List<Integer> input) {
-        List<Integer> sortedList = input.stream().sorted().toList();
+    private static double getMedian(List<Long> input) {
+        List<Long> sortedList = input.stream().sorted().toList();
         if (sortedList.size() % 2 == 0) return sortedList.get(sortedList.size() / 2);
         else return (sortedList.get(sortedList.size() / 2 ) + sortedList.get(sortedList.size() / 2 +1))/2.0;
     }
@@ -228,7 +159,8 @@ public class DyMMerHelper {
             }
         }
         noFeaturesConstraintRefExceptParent = connectedFeatures.entrySet().stream().filter(e -> ! e.getValue().isEmpty()).count();
-        meanRefdFeaturesInConstraintsExceptParentPerFeature = connectedFeatures.values().stream().filter(iFeatures -> !iFeatures.isEmpty()).mapToInt(Set::size).average().orElseGet(() -> 0.0);
+        noEdgesConnectivity = connectedFeatures.values().stream().mapToLong(Set::size).sum() / 2;
+        meanRefdFeaturesInConstraintsExceptParentPerFeature = connectedFeatures.values().stream().filter(iFeatures -> !iFeatures.isEmpty()).mapToInt(Set::size).average().orElse(0.0);
     }
 
     // ------------------------------
@@ -273,23 +205,18 @@ public class DyMMerHelper {
         return leafFeatures;
     }
 
-    protected long getMaxDepth(FMInstance fmInstance) {
+    protected long getMaxDepth(FMInstance fmInstance) throws InterruptedException {
         checkInstance(fmInstance);
         if (maxDepth == -1){
-            maxDepth = getTreeDepthRecursive(fmInstance.featureModel().getStructure().getRoot());
+            generateLeafChildrenStats(fmInstance.featureModel());
         }
         return maxDepth;
     }
 
-    protected double getMedianDepth(FMInstance fmInstance) {
+    protected double getMedianDepth(FMInstance fmInstance) throws InterruptedException {
         checkInstance(fmInstance);
         if (medianDepth < 0){
-            List<IFeatureStructure> topLevel = fmInstance.featureModel().getStructure().getRoot().getChildren();
-            if (topLevel.size() % 2 == 1){
-                medianDepth = getTreeDepthRecursive(topLevel.get((topLevel.size() / 2) + 1));
-            } else {
-                medianDepth = (getTreeDepthRecursive(topLevel.get(topLevel.size() / 2))+ getTreeDepthRecursive(topLevel.get((topLevel.size() / 2) + 1))) / 2.0;
-            }
+            generateLeafChildrenStats(fmInstance.featureModel());
         }
         return medianDepth;
     }
@@ -305,7 +232,7 @@ public class DyMMerHelper {
     protected long getOrGroups(FMInstance fmInstance) {
         checkInstance(fmInstance);
         if (orGroups == -1){
-            createStatistics(fmInstance.featureModel());
+            orGroups = fmInstance.featureModel().getFeatures().stream().filter(e -> e.getStructure().isOr()).count();
         }
         return orGroups;
     }
@@ -313,7 +240,7 @@ public class DyMMerHelper {
     protected long getXorGroups(FMInstance fmInstance) {
         checkInstance(fmInstance);
         if (xorGroups == -1){
-            createStatistics(fmInstance.featureModel());
+            xorGroups = fmInstance.featureModel().getFeatures().stream().filter(e -> e.getStructure().isAlternative()).count();
         }
         return xorGroups;
     }
@@ -321,84 +248,76 @@ public class DyMMerHelper {
     protected double getBranchingFactorMedian(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (branchingFactorMedian < 0){
-            createStatistics(fmInstance.featureModel());
+            generateBranchingFactors(fmInstance.featureModel());
         }
         return branchingFactorMedian;
     }
     protected double getBranchingFactorMean(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (branchingFactorMean < 0){
-            createStatistics(fmInstance.featureModel());
+            generateBranchingFactors(fmInstance.featureModel());
         }
         return branchingFactorMean;
     }
     protected int getBranchingFactorMax(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (branchingFactorMax < 0){
-            createStatistics(fmInstance.featureModel());
+            generateBranchingFactors(fmInstance.featureModel());
         }
         return branchingFactorMax;
     }
     protected int getRootCount(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (rootCount < 0){
-            createStatistics(fmInstance.featureModel());
+            rootCount = 1;
         }
         return rootCount;
-    }
-    protected long getWeirdMandatory(FMInstance fmInstance){
-        checkInstance(fmInstance);
-        if (weirdMandatory < 0){
-            createStatistics(fmInstance.featureModel());
-        }
-        return weirdMandatory;
-    }
-    protected long getWeirdOptional(FMInstance fmInstance){
-        checkInstance(fmInstance);
-        if (weirdOptional < 0){
-            createStatistics(fmInstance.featureModel());
-        }
-        return weirdOptional;
     }
     protected long getSingleCyclicDependentFeatures(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (singleCyclicDependentFeatures < 0){
-            createStatistics(fmInstance.featureModel());
+            computeConstrainedFeatures(fmInstance.featureModel());
+            singleCyclicDependentFeatures = fmInstance.featureModel().getFeatures().stream()
+                    .filter(e -> e.getStructure().isAlternative() || (e.getStructure().getParent() != null && e.getStructure().getParent().isAlternative()))
+                    .count();
         }
         return singleCyclicDependentFeatures;
     }
     protected long getMultiCyclicDependentFeatures(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (multiCyclicDependentFeatures < 0){
-            createStatistics(fmInstance.featureModel());
+            computeConstrainedFeatures(fmInstance.featureModel());
+            multiCyclicDependentFeatures = fmInstance.featureModel().getFeatures().stream()
+                    .filter(e -> e.getStructure().isOr() || (e.getStructure().getParent() != null && e.getStructure().getParent().isOr()))
+                    .count();
         }
         return multiCyclicDependentFeatures;
     }
     protected long getChildCountXor(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (childCountXor < 0){
-            createStatistics(fmInstance.featureModel());
+            childCountXor = fmInstance.featureModel().getFeatures().stream().map(IFeature::getStructure).filter(IFeatureStructure::isAlternative).mapToLong(IFeatureStructure::getChildrenCount).sum();
         }
         return childCountXor;
     }
     protected long getChildCountOr(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (childCountOr < 0){
-            createStatistics(fmInstance.featureModel());
+            childCountOr = fmInstance.featureModel().getFeatures().stream().map(IFeature::getStructure).filter(IFeatureStructure::isOr).mapToLong(IFeatureStructure::getChildrenCount).sum();
         }
         return childCountOr;
     }
     protected long getGroupedXor(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (groupedXor < 0){
-            createStatistics(fmInstance.featureModel());
+            groupedXor = fmInstance.featureModel().getFeatures().stream().filter(e -> (e.getStructure().getParent() != null) && e.getStructure().getParent().isAlternative()).count();
         }
         return groupedXor;
     }
     protected long getGroupedOr(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (groupedOr < 0){
-            createStatistics(fmInstance.featureModel());
+            groupedOr = fmInstance.featureModel().getFeatures().stream().filter(e -> (e.getStructure().getParent() != null) && e.getStructure().getParent().isOr()).count();
         }
         return groupedOr;
     }
@@ -422,15 +341,15 @@ public class DyMMerHelper {
                 + (Math.pow(getNoMandatoryFeatures(fmInstance, timeout), 2)
                     + 2 * Math.pow(getOrGroups(fmInstance), 2)
                     + 3 * Math.pow(getXorGroups(fmInstance), 2)
-                    + 3 * Math.pow(getOrGroups(fmInstance) + getXorGroups(fmInstance), 2)
+                    + 3 * Math.pow( getOrGroups(fmInstance) + getXorGroups(fmInstance), 2)
                     + 3 * Math.pow(getConstraintCount(fmInstance), 2)
                   ) / 9;
     }
 
-    protected double getConnectivityDensityCoefficent(FMInstance fmInstance) {
+    protected double getConnectivityDensityCoefficent(FMInstance fmInstance) throws InterruptedException {
         checkInstance(fmInstance);
-        if (getFeatureCount(fmInstance) -1 <= 0) return 0;
-        else return (double) (getFeatureCount(fmInstance) -1) / getFeatureCount(fmInstance);
+        if (noEdgesConnectivity < 0) computeConnectivity(fmInstance);
+        return (double) noEdgesConnectivity / getFeatureCount(fmInstance);
     }
 
     protected long getCountGrouped(FMInstance fmInstance) {
