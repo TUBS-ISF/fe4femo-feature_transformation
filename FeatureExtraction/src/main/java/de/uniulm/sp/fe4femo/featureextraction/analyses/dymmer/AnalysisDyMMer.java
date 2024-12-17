@@ -29,6 +29,7 @@ public class AnalysisDyMMer extends Analysis {
     private static List<AnalysisStep> getAnalysisSteps() {
         DyMMerHelper dyMMerHelper = new DyMMerHelper();
         return List.of(
+
                 new DyMMerStep("Number of features (NF)", dyMMerHelper) {
                     @Override
                     protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
@@ -38,6 +39,10 @@ public class AnalysisDyMMer extends Analysis {
                         );
                     }
                 },
+
+
+
+
                 new DyMMerStep("Number of Optional Features (NO)", dyMMerHelper) {
                     @Override
                     protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
@@ -56,6 +61,55 @@ public class AnalysisDyMMer extends Analysis {
                         );
                     }
                 },
+                new DyMMerStep("Non-Functional Commonality (NFC)", dyMMerHelper) {
+                    @Override
+                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
+                        double value = (double) helper.getNoMandatoryFeatures(fmInstance, timeout) / helper.getFeatureCount(fmInstance);
+                        return new IntraStepResult(Map.of(getAnalysesNames()[0], Double.toString(value)), StatusEnum.SUCCESS);
+                    }
+                },
+                new DyMMerStep("Ratio of Switch Features", dyMMerHelper) { //in computation but not export?
+                    @Override
+                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
+                        return new IntraStepResult(
+                                Map.of(getAnalysesNames()[0], String.valueOf((helper.getFeatureCount(fmInstance) - helper.getNoMandatoryFeatures(fmInstance, timeout) -1) / helper.getFeatureCount(fmInstance) )),
+                                StatusEnum.SUCCESS
+                        );
+                    }
+                },
+                new DyMMerStep("Flexibility of configuration (FoC)", dyMMerHelper) {
+                    @Override
+                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
+                        return new IntraStepResult(
+                                Map.of(getAnalysesNames()[0], String.valueOf((double) helper.getOptionalFeatures(fmInstance, timeout) / helper.getFeatureCount(fmInstance))),
+                                StatusEnum.SUCCESS
+                        );
+                    }
+                },
+                new DyMMerStep("Number of variable features (NVF)", dyMMerHelper) {
+                    @Override
+                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
+                        return new IntraStepResult(
+                                Map.of(getAnalysesNames()[0], String.valueOf(helper.getOptionalFeatures(fmInstance, timeout))),
+                                StatusEnum.SUCCESS
+                        );
+                    }
+                },
+
+                new DyMMerStep("Compound Complexity (ComC)", dyMMerHelper) {
+                    @Override
+                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
+                        return new IntraStepResult(
+                                Map.of(getAnalysesNames()[0], String.valueOf(helper.getCompoundComplexity(fmInstance, timeout))),
+                                StatusEnum.SUCCESS
+                        );
+                    }
+                },
+
+
+
+
+
                 new DyMMerStep("Number of top features (NTop)", dyMMerHelper) {
                     @Override
                     protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
@@ -65,6 +119,46 @@ public class AnalysisDyMMer extends Analysis {
                         );
                     }
                 },
+
+                new DyMMerStep("Single Cyclic Dependent Features (SCDF)", dyMMerHelper) {
+                    @Override
+                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
+                        return new IntraStepResult(
+                                Map.of(getAnalysesNames()[0], String.valueOf(helper.getSingleCyclicDependentFeatures(fmInstance))),
+                                StatusEnum.SUCCESS
+                        );
+                    }
+                },
+                new DyMMerStep("Multiple Cyclic Dependent Features (MCDF)", dyMMerHelper) {
+                    @Override
+                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
+                        return new IntraStepResult(
+                                Map.of(getAnalysesNames()[0], String.valueOf(helper.getMultiCyclicDependentFeatures(fmInstance))),
+                                StatusEnum.SUCCESS
+                        );
+                    }
+                },
+                new DyMMerStep("Cross-tree constraints Variables (CTCV)", dyMMerHelper) {
+                    @Override
+                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
+                        return new IntraStepResult(
+                                Map.of(getAnalysesNames()[0], String.valueOf(helper.getNoConstrainedFeatures(fmInstance))),
+                                StatusEnum.SUCCESS
+                        );
+                    }
+                },
+                new DyMMerStep("Cross-tree constraints Rate", dyMMerHelper) { //in computation but not export?
+                    @Override
+                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
+                        return new IntraStepResult(
+                                Map.of(getAnalysesNames()[0], String.valueOf((double) helper.getNoConstrainedFeatures(fmInstance) / helper.getFeatureCount(fmInstance))),
+                                StatusEnum.SUCCESS
+                        );
+                    }
+                },
+
+
+
                 new DyMMerStep("Number of leaf Features (NLeaf)", dyMMerHelper) {
                     @Override
                     protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
@@ -101,18 +195,6 @@ public class AnalysisDyMMer extends Analysis {
                         );
                     }
                 },
-                new DyMMerStep("Cognitive Complexity of a Feature Model (CogC)", dyMMerHelper) {
-                    @Override
-                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
-                        return new IntraStepResult(
-                                Map.of(
-                                        "Cognitive_Complexity_of_a_Feature_Model_(CogC)",
-                                        String.valueOf(helper.getOrGroups(fmInstance) + helper.getXorGroups(fmInstance))
-                                ),
-                                StatusEnum.SUCCESS
-                        );
-                    }
-                },
                 new DyMMerStep("Feature EXtendibility (FEX)", dyMMerHelper) {
                     @Override
                     protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
@@ -122,65 +204,31 @@ public class AnalysisDyMMer extends Analysis {
                         );
                     }
                 },
-                new DyMMerStep("Flexibility of configuration (FoC)", dyMMerHelper) {
+
+
+
+
+                new DyMMerStep("Ratio of variability (RoV)", dyMMerHelper) {
                     @Override
                     protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
                         return new IntraStepResult(
-                                Map.of(getAnalysesNames()[0], String.valueOf((double) helper.getOptionalFeatures(fmInstance, timeout) / helper.getFeatureCount(fmInstance))),
+                                Map.of(getAnalysesNames()[0], String.valueOf(helper.getVariabilityRatio(fmInstance))),
                                 StatusEnum.SUCCESS
                         );
                     }
                 },
-                new DyMMerStep("Single Cyclic Dependent Features (SCDF)", dyMMerHelper) {
-                    @Override
-                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
-                        return new IntraStepResult(
-                                Map.of(getAnalysesNames()[0], String.valueOf(helper.getSingleCyclicDependentFeatures(fmInstance))),
-                                StatusEnum.SUCCESS
-                        );
-                    }
-                },
-                new DyMMerStep("Multiple Cyclic Dependent Features (MCDF)", dyMMerHelper) {
-                    @Override
-                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
-                        return new IntraStepResult(
-                                Map.of(getAnalysesNames()[0], String.valueOf(helper.getMultiCyclicDependentFeatures(fmInstance))),
-                                StatusEnum.SUCCESS
-                        );
-                    }
-                },
+
+
+
+
+
+
+
                 new DyMMerStep("Cyclomatic complexity (CyC)", dyMMerHelper) {
                     @Override
                     protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
                         return new IntraStepResult(
                                 Map.of(getAnalysesNames()[0], String.valueOf(helper.getConstraintCount(fmInstance))),
-                                StatusEnum.SUCCESS
-                        );
-                    }
-                },
-                new DyMMerStep("Compound Complexity (ComC)", dyMMerHelper) {
-                    @Override
-                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
-                        return new IntraStepResult(
-                                Map.of(getAnalysesNames()[0], String.valueOf(helper.getCompoundComplexity(fmInstance, timeout))),
-                                StatusEnum.SUCCESS
-                        );
-                    }
-                },
-                new DyMMerStep("Grouping Features (NGF)", dyMMerHelper) {
-                    @Override
-                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
-                        return new IntraStepResult(
-                                Map.of(getAnalysesNames()[0], String.valueOf(helper.getNoFeaturesWithChildren(fmInstance))),
-                                StatusEnum.SUCCESS
-                        );
-                    }
-                },
-                new DyMMerStep("Cross-tree constraints Variables (CTCV)", dyMMerHelper) {
-                    @Override
-                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
-                        return new IntraStepResult(
-                                Map.of(getAnalysesNames()[0], String.valueOf(helper.getNoConstrainedFeatures(fmInstance))),
                                 StatusEnum.SUCCESS
                         );
                     }
@@ -194,15 +242,28 @@ public class AnalysisDyMMer extends Analysis {
                         );
                     }
                 },
-                new DyMMerStep("Cross-tree constraints Rate", dyMMerHelper) { //in computation but not export?
+
+
+
+
+
+                new DyMMerStep("Grouping Features (NGF)", dyMMerHelper) {
                     @Override
                     protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
                         return new IntraStepResult(
-                                Map.of(getAnalysesNames()[0], String.valueOf((double) helper.getNoConstrainedFeatures(fmInstance) / helper.getFeatureCount(fmInstance))),
+                                Map.of(getAnalysesNames()[0], String.valueOf(helper.getNoFeaturesWithChildren(fmInstance))),
                                 StatusEnum.SUCCESS
                         );
                     }
                 },
+
+
+
+
+
+
+
+
                 new DyMMerStep("Connectivity of the Dependency Graph Rate (Rcon)", dyMMerHelper) {
                     @Override
                     protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
@@ -230,15 +291,9 @@ public class AnalysisDyMMer extends Analysis {
                         );
                     }
                 },
-                new DyMMerStep("Number of variable features (NVF)", dyMMerHelper) {
-                    @Override
-                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
-                        return new IntraStepResult(
-                                Map.of(getAnalysesNames()[0], String.valueOf(helper.getOptionalFeatures(fmInstance, timeout))),
-                                StatusEnum.SUCCESS
-                        );
-                    }
-                },
+
+
+
                 new DyMMerStep("Single Hotspot Features (SHoF)", dyMMerHelper) {
                     @Override
                     protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
@@ -266,15 +321,10 @@ public class AnalysisDyMMer extends Analysis {
                         );
                     }
                 },
-                new DyMMerStep("Ratio of variability (RoV)", dyMMerHelper) {
-                    @Override
-                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
-                        return new IntraStepResult(
-                                Map.of(getAnalysesNames()[0], String.valueOf(helper.getVariabilityRatio(fmInstance))),
-                                StatusEnum.SUCCESS
-                        );
-                    }
-                },
+
+
+
+
                 new DyMMerStep("Number of valid configurations (NVC)", dyMMerHelper) {
                     @Override
                     protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
@@ -287,6 +337,9 @@ public class AnalysisDyMMer extends Analysis {
                         );
                     }
                 },
+
+
+
                 new DyMMerStep("Branching Factor Max (BF Max)", dyMMerHelper) {
                     @Override
                     protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
@@ -314,6 +367,11 @@ public class AnalysisDyMMer extends Analysis {
                         );
                     }
                 },
+
+
+
+
+
                 new DyMMerStep("Number Groups Or (NGOr)", dyMMerHelper) {
                     @Override
                     protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
@@ -332,31 +390,6 @@ public class AnalysisDyMMer extends Analysis {
                         );
                     }
                 },
-                new DyMMerStep("Or Rate", dyMMerHelper) {
-                    @Override
-                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
-                        return new IntraStepResult(
-                                Map.of(getAnalysesNames()[0], String.valueOf((double) helper.getChildCountOr(fmInstance) / helper.getFeatureCount(fmInstance))),
-                                StatusEnum.SUCCESS
-                        );
-                    }
-                },
-                new DyMMerStep("Xor Rate", dyMMerHelper) {
-                    @Override
-                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
-                        return new IntraStepResult(
-                                Map.of(getAnalysesNames()[0], String.valueOf((double) helper.getChildCountXor(fmInstance) / helper.getFeatureCount(fmInstance))),
-                                StatusEnum.SUCCESS
-                        );
-                    }
-                },
-                new DyMMerStep("Non-Functional Commonality (NFC)", dyMMerHelper) {
-                    @Override
-                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
-                        double value = (double) helper.getNoMandatoryFeatures(fmInstance, timeout) / helper.getFeatureCount(fmInstance);
-                        return new IntraStepResult(Map.of(getAnalysesNames()[0], Double.toString(value)), StatusEnum.SUCCESS);
-                    }
-                },
                 new DyMMerStep("Number of Variation Points (NVP)", dyMMerHelper) { //in computation but not export?
                     @Override
                     protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
@@ -366,15 +399,44 @@ public class AnalysisDyMMer extends Analysis {
                         );
                     }
                 },
-                new DyMMerStep("Ratio of Switch Features", dyMMerHelper) { //in computation but not export?
+                new DyMMerStep("Cognitive Complexity of a Feature Model (CogC)", dyMMerHelper) {
                     @Override
                     protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
                         return new IntraStepResult(
-                                Map.of(getAnalysesNames()[0], String.valueOf((helper.getFeatureCount(fmInstance) - helper.getNoMandatoryFeatures(fmInstance, timeout) -1) / helper.getFeatureCount(fmInstance) )),
+                                Map.of(
+                                        "Cognitive_Complexity_of_a_Feature_Model_(CogC)",
+                                        String.valueOf(helper.getOrGroups(fmInstance) + helper.getXorGroups(fmInstance))
+                                ),
+                                StatusEnum.SUCCESS
+                        );
+                    }
+                },
+
+
+
+
+                new DyMMerStep("Or Rate", dyMMerHelper) {
+                    @Override
+                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
+                        return new IntraStepResult(
+                                Map.of(getAnalysesNames()[0], String.valueOf((double) helper.getChildCountOr(fmInstance) / helper.getFeatureCount(fmInstance))),
+                                StatusEnum.SUCCESS
+                        );
+                    }
+                },
+
+
+                new DyMMerStep("Xor Rate", dyMMerHelper) {
+                    @Override
+                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
+                        return new IntraStepResult(
+                                Map.of(getAnalysesNames()[0], String.valueOf((double) helper.getChildCountXor(fmInstance) / helper.getFeatureCount(fmInstance))),
                                 StatusEnum.SUCCESS
                         );
                     }
                 }
+
+
         );
     }
 
