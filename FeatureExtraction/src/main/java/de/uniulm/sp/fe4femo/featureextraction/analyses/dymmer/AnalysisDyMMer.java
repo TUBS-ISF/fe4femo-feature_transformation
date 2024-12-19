@@ -51,16 +51,16 @@ public class AnalysisDyMMer extends Analysis {
                         "Compound Complexity (ComC)"
                 }, dyMMerHelper) {
                     @Override
-                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
-                        LOGGER.info("Starting DyMMer mandatory-dead-based analysis");
+                    protected IntraStepResult doComputation(FMInstance fmInstance, int timeout)  {
+                        LOGGER.info("Starting DyMMer feature-type based analysis");
                         Map<String, String> results = new HashMap<>(getAnalysesNames().length);
-                        results.put(this.getAnalysesNames()[0], String.valueOf(helper.getOptionalFeatures(fmInstance, timeout)));
-                        results.put(this.getAnalysesNames()[1], String.valueOf(helper.getNoMandatoryFeatures(fmInstance, timeout)));
-                        results.put(this.getAnalysesNames()[2], String.valueOf((double) helper.getNoMandatoryFeatures(fmInstance, timeout) / helper.getFeatureCount(fmInstance)));
-                        results.put(this.getAnalysesNames()[3], String.valueOf((helper.getFeatureCount(fmInstance) - helper.getNoMandatoryFeatures(fmInstance, timeout) -1) / helper.getFeatureCount(fmInstance))); //in computation but not export?
-                        results.put(this.getAnalysesNames()[4], String.valueOf((double) helper.getOptionalFeatures(fmInstance, timeout) / helper.getFeatureCount(fmInstance)));
-                        results.put(this.getAnalysesNames()[5], String.valueOf(helper.getOptionalFeatures(fmInstance, timeout)));
-                        results.put(this.getAnalysesNames()[6], String.valueOf(helper.getCompoundComplexity(fmInstance, timeout)));
+                        results.put(this.getAnalysesNames()[0], String.valueOf(helper.getOptionalFeatures(fmInstance)));
+                        results.put(this.getAnalysesNames()[1], String.valueOf(helper.getNoMandatoryFeatures(fmInstance)));
+                        results.put(this.getAnalysesNames()[2], String.valueOf((double) helper.getNoMandatoryFeatures(fmInstance) / helper.getFeatureCount(fmInstance)));
+                        results.put(this.getAnalysesNames()[3], String.valueOf(((double)helper.getFeatureCount(fmInstance) - helper.getNoMandatoryFeatures(fmInstance) -1) / helper.getFeatureCount(fmInstance))); //in computation but not export?
+                        results.put(this.getAnalysesNames()[4], String.valueOf((double) helper.getOptionalFeatures(fmInstance) / helper.getFeatureCount(fmInstance)));
+                        results.put(this.getAnalysesNames()[5], String.valueOf(helper.getOptionalFeatures(fmInstance)));
+                        results.put(this.getAnalysesNames()[6], String.valueOf(helper.getCompoundComplexity(fmInstance)));
                         return new IntraStepResult(results, StatusEnum.SUCCESS);
                     }
                 },

@@ -20,6 +20,8 @@ public class DyMMerHelper {
 
     private FeatureModelAnalyzer featureModelAnalyzer;
     private long mandatoryFeatures;
+    private long optionalFeatures;
+    private long coreFeatures;
     private long deadFeatures;
     private long featureCount;
     private long topFeatures;
@@ -55,6 +57,8 @@ public class DyMMerHelper {
 
     private void invalidateAll() {
         mandatoryFeatures = -1;
+        optionalFeatures = -1;
+        coreFeatures = -1;
         deadFeatures = -1;
         featureModelAnalyzer = null;
         featureCount = -1;
@@ -105,7 +109,7 @@ public class DyMMerHelper {
         CoreDeadAnalysis coreDeadAnalysis = new CoreDeadAnalysis(fmInstance.fmFormula().getCNF());
         coreDeadAnalysis.setTimeout(1000* timeout);
         LiteralSet result = coreDeadAnalysis.execute(new NullMonitor<>());
-        mandatoryFeatures = fmInstance.fmFormula().getCNF().getVariables().convertToString(result, true, false, false).size();
+        coreFeatures = fmInstance.fmFormula().getCNF().getVariables().convertToString(result, true, false, false).size();
         deadFeatures = fmInstance.fmFormula().getCNF().getVariables().convertToString(result, false, true, false).size();
     }
 
@@ -165,12 +169,20 @@ public class DyMMerHelper {
 
     // ------------------------------
 
-    protected long getNoMandatoryFeatures(FMInstance fmInstance, int timeout) throws Exception {
+    protected long getNoMandatoryFeatures(FMInstance fmInstance) {
         checkInstance(fmInstance);
         if (mandatoryFeatures == -1){
-            manDeadAnalysis(fmInstance, timeout);
+            mandatoryFeatures = fmInstance.featureModel().getFeatures().stream().filter(e -> e.getStructure().isMandatory()).count();
         }
         return mandatoryFeatures;
+    }
+
+    protected long getNoCoreFeatures(FMInstance fmInstance, int timeout) throws Exception {
+        checkInstance(fmInstance);
+        if (coreFeatures == -1){
+            manDeadAnalysis(fmInstance, timeout);
+        }
+        return coreFeatures;
     }
 
     protected long getNoDeadFeatures(FMInstance fmInstance, int timeout) throws Exception {
@@ -322,9 +334,16 @@ public class DyMMerHelper {
         return groupedOr;
     }
 
-    protected long getOptionalFeatures(FMInstance fmInstance, int timeout) throws Exception{
+    protected long getOptionalFeatures(FMInstance fmInstance) {
         checkInstance(fmInstance);
-        return getFeatureCount(fmInstance) - getNoMandatoryFeatures(fmInstance, timeout) - getNoDeadFeatures(fmInstance, timeout);
+        if(optionalFeatures < 0) {
+            optionalFeatures = fmInstance.featureModel().getFeatures().stream().map(IFeature::getStructure)
+                    .filter(e -> ! e.isMandatory())
+                    .filter(e -> ! e.getParent().isAlternative())
+                    .filter(e -> ! e.getParent().isOr())
+                    .count();
+        }
+        return optionalFeatures;
     }
 
     protected long getConstraintCount(FMInstance fmInstance) {
@@ -335,10 +354,10 @@ public class DyMMerHelper {
         return constraintCount;
     }
 
-    protected double getCompoundComplexity(FMInstance fmInstance, int timeout) throws Exception {
+    protected double getCompoundComplexity(FMInstance fmInstance)  {
         checkInstance(fmInstance);
         return Math.pow(getFeatureCount(fmInstance), 2)
-                + (Math.pow(getNoMandatoryFeatures(fmInstance, timeout), 2)
+                + (Math.pow(getNoMandatoryFeatures(fmInstance), 2)
                     + 2 * Math.pow(getOrGroups(fmInstance), 2)
                     + 3 * Math.pow(getXorGroups(fmInstance), 2)
                     + 3 * Math.pow( getOrGroups(fmInstance) + getXorGroups(fmInstance), 2)
