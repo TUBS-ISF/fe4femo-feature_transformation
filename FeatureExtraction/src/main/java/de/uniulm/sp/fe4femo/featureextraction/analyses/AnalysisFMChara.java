@@ -133,7 +133,8 @@ public class AnalysisFMChara extends Analysis {
                 "ANALYSIS/Configuration_distribution/Mode/value",
                 "ANALYSIS/Configuration_distribution/Min/value",
                 "ANALYSIS/Configuration_distribution/Max/value",
-                "ANALYSIS/Configuration_distribution/Range/value"
+                "ANALYSIS/Configuration_distribution/Range/value",
+                "ANALYSIS/isApprox/value"
         };
 
         return List.of(new FMCharaMetricStep("FM_Characterization_Metrics", metrics), new FMCharaAnalysesStep("FM_Characterization_Analyses", analyses));
