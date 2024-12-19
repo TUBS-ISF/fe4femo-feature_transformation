@@ -363,7 +363,7 @@ public class DyMMerHelper {
     }
 
 
-    public double getVariabilityRatio(FMInstance fmInstance) throws InterruptedException {
+    protected double getVariabilityRatio(FMInstance fmInstance) throws InterruptedException {
         checkInstance(fmInstance);
         if (variablityRatio < 0) {
             long sum = fmInstance.featureModel().getFeatures().stream().mapToInt(e -> e.getStructure().getChildrenCount()).sum();
@@ -373,19 +373,19 @@ public class DyMMerHelper {
     }
 
 
-    public long getNoFeaturesConstraintRefExceptParents(FMInstance fmInstance) throws InterruptedException {
+    protected long getNoFeaturesConstraintRefExceptParents(FMInstance fmInstance) throws InterruptedException {
         checkInstance(fmInstance);
         if (noFeaturesConstraintRefExceptParent < 0) computeConnectivity(fmInstance);
         return noFeaturesConstraintRefExceptParent;
     }
 
-    public double getMeanRefdFeaturesInConstraintsExceptParentPerFeature(FMInstance fmInstance) throws InterruptedException {
+    protected double getMeanRefdFeaturesInConstraintsExceptParentPerFeature(FMInstance fmInstance) throws InterruptedException {
         checkInstance(fmInstance);
         if (meanRefdFeaturesInConstraintsExceptParentPerFeature < 0) computeConnectivity(fmInstance);
         return meanRefdFeaturesInConstraintsExceptParentPerFeature;
     }
 
-    public long getNoFeaturesWithChildren(FMInstance fmInstance)  {
+    protected long getNoFeaturesWithChildren(FMInstance fmInstance)  {
         checkInstance(fmInstance);
         if (noFeaturesWithChildren < 0) {
             noFeaturesWithChildren = fmInstance.featureModel().getFeatures().stream().filter(e -> e.getStructure().getChildrenCount() > 0).count();
@@ -393,7 +393,7 @@ public class DyMMerHelper {
         return noFeaturesWithChildren;
     }
 
-    public long getNoConstrainedFeatures(FMInstance fmInstance) {
+    protected long getNoConstrainedFeatures(FMInstance fmInstance) {
         checkInstance(fmInstance);
         if(Objects.isNull(constrainedFeatures)) computeConstrainedFeatures(fmInstance.featureModel());
         return constrainedFeatures.size();
