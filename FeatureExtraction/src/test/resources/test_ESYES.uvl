@@ -1,0 +1,36 @@
+features
+    "Ice Cream" {extended__}
+        mandatory
+            Category
+                alternative
+                    Popsicle {Price 1}
+                    Scoop {Price 2}
+            Flavors
+                or
+                    Lemon
+                    Chocolate cardinality [1..3]
+                        or
+                            White
+                            Dark
+                            Pink
+                            Blue
+            Container
+                alternative
+                    Stick
+                    Cup
+                        mandatory
+                            Spoon
+                    Cone
+
+        optional
+            Waffle {Price 0.7}
+            Coffee {Price 4.5}
+            Smile
+
+constraints
+    "Ice Cream" => Smile
+    Popsicle => Stick
+    Scoop => Cup | Cone
+    Lemon => Waffle
+    Container => ! Coffee
+    sum(Price) < 2.5 //ignored by FeatureIDE
