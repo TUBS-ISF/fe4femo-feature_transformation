@@ -2,7 +2,8 @@ config=$HOME/fe4femo/runtime_measurements/SLURM_scripts/config.txt
 inputpath=$HOME/fe4femo/runtime_measurements/feature-model-benchmark/feature_models
 
 no=$MODELNO
-input=$(awk -v ArrayTaskID=$no '$1==ArrayTaskID {print $2}' $config)
+pre_input=$(awk -v ArrayTaskID=$no '$1==ArrayTaskID {print $2}' $config)
+input=${pre_input}.dimacs
 
 echo -e "JOB_ID=${SLURM_JOB_ID}"
 echo -e "MODEL_NUMBER=${no}"
