@@ -27,6 +27,7 @@ echo -e "RERUN=${SLURM_RESTART_COUNT}"
 
 mkdir -p $TMPDIR/in/
 mkdir -p $TMPDIR/out/
+mkdir -p $(dirname "$TMPDIR/in/$input")
 
 if [ -f $inputpath/uvl/$input ]; then
     cp $inputpath/uvl/$input $TMPDIR/in/$input
