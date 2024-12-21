@@ -19,7 +19,7 @@ echo -e "JOB_ID=${SLURM_JOB_ID}"
 echo -e "MODEL_NUMBER=${no}"
 echo -e "MODEL_PATH=${input}"
 
-container_path=$HOME/fe4femo/runtime_measurements/container/enroot/${container}_i.sqsh
+container_path=$HOME/fe4femo/FeatureExtraction/slurm_scripts/${container}_i.sqsh
 
 echo -e "CONTAINER=${container_path}"
 
