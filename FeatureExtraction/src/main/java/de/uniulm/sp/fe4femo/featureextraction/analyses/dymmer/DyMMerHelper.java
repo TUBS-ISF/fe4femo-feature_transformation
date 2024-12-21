@@ -51,7 +51,7 @@ public class DyMMerHelper {
     private long groupedOr;
 
 
-    protected DyMMerHelper() {
+    public DyMMerHelper() {
         invalidateAll();
     }
 
@@ -169,7 +169,7 @@ public class DyMMerHelper {
 
     // ------------------------------
 
-    protected long getNoMandatoryFeatures(FMInstance fmInstance) {
+    public long getNoMandatoryFeatures(FMInstance fmInstance) {
         checkInstance(fmInstance);
         if (mandatoryFeatures == -1){
             mandatoryFeatures = fmInstance.featureModel().getFeatures().stream().filter(e -> e.getStructure().isMandatory()).count();
@@ -177,7 +177,7 @@ public class DyMMerHelper {
         return mandatoryFeatures;
     }
 
-    protected long getNoCoreFeatures(FMInstance fmInstance, int timeout) throws Exception {
+    public long getNoCoreFeatures(FMInstance fmInstance, int timeout) throws Exception {
         checkInstance(fmInstance);
         if (coreFeatures == -1){
             manDeadAnalysis(fmInstance, timeout);
@@ -185,7 +185,7 @@ public class DyMMerHelper {
         return coreFeatures;
     }
 
-    protected long getNoDeadFeatures(FMInstance fmInstance, int timeout) throws Exception {
+    public long getNoDeadFeatures(FMInstance fmInstance, int timeout) throws Exception {
         checkInstance(fmInstance);
         if (deadFeatures == -1){
             manDeadAnalysis(fmInstance, timeout);
@@ -193,7 +193,7 @@ public class DyMMerHelper {
         return deadFeatures;
     }
 
-    protected long getFeatureCount(FMInstance fmInstance) {
+    public long getFeatureCount(FMInstance fmInstance) {
         checkInstance(fmInstance);
         if (featureCount == -1){
             featureCount = fmInstance.featureModel().getNumberOfFeatures();
@@ -201,7 +201,7 @@ public class DyMMerHelper {
         return featureCount;
     }
 
-    protected long getTopFeatures(FMInstance fmInstance) {
+    public long getTopFeatures(FMInstance fmInstance) {
         checkInstance(fmInstance);
         if (topFeatures == -1){
             topFeatures = fmInstance.featureModel().getStructure().getRoot().getChildrenCount();
@@ -209,7 +209,7 @@ public class DyMMerHelper {
         return topFeatures;
     }
 
-    protected long getLeafFeatures(FMInstance fmInstance) throws InterruptedException {
+    public long getLeafFeatures(FMInstance fmInstance) throws InterruptedException {
         checkInstance(fmInstance);
         if (leafFeatures == -1){
             generateLeafChildrenStats(fmInstance.featureModel());
@@ -217,7 +217,7 @@ public class DyMMerHelper {
         return leafFeatures;
     }
 
-    protected long getMaxDepth(FMInstance fmInstance) throws InterruptedException {
+    public long getMaxDepth(FMInstance fmInstance) throws InterruptedException {
         checkInstance(fmInstance);
         if (maxDepth == -1){
             generateLeafChildrenStats(fmInstance.featureModel());
@@ -225,7 +225,7 @@ public class DyMMerHelper {
         return maxDepth;
     }
 
-    protected double getMedianDepth(FMInstance fmInstance) throws InterruptedException {
+    public double getMedianDepth(FMInstance fmInstance) throws InterruptedException {
         checkInstance(fmInstance);
         if (medianDepth < 0){
             generateLeafChildrenStats(fmInstance.featureModel());
@@ -233,7 +233,7 @@ public class DyMMerHelper {
         return medianDepth;
     }
 
-    protected double getMeanDepth(FMInstance fmInstance) throws InterruptedException {
+    public double getMeanDepth(FMInstance fmInstance) throws InterruptedException {
         checkInstance(fmInstance);
         if (meanDepth < 0) {
             generateLeafChildrenStats(fmInstance.featureModel());
@@ -241,7 +241,7 @@ public class DyMMerHelper {
         return meanDepth;
     }
 
-    protected long getOrGroups(FMInstance fmInstance) {
+    public long getOrGroups(FMInstance fmInstance) {
         checkInstance(fmInstance);
         if (orGroups == -1){
             orGroups = fmInstance.featureModel().getFeatures().stream().filter(e -> e.getStructure().isOr()).count();
@@ -249,7 +249,7 @@ public class DyMMerHelper {
         return orGroups;
     }
 
-    protected long getXorGroups(FMInstance fmInstance) {
+    public long getXorGroups(FMInstance fmInstance) {
         checkInstance(fmInstance);
         if (xorGroups == -1){
             xorGroups = fmInstance.featureModel().getFeatures().stream().filter(e -> e.getStructure().isAlternative()).count();
@@ -257,35 +257,35 @@ public class DyMMerHelper {
         return xorGroups;
     }
 
-    protected double getBranchingFactorMedian(FMInstance fmInstance){
+    public double getBranchingFactorMedian(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (branchingFactorMedian < 0){
             generateBranchingFactors(fmInstance.featureModel());
         }
         return branchingFactorMedian;
     }
-    protected double getBranchingFactorMean(FMInstance fmInstance){
+    public double getBranchingFactorMean(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (branchingFactorMean < 0){
             generateBranchingFactors(fmInstance.featureModel());
         }
         return branchingFactorMean;
     }
-    protected int getBranchingFactorMax(FMInstance fmInstance){
+    public int getBranchingFactorMax(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (branchingFactorMax < 0){
             generateBranchingFactors(fmInstance.featureModel());
         }
         return branchingFactorMax;
     }
-    protected int getRootCount(FMInstance fmInstance){
+    public int getRootCount(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (rootCount < 0){
             rootCount = 1;
         }
         return rootCount;
     }
-    protected long getSingleCyclicDependentFeatures(FMInstance fmInstance){
+    public long getSingleCyclicDependentFeatures(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (singleCyclicDependentFeatures < 0){
             if (constrainedFeatures == null) computeConstrainedFeatures(fmInstance.featureModel());
@@ -295,7 +295,7 @@ public class DyMMerHelper {
         }
         return singleCyclicDependentFeatures;
     }
-    protected long getMultiCyclicDependentFeatures(FMInstance fmInstance){
+    public long getMultiCyclicDependentFeatures(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (multiCyclicDependentFeatures < 0){
             if (constrainedFeatures == null) computeConstrainedFeatures(fmInstance.featureModel());
@@ -305,28 +305,28 @@ public class DyMMerHelper {
         }
         return multiCyclicDependentFeatures;
     }
-    protected long getChildCountXor(FMInstance fmInstance){
+    public long getChildCountXor(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (childCountXor < 0){
             childCountXor = fmInstance.featureModel().getFeatures().stream().map(IFeature::getStructure).filter(IFeatureStructure::isAlternative).mapToLong(IFeatureStructure::getChildrenCount).sum();
         }
         return childCountXor;
     }
-    protected long getChildCountOr(FMInstance fmInstance){
+    public long getChildCountOr(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (childCountOr < 0){
             childCountOr = fmInstance.featureModel().getFeatures().stream().map(IFeature::getStructure).filter(IFeatureStructure::isOr).mapToLong(IFeatureStructure::getChildrenCount).sum();
         }
         return childCountOr;
     }
-    protected long getGroupedXor(FMInstance fmInstance){
+    public long getGroupedXor(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (groupedXor < 0){
             groupedXor = fmInstance.featureModel().getFeatures().stream().filter(e -> (e.getStructure().getParent() != null) && e.getStructure().getParent().isAlternative()).count();
         }
         return groupedXor;
     }
-    protected long getGroupedOr(FMInstance fmInstance){
+    public long getGroupedOr(FMInstance fmInstance){
         checkInstance(fmInstance);
         if (groupedOr < 0){
             groupedOr = fmInstance.featureModel().getFeatures().stream().filter(e -> (e.getStructure().getParent() != null) && e.getStructure().getParent().isOr()).count();
@@ -334,7 +334,7 @@ public class DyMMerHelper {
         return groupedOr;
     }
 
-    protected long getOptionalFeatures(FMInstance fmInstance) {
+    public long getOptionalFeatures(FMInstance fmInstance) {
         checkInstance(fmInstance);
         if(optionalFeatures < 0) {
             optionalFeatures = fmInstance.featureModel().getFeatures().stream().map(IFeature::getStructure)
@@ -346,7 +346,7 @@ public class DyMMerHelper {
         return optionalFeatures;
     }
 
-    protected long getConstraintCount(FMInstance fmInstance) {
+    public long getConstraintCount(FMInstance fmInstance) {
         checkInstance(fmInstance);
         if (constraintCount < 1){
             constraintCount = fmInstance.featureModel().getConstraintCount();
@@ -354,7 +354,7 @@ public class DyMMerHelper {
         return constraintCount;
     }
 
-    protected double getCompoundComplexity(FMInstance fmInstance)  {
+    public double getCompoundComplexity(FMInstance fmInstance)  {
         checkInstance(fmInstance);
         return Math.pow(getFeatureCount(fmInstance), 2)
                 + (Math.pow(getNoMandatoryFeatures(fmInstance), 2)
@@ -365,24 +365,24 @@ public class DyMMerHelper {
                   ) / 9;
     }
 
-    protected double getConnectivityDensityCoefficent(FMInstance fmInstance) throws InterruptedException {
+    public double getConnectivityDensityCoefficent(FMInstance fmInstance) throws InterruptedException {
         checkInstance(fmInstance);
         if (noEdgesConnectivity < 0) computeConnectivity(fmInstance);
         return (double) noEdgesConnectivity / getFeatureCount(fmInstance);
     }
 
-    protected long getCountGrouped(FMInstance fmInstance) {
+    public long getCountGrouped(FMInstance fmInstance) {
         checkInstance(fmInstance);
         return getGroupedOr(fmInstance) + getGroupedXor(fmInstance);
     }
 
-    protected long getCountGroups(FMInstance fmInstance) {
+    public long getCountGroups(FMInstance fmInstance) {
         checkInstance(fmInstance);
         return getOrGroups(fmInstance) + getXorGroups(fmInstance);
     }
 
 
-    protected double getVariabilityRatio(FMInstance fmInstance) throws InterruptedException {
+    public double getVariabilityRatio(FMInstance fmInstance) throws InterruptedException {
         checkInstance(fmInstance);
         if (variablityRatio < 0) {
             long sum = fmInstance.featureModel().getFeatures().stream().mapToInt(e -> e.getStructure().getChildrenCount()).sum();
@@ -392,19 +392,19 @@ public class DyMMerHelper {
     }
 
 
-    protected long getNoFeaturesConstraintRefExceptParents(FMInstance fmInstance) throws InterruptedException {
+    public long getNoFeaturesConstraintRefExceptParents(FMInstance fmInstance) throws InterruptedException {
         checkInstance(fmInstance);
         if (noFeaturesConstraintRefExceptParent < 0) computeConnectivity(fmInstance);
         return noFeaturesConstraintRefExceptParent;
     }
 
-    protected double getMeanRefdFeaturesInConstraintsExceptParentPerFeature(FMInstance fmInstance) throws InterruptedException {
+    public double getMeanRefdFeaturesInConstraintsExceptParentPerFeature(FMInstance fmInstance) throws InterruptedException {
         checkInstance(fmInstance);
         if (meanRefdFeaturesInConstraintsExceptParentPerFeature < 0) computeConnectivity(fmInstance);
         return meanRefdFeaturesInConstraintsExceptParentPerFeature;
     }
 
-    protected long getNoFeaturesWithChildren(FMInstance fmInstance)  {
+    public long getNoFeaturesWithChildren(FMInstance fmInstance)  {
         checkInstance(fmInstance);
         if (noFeaturesWithChildren < 0) {
             noFeaturesWithChildren = fmInstance.featureModel().getFeatures().stream().filter(e -> e.getStructure().getChildrenCount() > 0).count();
@@ -412,7 +412,7 @@ public class DyMMerHelper {
         return noFeaturesWithChildren;
     }
 
-    protected long getNoConstrainedFeatures(FMInstance fmInstance) {
+    public long getNoConstrainedFeatures(FMInstance fmInstance) {
         checkInstance(fmInstance);
         if(Objects.isNull(constrainedFeatures)) computeConstrainedFeatures(fmInstance.featureModel());
         return constrainedFeatures.size();

@@ -3,10 +3,7 @@ package de.uniulm.sp.fe4femo.featureextraction;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import de.uniulm.sp.fe4femo.featureextraction.analyses.AnalysisFMBA;
-import de.uniulm.sp.fe4femo.featureextraction.analyses.AnalysisFMChara;
-import de.uniulm.sp.fe4femo.featureextraction.analyses.AnalysisSATfeatPy;
-import de.uniulm.sp.fe4femo.featureextraction.analyses.AnalysisSatzilla;
+import de.uniulm.sp.fe4femo.featureextraction.analyses.*;
 import de.uniulm.sp.fe4femo.featureextraction.analyses.dymmer.AnalysisDyMMer;
 import de.uniulm.sp.fe4femo.featureextraction.analysis.Analysis;
 import de.uniulm.sp.fe4femo.featureextraction.analysis.Result;
@@ -34,7 +31,8 @@ public class ExtractionHandler {
                 new AnalysisSATfeatPy(),
                 new AnalysisSatzilla(),
                 new AnalysisFMChara(),
-                new AnalysisDyMMer()
+                new AnalysisDyMMer(),
+                new AnalysisESYES()
         );
     }
 
