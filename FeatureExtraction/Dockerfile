@@ -26,7 +26,11 @@ WORKDIR /app
 COPY . .
 RUN gradle build --no-daemon
 
-FROM eclipse-temurin:21.0.5_11-jre-jammy
+FROM ubuntu:jammy-20240911.1
+
+RUN apt-get -y update && \
+    apt-get install --no-install-recommends -y openjdk-21-jre-headless && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN mkdir /out/ && mkdir /in/
 
