@@ -13,11 +13,11 @@ import de.ovgu.featureide.fm.core.io.xml.XmlFeatureModelFormat;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.BufferedReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.nio.file.attribute.FileAttribute;
 import java.util.Optional;
 
@@ -28,7 +28,13 @@ public class FMInstanceFactory {
     public static Optional<FMInstance> createFMInstance(Path pathFM) {
         //TODO handle if dimacs use dimacs, else export dimacs
         try {
-            IFeatureModel featureModel = FeatureModelManager.load(pathFM);
+            Path tmpFile = Files.createTempFile("fm_tmpUVLsafe", ".uvl");
+            try(BufferedReader reader = Files.newBufferedReader(pathFM)) {
+                while (reader.ready()) {
+                    Files.writeString(tmpFile, reader.readLine().replace("'", "`") + System.lineSeparator(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                }
+            }
+            IFeatureModel featureModel = FeatureModelManager.load(tmpFile);
             if (featureModel == null) {
                 LOGGER.error("Could not load feature model {}", pathFM);
                 return Optional.empty();
