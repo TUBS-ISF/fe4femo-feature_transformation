@@ -44,7 +44,7 @@ echo -e "########\nCONTAINER START"
 
 timeout 3600 srun --container-image=${container_path}  --container-name=${container}:no_exec \
    --container-mounts=/etc/slurm/task_prolog:/etc/slurm/task_prolog,/scratch:/scratch,$TMPDIR/in:/in,$TMPDIR/out:/out \
-   --container-workdir=/app/ --no-container-entrypoint java -jar -Djava.io.tmpdir=/out/ fe.jar /in/$input $perMetricTimeout
+   --container-workdir=/app/ --container-writable --no-container-entrypoint java -jar -Djava.io.tmpdir=/out/ fe.jar /in/"$input" $perMetricTimeout
 retValue=$?
 
 if [[ ${retValue} -eq 0 ]]; then
