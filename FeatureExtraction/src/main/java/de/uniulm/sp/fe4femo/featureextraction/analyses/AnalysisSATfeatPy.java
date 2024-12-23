@@ -67,13 +67,19 @@ public class AnalysisSATfeatPy extends Analysis {
             return switch (result.status()){
                 case SUCCESS -> {
                     LOGGER.info("SATfeatPy step {} executed successfully", part);
-                    String[] lines = result.output().lines().toArray(String[]::new);
-                    String lastLine = lines[lines.length-1];
+                    Optional<String> line = result.output().lines()
+                            .dropWhile(e -> ! e.equals("######----######")).skip(1)
+                            .findFirst();
                     try {
-                        Map<String, String> values = objectMapper.readValue(lastLine, typeRef);
-                        yield new IntraStepResult(values, result.status());
+                        if (line.isPresent()) {
+                            Map<String, String> values = objectMapper.readValue(line.get(), typeRef);
+                            yield new IntraStepResult(values, result.status());
+                        } else {
+                            LOGGER.warn("SATfeatPy step {} failed to produce json, most likely due to timeout, with lines: {}", part, result.output());
+                            yield new IntraStepResult(Map.of(), StatusEnum.TIMEOUT);
+                        }
                     } catch (JsonProcessingException e) {
-                        if(LOGGER.isErrorEnabled()) LOGGER.error("SATfeatPy step {} failed to parse json with lines: {}", part, String.join("\n", lines), e);
+                        LOGGER.error("SATfeatPy step {} failed to parse json with lines: {}", part, result.output(), e);
                         yield new IntraStepResult(Map.of(), StatusEnum.ERROR);
                     }
                 }
