@@ -183,10 +183,15 @@ public class AnalysisFMChara extends Analysis {
 
 
         protected static Map<String, String> parseOutput(ExecutableHelper.ExternalResult result) {
-            return result.output().lines()
-                    .dropWhile(e -> !Objects.equals("###---###", e)).skip(1)
-                    .map(e -> e.split(" ", 2))
-                    .collect(Collectors.toMap(e -> e[0], e -> e[1]));
+            try {
+                return result.output().lines()
+                        .dropWhile(e -> !Objects.equals("###---###", e)).skip(1)
+                        .map(e -> e.split(" ", 2))
+                        .collect(Collectors.toMap(e -> e[0], e -> e[1]));
+            } catch (Exception e) {
+                LOGGER.error("Unexpected behaviour in FMChara output parsing with input: {}", result.output(), e);
+                throw e;
+            }
         }
 
         protected static String[] getCommand(String part, Path modelPath, String mode){

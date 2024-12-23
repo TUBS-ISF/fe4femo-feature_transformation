@@ -10,12 +10,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 /**
  * @see <a href="https://github.com/RSD6170/SATfeatPy">https://github.com/RSD6170/SATfeatPy</a>
@@ -75,7 +73,7 @@ public class AnalysisSATfeatPy extends Analysis {
                         Map<String, String> values = objectMapper.readValue(lastLine, typeRef);
                         yield new IntraStepResult(values, result.status());
                     } catch (JsonProcessingException e) {
-                        LOGGER.error("SATfeatPy step {} failed to parse json with line {}", part, lastLine, e);
+                        if(LOGGER.isErrorEnabled()) LOGGER.error("SATfeatPy step {} failed to parse json with lines: {}", part, String.join("\n", lines), e);
                         yield new IntraStepResult(Map.of(), StatusEnum.ERROR);
                     }
                 }
