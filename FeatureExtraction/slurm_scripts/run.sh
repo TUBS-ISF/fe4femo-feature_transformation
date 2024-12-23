@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --time=250
+#SBATCH --time=300
 #SBATCH --job-name=eval_metrics
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=9500
+#SBATCH --mem=15750
 
 perMetricTimeout=1800
 container="extractor"
@@ -35,7 +35,7 @@ if [ -f $inputpath/uvl/$input ]; then
 else
     echo -e "########\nCONTAINER START"
     echo "Missing file"
-    echo -e "########\n3601.1337########\n"
+    echo -e "########\nPROG_STATUS=MISSING_FILE########\n"
     exit 0
 fi
 
@@ -49,16 +49,17 @@ timeout 3600 srun --container-image="$TMPDIR/container.sqsh"  \
 retValue=$?
 
 if [[ ${retValue} -eq 0 ]]; then
+    echo -e "###########\PROG_STATUS=SUCCESS\n###########\n"
     exit 0
 elif  [[ ${retValue} -eq 124 ]]; then
-    echo -e "###########\n3600.42\n###########\n"
+    echo -e "###########\PROG_STATUS=TIMEOUT\n###########\n"
     exit 0
 else
     if [[ ${SLURM_RESTART_COUNT} -le 1 ]]; then
         scontrol requeue $SLURM_JOB_ID
         exit 1
     else
-        echo -e "###########\n3600.999999\n###########\n"
+        echo -e "###########\PROG_STATUS=ERROR\n###########\n"
         exit -1
     fi
 fi
