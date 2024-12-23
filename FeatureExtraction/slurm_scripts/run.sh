@@ -2,8 +2,10 @@
 #SBATCH --time=300
 #SBATCH --job-name=eval_metrics
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=12
 #SBATCH --mem=15750
+
+export OMP_NUM_THREADS=$((${SLURM_JOB_CPUS_PER_NODE}/2))
 
 perMetricTimeout=1800
 container="extractor"
