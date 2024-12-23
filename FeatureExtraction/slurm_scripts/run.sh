@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH --time=300
+#SBATCH --time=6:0:0
 #SBATCH --job-name=eval_metrics
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=12
-#SBATCH --mem=15750
+#SBATCH --mem=16000
 
 export OMP_NUM_THREADS=$((${SLURM_JOB_CPUS_PER_NODE}/2))
 
-perMetricTimeout=1800
+perMetricTimeout=3600
 container="extractor"
 
 config=$HOME/fe4femo/runtime_measurements/SLURM_scripts/config.txt
@@ -56,7 +56,7 @@ if [[ ${retValue} -eq 0 ]]; then
     echo -e "###########\PROG_STATUS=SUCCESS\n###########\n"
     exit 0
 else
-    if [[ ${SLURM_RESTART_COUNT} -le 1 ]]; then
+    if [[ ${SLURM_RESTART_COUNT} -lt 1 ]]; then
         scontrol requeue $SLURM_JOB_ID
         exit 1
     else
