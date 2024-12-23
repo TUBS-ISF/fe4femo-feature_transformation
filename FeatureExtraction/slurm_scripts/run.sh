@@ -23,6 +23,8 @@ container_path=$HOME/fe4femo/FeatureExtraction/slurm_scripts/${container}_i.sqsh
 
 echo -e "CONTAINER=${container_path}"
 
+cp "${container_path}" "$TMPDIR/container.sqsh"
+
 echo -e "RERUN=${SLURM_RESTART_COUNT}"
 
 mkdir -p $TMPDIR/in/
@@ -41,7 +43,7 @@ echo -e "########\nCONTAINER START"
 
 
 
-timeout 3600 srun --container-image=${container_path}  \
+timeout 3600 srun --container-image="$TMPDIR/container.sqsh"  \
    --container-mounts=/etc/slurm/task_prolog:/etc/slurm/task_prolog,/scratch:/scratch,$TMPDIR/in:/in,$TMPDIR/out:/out \
    --container-workdir=/app/ --container-writable --no-container-entrypoint java -jar -Djava.io.tmpdir=/out/ fe.jar /in/"${no}".uvl $perMetricTimeout
 retValue=$?
