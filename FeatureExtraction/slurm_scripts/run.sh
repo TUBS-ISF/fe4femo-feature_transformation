@@ -45,7 +45,8 @@ fi
 
 echo -e "########\nCONTAINER START"
 
-
+mkdir -p $TMPDIR/enroot
+ENROOT_DATA_PATH=$TMPDIR/enroot
 
 srun --container-image="$TMPDIR/container.sqsh" \
    --container-mounts=/etc/slurm/task_prolog:/etc/slurm/task_prolog,/scratch:/scratch,$TMPDIR/in:/in,$TMPDIR/out:/out,$TMPDIR/tmp:/tmp \
