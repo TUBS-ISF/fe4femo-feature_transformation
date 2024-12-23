@@ -30,11 +30,11 @@ FROM ubuntu:jammy-20240911.1
 
 RUN apt-get -y update && \
     apt-get install --no-install-recommends -y openjdk-21-jre-headless && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN mkdir /out/ && mkdir /in/
+    rm -rf /var/lib/apt/lists/* && \
+    mkdir /out/ && mkdir /in/
 
 ENV TMPDIR=/out/
+ENV PYTHONDONTWRITEBYTECODE=FALSE
 
 COPY --from=satfeatpy /venv_SATfeatPy/ /venv_SATfeatPy/
 COPY --from=fmchara /venv_fm_chara/ /venv_fm_chara/
