@@ -23,9 +23,10 @@ container_path=$HOME/fe4femo/FeatureExtraction/slurm_scripts/${container}_i.sqsh
 
 echo -e "CONTAINER=${container_path}"
 
-cp "${container_path}" "$TMPDIR/container.sqsh"
-
 echo -e "RERUN=${SLURM_RESTART_COUNT}"
+
+cp "${container_path}" "$TMPDIR/container.sqsh"
+echo -e "Successfully copied container sqsh"
 
 mkdir -p $TMPDIR/in/
 mkdir -p $TMPDIR/out/
