@@ -57,7 +57,7 @@ if [[ ${retValue} -eq 0 ]]; then
     echo -e "###########\PROG_STATUS=SUCCESS\n###########\n"
     exit 0
 else
-    if [[ ${SLURM_RESTART_COUNT} -lt 1 ]]; then
+    if [[ ${SLURM_RESTART_COUNT} -lt 0 ]]; then # Deactivated
         scontrol requeue $SLURM_JOB_ID
         exit 1
     else
