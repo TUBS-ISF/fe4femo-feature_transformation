@@ -1,11 +1,11 @@
 #!/bin/bash
-#SBATCH --time=125
+#SBATCH --time=250
 #SBATCH --job-name=eval_metrics
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=9500
 
-perMetricTimeout=120
+perMetricTimeout=1800
 container="extractor"
 
 config=$HOME/fe4femo/runtime_measurements/SLURM_scripts/config.txt
@@ -27,10 +27,9 @@ echo -e "RERUN=${SLURM_RESTART_COUNT}"
 
 mkdir -p $TMPDIR/in/
 mkdir -p $TMPDIR/out/
-mkdir -p $(dirname "$TMPDIR/in/$input")
 
 if [ -f $inputpath/uvl/$input ]; then
-    cp $inputpath/uvl/$input $TMPDIR/in/$input
+    cp $inputpath/uvl/$input $TMPDIR/in/"${no}".uvl
 else
     echo -e "########\nCONTAINER START"
     echo "Missing file"
@@ -42,9 +41,9 @@ echo -e "########\nCONTAINER START"
 
 
 
-timeout 3600 srun --container-image=${container_path}  --container-name=${container}:no_exec \
+timeout 3600 srun --container-image=${container_path}  \
    --container-mounts=/etc/slurm/task_prolog:/etc/slurm/task_prolog,/scratch:/scratch,$TMPDIR/in:/in,$TMPDIR/out:/out \
-   --container-workdir=/app/ --container-writable --no-container-entrypoint java -jar -Djava.io.tmpdir=/out/ fe.jar /in/"$input" $perMetricTimeout
+   --container-workdir=/app/ --container-writable --no-container-entrypoint java -jar -Djava.io.tmpdir=/out/ fe.jar /in/"${no}".uvl $perMetricTimeout
 retValue=$?
 
 if [[ ${retValue} -eq 0 ]]; then
