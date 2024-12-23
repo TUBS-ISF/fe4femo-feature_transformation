@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=6:0:0
+#SBATCH --time=8:0:0
 #SBATCH --job-name=eval_metrics
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=12
