@@ -24,7 +24,7 @@ public class AnalysisFMBA extends Analysis {
 
     @Override
     public List<Result> analyseFM(FMInstance instance, int perStepTimeout) throws InterruptedException {
-        return super.analyseFM(instance, perStepTimeout, (perStepTimeout * 4)+4);
+        return super.analyseFM(instance, perStepTimeout, (perStepTimeout)+4);
     }
 
     private static List<AnalysisStep> getAnalysisSteps() {
