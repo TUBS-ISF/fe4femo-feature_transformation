@@ -27,9 +27,6 @@ echo -e "CONTAINER=${container_path}"
 
 echo -e "RERUN=${SLURM_RESTART_COUNT}"
 
-cp "${container_path}" "$TMPDIR/container.sqsh"
-echo -e "Successfully copied container sqsh"
-
 mkdir -p $TMPDIR/in/
 mkdir -p $TMPDIR/out/
 mkdir -p $TMPDIR/tmp/
@@ -46,9 +43,9 @@ fi
 echo -e "########\nCONTAINER START"
 
 
-srun --container-image="$TMPDIR/container.sqsh" \
+srun --container-image="$container_path" --container-name=${container}:no_exec \
    --container-mounts=/etc/slurm/task_prolog:/etc/slurm/task_prolog,/scratch:/scratch,$TMPDIR/in:/in,$TMPDIR/out:/out,$TMPDIR/tmp:/tmp \
-   --container-workdir=/app/ --container-writable --no-container-entrypoint java -jar -Djava.io.tmpdir=$TMPDIR fe.jar /in/"${no}".uvl $perMetricTimeout
+   --container-workdir=/app/ --no-container-entrypoint java -jar -Djava.io.tmpdir=$TMPDIR fe.jar /in/"${no}".uvl $perMetricTimeout
 retValue=$?
 
 if [[ ${retValue} -eq 0 ]]; then
