@@ -161,7 +161,7 @@ public class AnalysisFMChara extends Analysis {
 
         @Override
         public IntraStepResult analyze(FMInstance fmInstance, int timeout) throws InterruptedException {
-            ExecutableHelper.ExternalResult result = ExecutableHelper.executeExternal(getCommand(part, fmInstance.xmlPath(), "metrics"), timeout, subpath);
+            ExecutableHelper.ExternalResult result = ExecutableHelper.executeExternal(getCommand(part, fmInstance.uvlPath(), fmInstance.xmlPath(), "metrics"), timeout, subpath);
             return switch (result.status()){
                 case SUCCESS -> {
                     LOGGER.info("FM_Characterization metric step executed successfully");
@@ -184,23 +184,29 @@ public class AnalysisFMChara extends Analysis {
 
         protected static Map<String, String> parseOutput(ExecutableHelper.ExternalResult result) {
             try {
-                return result.output().lines()
+                Map<String, String> output = result.output().lines()
                         .dropWhile(e -> !Objects.equals("###---###", e)).skip(1)
                         .map(e -> e.split(" ", 2))
                         .collect(Collectors.toMap(e -> e[0], e -> e[1]));
+                if (output.isEmpty()) {
+                    LOGGER.error("Missing output in FMChara output parsing with input: {}", result.output());
+                    throw new IllegalStateException("Missing Output in FMChara");
+                }
+                return output;
             } catch (Exception e) {
                 LOGGER.error("Unexpected behaviour in FMChara output parsing with input: {}", result.output(), e);
                 throw e;
             }
         }
 
-        protected static String[] getCommand(String part, Path modelPath, String mode){
+        protected static String[] getCommand(String part, Path uvlPath, Path xmlPath, String mode){
             return new String[]{
                     Path.of("/venv_fm_chara/bin/python").toAbsolutePath().toString(),
                     Path.of("external/fm_characterization/main_characterization.py").toAbsolutePath().toString(),
                     "--mode",
                     mode,
-                    modelPath.toString()
+                    uvlPath.toString(),
+                    xmlPath.toString()
             };
         }
     }
@@ -215,7 +221,7 @@ public class AnalysisFMChara extends Analysis {
 
         @Override
         public IntraStepResult analyze(FMInstance fmInstance, int timeout) throws InterruptedException {
-            ExecutableHelper.ExternalResult result = ExecutableHelper.executeExternal(getCommand(part, fmInstance.xmlPath(), "analysis_full"), timeout, subpath);
+            ExecutableHelper.ExternalResult result = ExecutableHelper.executeExternal(getCommand(part, fmInstance.uvlPath(), fmInstance.xmlPath(), "analysis_full"), timeout, subpath);
             return switch (result.status()){
                 case SUCCESS -> {
                     LOGGER.info("Expensive FM_Characterization analyses step executed successfully");
@@ -237,7 +243,7 @@ public class AnalysisFMChara extends Analysis {
         }
 
         private IntraStepResult analyzeEasy(FMInstance fmInstance, int timeout) throws InterruptedException{
-            ExecutableHelper.ExternalResult result = ExecutableHelper.executeExternal(getCommand(part, fmInstance.xmlPath(), "analysis_light"), timeout, subpath);
+            ExecutableHelper.ExternalResult result = ExecutableHelper.executeExternal(getCommand(part, fmInstance.uvlPath(), fmInstance.xmlPath(), "analysis_light"), timeout, subpath);
             return switch (result.status()){
                 case SUCCESS -> {
                     LOGGER.info("Easy FM_Characterization analyses step executed successfully");
