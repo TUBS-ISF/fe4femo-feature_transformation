@@ -45,6 +45,7 @@ public class ExtractionHandler {
             FMInstance featureModel = FMInstanceFactory.createFMInstance(featureModelPath).orElseThrow();
             List<Result> results = analyseFM(createAnalyses(), featureModel, Integer.parseInt(args[1]));
             printResultsToConsole(results);
+            LOGGER.info("Finished analysis of feature model!");
             System.exit(0);
         } catch (InvalidPathException e) {
             LOGGER.error("Invalid input path {}", args[0], e);
