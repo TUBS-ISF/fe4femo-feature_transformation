@@ -23,7 +23,6 @@ public class ExecutableHelper {
         Process ps = null;
         try {
             ps = new ProcessBuilder(commands).redirectErrorStream(true).directory(workingDir.toFile()).start();
-            long pid = ps.pid();
             if (!ps.waitFor(timeout, TimeUnit.SECONDS)) {
                 killProcesses(ps.toHandle());
                 return new ExternalResult("", StatusEnum.TIMEOUT);
