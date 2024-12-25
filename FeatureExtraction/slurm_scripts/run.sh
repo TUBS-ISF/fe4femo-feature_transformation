@@ -2,8 +2,8 @@
 #SBATCH --time=8:0:0
 #SBATCH --job-name=eval_metrics
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=12
-#SBATCH --mem=24000
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=32000
 
 export OMP_NUM_THREADS=$((${SLURM_JOB_CPUS_PER_NODE}/2))
 
