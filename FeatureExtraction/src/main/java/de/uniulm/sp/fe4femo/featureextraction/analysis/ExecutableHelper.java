@@ -36,6 +36,7 @@ public class ExecutableHelper {
                     val.append(line).append("\n");
                 }
             }
+            if (ps != null)	killProcesses(ps.toHandle());
             return new ExternalResult(val.toString(), StatusEnum.SUCCESS);
         } catch (IOException e) {
             if (ps != null)	killProcesses(ps.toHandle());
