@@ -26,6 +26,21 @@ WORKDIR /app
 COPY . .
 RUN gradle build --no-daemon
 
+FROM ubuntu:jammy-20240911.1 AS satzilla
+
+RUN apt-get update && apt-get -y install cmake gcc build-essential software-properties-common zlib1g-dev &&\
+    add-apt-repository ppa:ubuntu-toolchain-r/test &&\
+    apt-get update && apt-get -y install gcc-11 g++-11 &&\
+    rm /usr/bin/gcc && rm /usr/bin/g++ &&\
+    ln -s /usr/bin/gcc-11 /usr/bin/gcc && ln -s /usr/bin/g++-11 /usr/bin/g++
+
+WORKDIR /app
+COPY external/revisiting_satzilla/SAT-features-competition2024/ /app/external/revisiting_satzilla/SAT-features-competition2024/
+
+WORKDIR /app/external/revisiting_satzilla/SAT-features-competition2024/
+RUN make
+
+
 FROM ubuntu:jammy-20240911.1
 
 RUN apt-get -y update && \
@@ -41,7 +56,7 @@ COPY --from=fmchara /venv_fm_chara/ /venv_fm_chara/
 
 WORKDIR /app
 
-COPY  external/revisiting_satzilla/SAT-features-competition2024/ /app/external/revisiting_satzilla/SAT-features-competition2024/
+COPY --from=satzilla  /app/external/revisiting_satzilla/SAT-features-competition2024/ /app/external/revisiting_satzilla/SAT-features-competition2024/
 
 COPY external/feature-model-batch-analysis/solver/ /app/external/feature-model-batch-analysis/solver/
 
