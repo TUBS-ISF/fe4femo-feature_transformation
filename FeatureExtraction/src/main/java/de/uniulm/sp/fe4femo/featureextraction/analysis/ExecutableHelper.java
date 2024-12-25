@@ -8,6 +8,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 public class ExecutableHelper {
@@ -23,26 +26,36 @@ public class ExecutableHelper {
         Process ps = null;
         try {
             ps = new ProcessBuilder(commands).redirectErrorStream(true).directory(workingDir.toFile()).start();
+
+            Process finalPs = ps;
+            Future<String> output = ForkJoinPool.commonPool().submit(() -> {
+                StringBuilder val = new StringBuilder();
+                String line;
+                try (BufferedReader in = new BufferedReader(new InputStreamReader(finalPs.getInputStream()))) {
+                    while ((line = in.readLine()) != null) {
+                        val.append(line).append("\n");
+                    }
+                }
+                return val.toString();
+            });
+
             if (!ps.waitFor(timeout, TimeUnit.SECONDS)) {
                 killProcesses(ps.toHandle());
                 return new ExternalResult("", StatusEnum.TIMEOUT);
             }
 
-            StringBuilder val = new StringBuilder();
-            String line;
-            try (BufferedReader in = new BufferedReader(new InputStreamReader(ps.getInputStream()))) {
-                while ((line = in.readLine()) != null) {
-                    val.append(line).append("\n");
-                }
-            }
             if (ps != null)	killProcesses(ps.toHandle());
-            return new ExternalResult(val.toString(), StatusEnum.SUCCESS);
+            return new ExternalResult(output.get(), StatusEnum.SUCCESS);
         } catch (IOException e) {
             if (ps != null)	killProcesses(ps.toHandle());
             return new ExternalResult("", StatusEnum.ERROR);
         } catch (InterruptedException e) {
             if (ps != null)	killProcesses(ps.toHandle());
             throw new InterruptedException();
+        } catch (ExecutionException e) {
+            if (ps != null)	killProcesses(ps.toHandle());
+            LOGGER.error("Error reading from external command {}", commands, e);
+            return new ExternalResult("", StatusEnum.ERROR);
         }
 
     }
