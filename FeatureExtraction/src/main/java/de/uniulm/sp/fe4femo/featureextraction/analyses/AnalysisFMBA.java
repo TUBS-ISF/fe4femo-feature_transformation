@@ -5,6 +5,7 @@ import de.uniulm.sp.fe4femo.featureextraction.analysis.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.collection.fm.analyses.*;
+import org.collection.fm.formulagraph.ConnectivityGraph;
 import org.collection.fm.util.AnalysisCacher;
 
 import java.nio.file.Path;
@@ -56,9 +57,10 @@ public class AnalysisFMBA extends Analysis {
                 new NumberOfUnitClauses(),
                 new NumberOfTwoClauses(),
                 new ClauseDensity(),
-                new ConnectivityDensity(),
                 new VoidModel(),
                 new NumberOfValidConfigurationsLog(),
+
+                new ConnectivityDensity(),
                 new SimpleCyclomaticComplexity(),
                 new IndependentCyclomaticComplexity(),
 
