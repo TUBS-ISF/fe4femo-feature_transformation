@@ -97,6 +97,11 @@ public class AnalysisSatzilla extends Analysis {
             command[2] = dimacsPath.toString();
             return command;
         }
+
+        @Override
+        public String toString() {
+            return "SATzillaStep " + part;
+        }
     }
 
 

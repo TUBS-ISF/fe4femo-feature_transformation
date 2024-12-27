@@ -49,5 +49,8 @@ public abstract class DyMMerStep implements AnalysisStep {
         return names;
     }
 
-
+    @Override
+    public String toString() {
+        return "DyMMerStep [" + Arrays.toString(names) + "]";
+    }
 }

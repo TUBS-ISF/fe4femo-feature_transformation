@@ -107,6 +107,10 @@ public class AnalysisFMBA extends Analysis {
 
         }
 
+        @Override
+        public String toString() {
+            return "FMBASMultiStep [" + Arrays.toString(getAnalysesNames()) + "]";
+        }
     }
 
     public static class FMBASingleStep implements AnalysisStep {
@@ -136,5 +140,9 @@ public class AnalysisFMBA extends Analysis {
             }
         }
 
+        @Override
+        public String toString() {
+            return "FMBASingleStep [" + Arrays.toString(getAnalysesNames()) + "]";
+        }
     }
 }

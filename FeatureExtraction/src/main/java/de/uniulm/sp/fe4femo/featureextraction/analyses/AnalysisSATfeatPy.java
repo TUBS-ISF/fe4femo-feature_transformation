@@ -111,7 +111,10 @@ public class AnalysisSATfeatPy extends Analysis {
                     dimacsPath.toString()
             };
         }
+
+        @Override
+        public String toString() {
+            return "SATfeatPyStep " + part;
+        }
     }
-
-
 }

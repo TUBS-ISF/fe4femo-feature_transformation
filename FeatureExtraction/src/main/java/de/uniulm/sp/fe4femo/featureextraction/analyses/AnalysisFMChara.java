@@ -209,6 +209,11 @@ public class AnalysisFMChara extends Analysis {
                     xmlPath.toString()
             };
         }
+
+        @Override
+        public String toString() {
+            return "FMCharaMetricStep [" + Arrays.toString(getAnalysesNames()) + "]";
+        }
     }
 
     public static class FMCharaAnalysesStep extends FMCharaMetricStep {
@@ -262,5 +267,9 @@ public class AnalysisFMChara extends Analysis {
             };
         }
 
+        @Override
+        public String toString() {
+            return "FMCharaAnalysesStep [" + Arrays.toString(getAnalysesNames()) + "]";
+        }
     }
 }

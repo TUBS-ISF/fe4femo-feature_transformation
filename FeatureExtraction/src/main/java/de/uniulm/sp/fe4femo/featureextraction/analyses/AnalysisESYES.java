@@ -16,16 +16,14 @@ import de.uniulm.sp.fe4femo.featureextraction.analysis.StatusEnum;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Executors;
 
 // https://www.sciencedirect.com/science/article/pii/S0950584918301873
 public class AnalysisESYES extends Analysis {
 
     protected static final Logger LOGGER = LogManager.getLogger();
+    public static final String ESYESSTEP = "ESYESStep [";
 
 
     public AnalysisESYES() {
@@ -83,6 +81,11 @@ public class AnalysisESYES extends Analysis {
             public String[] getAnalysesNames() {
                 return new String[]{"RatioActualVariable", "RatioActualCommonFeatures", "RatioActualDeadFeatures"};
             }
+
+            @Override
+            public String toString() {
+                return ESYESSTEP + Arrays.toString(getAnalysesNames()) + "]";
+            }
         };
     }
 
@@ -132,6 +135,11 @@ public class AnalysisESYES extends Analysis {
             public String[] getAnalysesNames() {
                 return new String[]{"pathMandatory", "RatioPathMandatory", "pathOptional", "RatioPathOptional", "localMandatory", "RatioLocalMandatory", "localOptional", "RatioLocalOptional"};
             }
+
+            @Override
+            public String toString() {
+                return ESYESSTEP + Arrays.toString(getAnalysesNames()) + "]";
+            }
         };
     }
 
@@ -149,6 +157,11 @@ public class AnalysisESYES extends Analysis {
             public String[] getAnalysesNames() {
                 return new String[]{"#Variability_points_and_cyclomatic_complexity"};
             }
+
+            @Override
+            public String toString() {
+                return ESYESSTEP + Arrays.toString(getAnalysesNames()) + "]";
+            }
         };
     }
 
@@ -165,6 +178,11 @@ public class AnalysisESYES extends Analysis {
                 DyMMerHelper dyMMerHelper = new DyMMerHelper();
                 long value = dyMMerHelper.getConstraintCount(fmInstance) + dyMMerHelper.getOrGroups(fmInstance) + dyMMerHelper.getXorGroups(fmInstance);
                 return new IntraStepResult(Map.of(getAnalysesNames()[0], String.valueOf(value)), StatusEnum.SUCCESS);
+            }
+
+            @Override
+            public String toString() {
+                return ESYESSTEP + Arrays.toString(getAnalysesNames()) + "]";
             }
         };
     }
@@ -189,6 +207,11 @@ public class AnalysisESYES extends Analysis {
                     LOGGER.warn("Error in ESYES atomic sets", e);
                     return new IntraStepResult(Map.of(), StatusEnum.ERROR);
                 }
+            }
+
+            @Override
+            public String toString() {
+                return ESYESSTEP + Arrays.toString(getAnalysesNames()) + "]";
             }
         };
     }
