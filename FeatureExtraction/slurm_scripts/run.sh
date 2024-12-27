@@ -2,8 +2,8 @@
 #SBATCH --time=10:0:0
 #SBATCH --job-name=eval_metrics
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=32000
+#SBATCH --cpus-per-task=20
+#SBATCH --mem=48000
 
 export OMP_NUM_THREADS=$((${SLURM_JOB_CPUS_PER_NODE}/2))
 
@@ -49,7 +49,7 @@ echo -e "########\nCONTAINER START"
 
 srun --container-image="$container_path" --container-name=${container}:no_exec \
    --container-mounts=/etc/slurm/task_prolog:/etc/slurm/task_prolog,/scratch:/scratch,$TMPDIR/in:/in,$TMPDIR/out:/out,$TMPDIR/tmp:/tmp \
-   --container-workdir=/app/ --no-container-entrypoint java -jar -Djava.io.tmpdir=$TMPDIR -Xmx${JavaMaxMem}m -XX:MaxRAMPercentage=75.0 fe.jar /in/"${no}".uvl $perMetricTimeout
+   --container-workdir=/app/ --no-container-entrypoint java -jar -Djava.io.tmpdir=$TMPDIR -Xmx${JavaMaxMem}m fe.jar /in/"${no}".uvl $perMetricTimeout
 retValue=$?
 
 if [[ ${retValue} -eq 0 ]]; then
