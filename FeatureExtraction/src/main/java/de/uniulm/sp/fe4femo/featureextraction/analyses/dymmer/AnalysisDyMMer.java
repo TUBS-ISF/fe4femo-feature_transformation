@@ -175,7 +175,7 @@ public class AnalysisDyMMer extends Analysis {
                     protected IntraStepResult doComputation(FMInstance fmInstance, int timeout) throws Exception {
                         NumberOfValidConfigurationsLog noConfigs = new NumberOfValidConfigurationsLog();
                         String retValue = noConfigs.getResult(fmInstance.featureModel(), fmInstance.fmFormula(), timeout, Path.of("external/feature-model-batch-analysis"));
-                        if (Objects.equals(retValue, "?")) throw new Exception("Error in computation of valid configuration count!");
+                        if (Objects.equals(retValue, "?")) throw new Exception("Error or Timeout in computation of valid configuration count!");
                         return new IntraStepResult(
                                 Map.of(getAnalysesNames()[0], retValue),
                                 StatusEnum.SUCCESS
