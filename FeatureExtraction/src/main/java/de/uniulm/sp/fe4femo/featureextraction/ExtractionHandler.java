@@ -3,6 +3,7 @@ package de.uniulm.sp.fe4femo.featureextraction;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import de.ovgu.featureide.fm.core.io.UnsupportedModelException;
 import de.uniulm.sp.fe4femo.featureextraction.analyses.*;
 import de.uniulm.sp.fe4femo.featureextraction.analyses.dymmer.AnalysisDyMMer;
 import de.uniulm.sp.fe4femo.featureextraction.analysis.Analysis;
@@ -55,6 +56,8 @@ public class ExtractionHandler {
             LOGGER.error("Invalid per-step timeout \"{}\"", args[1], e);
         } catch (ArrayIndexOutOfBoundsException e) {
             LOGGER.error("Not enough CLI arguments given");
+        } catch (UnsupportedModelException e) {
+            LOGGER.error("Invalid Input Format, currently only supports UVL {}", ".uvl", e);
         }
         System.exit(1);
     }

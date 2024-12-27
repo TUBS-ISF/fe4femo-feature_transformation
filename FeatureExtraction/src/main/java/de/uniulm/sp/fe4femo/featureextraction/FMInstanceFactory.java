@@ -5,6 +5,7 @@ import de.ovgu.featureide.fm.attributes.format.XmlExtendedFeatureModelFormat;
 import de.ovgu.featureide.fm.core.analysis.cnf.formula.FeatureModelFormula;
 import de.ovgu.featureide.fm.core.base.IFeatureModel;
 import de.ovgu.featureide.fm.core.configuration.FeatureIDEFormat;
+import de.ovgu.featureide.fm.core.io.UnsupportedModelException;
 import de.ovgu.featureide.fm.core.io.dimacs.DimacsWriter;
 import de.ovgu.featureide.fm.core.io.manager.FeatureModelManager;
 import de.ovgu.featureide.fm.core.io.manager.IFeatureModelManager;
@@ -25,8 +26,10 @@ public class FMInstanceFactory {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    public static Optional<FMInstance> createFMInstance(Path pathFM) {
-        //TODO handle if dimacs use dimacs, else export dimacs
+    public static Optional<FMInstance> createFMInstance(Path pathFM) throws UnsupportedModelException {
+        if(!pathFM.getFileName().toString().endsWith(".uvl")) {
+            throw new UnsupportedModelException("Currently only UVL supported", 0);
+        }
         try {
             Path tmpFile = Files.createTempFile("fm_tmpUVLsafe", ".uvl");
             try(BufferedReader reader = Files.newBufferedReader(pathFM)) {
