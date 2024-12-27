@@ -31,7 +31,7 @@ public class FMInstanceFactory {
             Path tmpFile = Files.createTempFile("fm_tmpUVLsafe", ".uvl");
             try(BufferedReader reader = Files.newBufferedReader(pathFM)) {
                 while (reader.ready()) {
-                    Files.writeString(tmpFile, reader.readLine().replace("'", "`") + System.lineSeparator(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                    Files.writeString(tmpFile, reader.readLine().replace("'", "`").replaceAll("\\{featureDescription__.*}" ,"") + System.lineSeparator(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
                 }
             }
             IFeatureModel featureModel = FeatureModelManager.load(tmpFile);
