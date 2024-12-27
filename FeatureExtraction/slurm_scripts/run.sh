@@ -27,6 +27,10 @@ echo -e "CONTAINER=${container_path}"
 
 echo -e "RERUN=${SLURM_RESTART_COUNT}"
 
+memFloat=$(echo "$SLURM_MEM_PER_NODE * 0.70" | bc -l )
+JavaMaxMem=$(printf "%.0f\n" "$memFloat")
+echo -e "JAVA_MAX_MEM_MB=$JavaMaxMem"
+
 mkdir -p $TMPDIR/in/
 mkdir -p $TMPDIR/out/
 mkdir -p $TMPDIR/tmp/
@@ -45,7 +49,7 @@ echo -e "########\nCONTAINER START"
 
 srun --container-image="$container_path" --container-name=${container}:no_exec \
    --container-mounts=/etc/slurm/task_prolog:/etc/slurm/task_prolog,/scratch:/scratch,$TMPDIR/in:/in,$TMPDIR/out:/out,$TMPDIR/tmp:/tmp \
-   --container-workdir=/app/ --no-container-entrypoint java -jar -Djava.io.tmpdir=$TMPDIR -XX:MaxRAMPercentage=75.0 fe.jar /in/"${no}".uvl $perMetricTimeout
+   --container-workdir=/app/ --no-container-entrypoint java -jar -Djava.io.tmpdir=$TMPDIR -Xmx${JavaMaxMem}m -XX:MaxRAMPercentage=75.0 fe.jar /in/"${no}".uvl $perMetricTimeout
 retValue=$?
 
 if [[ ${retValue} -eq 0 ]]; then
