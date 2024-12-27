@@ -212,7 +212,7 @@ public class AnalysisFMChara extends Analysis {
 
         @Override
         public String toString() {
-            return "FMCharaMetricStep [" + Arrays.toString(getAnalysesNames()) + "]";
+            return "FMCharaMetricStep";
         }
     }
 
@@ -269,7 +269,7 @@ public class AnalysisFMChara extends Analysis {
 
         @Override
         public String toString() {
-            return "FMCharaAnalysesStep [" + Arrays.toString(getAnalysesNames()) + "]";
+            return "FMCharaAnalysesStep";
         }
     }
 }
