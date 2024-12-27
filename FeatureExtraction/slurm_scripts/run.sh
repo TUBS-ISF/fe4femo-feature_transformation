@@ -45,7 +45,7 @@ echo -e "########\nCONTAINER START"
 
 srun --container-image="$container_path" --container-name=${container}:no_exec \
    --container-mounts=/etc/slurm/task_prolog:/etc/slurm/task_prolog,/scratch:/scratch,$TMPDIR/in:/in,$TMPDIR/out:/out,$TMPDIR/tmp:/tmp \
-   --container-workdir=/app/ --no-container-entrypoint java -jar -Djava.io.tmpdir=$TMPDIR fe.jar /in/"${no}".uvl $perMetricTimeout
+   --container-workdir=/app/ --no-container-entrypoint java -jar -Djava.io.tmpdir=$TMPDIR -XX:MaxRAMPercentage=75.0 fe.jar /in/"${no}".uvl $perMetricTimeout
 retValue=$?
 
 if [[ ${retValue} -eq 0 ]]; then
