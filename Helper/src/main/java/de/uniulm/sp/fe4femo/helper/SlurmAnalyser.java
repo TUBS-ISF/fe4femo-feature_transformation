@@ -3,7 +3,6 @@ package de.uniulm.sp.fe4femo.helper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.time.LocalTime;
@@ -17,6 +16,8 @@ public abstract class SlurmAnalyser implements LineAnalyser{
 
     private static final Logger LOGGER = LogManager.getLogger();
 
+    protected final Path path;
+
     protected int modelNumber = -1;
     protected Map<Integer, String> modelPath = new HashMap<>();
     protected Map<Integer, String> toolName = new HashMap<>();
@@ -27,6 +28,11 @@ public abstract class SlurmAnalyser implements LineAnalyser{
     protected Map<Integer, BigDecimal> jobTime = new HashMap<>();
     protected Map<Integer, BigDecimal> cpuUtilizationTime = new HashMap<>();
     protected Map<Integer, BigDecimal> jobMemMb = new HashMap<>();
+
+    protected SlurmAnalyser(Path path) {
+        this.path = path;
+        //TODO maybe parse modelNo here?
+    }
 
 
     @Override

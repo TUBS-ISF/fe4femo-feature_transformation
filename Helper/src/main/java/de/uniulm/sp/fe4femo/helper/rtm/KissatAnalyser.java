@@ -17,6 +17,10 @@ public class KissatAnalyser extends SlurmAnalyser {
 
     protected Map<Integer, Boolean> satisfiability;
 
+    public KissatAnalyser(Path path) {
+        super(path);
+    }
+
 
     @Override
     public void export(Path outputPath) throws IOException {

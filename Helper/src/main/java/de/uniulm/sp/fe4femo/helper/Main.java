@@ -1,5 +1,6 @@
 package de.uniulm.sp.fe4femo.helper;
 
+import de.uniulm.sp.fe4femo.helper.rtm.KissatAnalyser;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -15,8 +16,8 @@ public class Main {
     private static final Logger LOGGER = LogManager.getLogger();
 
 
-    private static Map<String, Function<Path, LineAnalyser>> typeMap = Map.of(
-
+    private static final Map<String, Function<Path, LineAnalyser>> typeMap = Map.of(
+        "kissat", KissatAnalyser::new
     );
 
     public static void main(String[] args) {
