@@ -16,7 +16,7 @@ public class KissatAnalyser extends SlurmAnalyser {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    protected Map<Integer, Boolean> satisfiability = new HashMap<>();
+    protected final Map<Integer, Boolean> satisfiability = new HashMap<>();
 
     public KissatAnalyser(Path path) {
         super(path);

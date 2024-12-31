@@ -19,15 +19,15 @@ public abstract class SlurmAnalyser implements LineAnalyser{
     protected final Path path;
 
     protected int modelNumber = -1;
-    protected Map<Integer, String> modelPath = new HashMap<>();
-    protected Map<Integer, String> toolName = new HashMap<>();
-    protected Map<Integer, BigDecimal> wallClockInner = new HashMap<>();
-    protected Map<Integer, BigDecimal> userClockInner = new HashMap<>();
-    protected Map<Integer, BigDecimal> sysClockInner = new HashMap<>();
-    protected Map<Integer, BigDecimal> wallClockOuter = new HashMap<>();
-    protected Map<Integer, BigDecimal> jobTime = new HashMap<>();
-    protected Map<Integer, BigDecimal> cpuUtilizationTime = new HashMap<>();
-    protected Map<Integer, BigDecimal> jobMemMb = new HashMap<>();
+    protected final Map<Integer, String> modelPath = new HashMap<>();
+    protected String toolName = "";
+    protected final Map<Integer, BigDecimal> wallClockInner = new HashMap<>();
+    protected final Map<Integer, BigDecimal> userClockInner = new HashMap<>();
+    protected final Map<Integer, BigDecimal> sysClockInner = new HashMap<>();
+    protected final Map<Integer, BigDecimal> wallClockOuter = new HashMap<>();
+    protected final Map<Integer, BigDecimal> jobTime = new HashMap<>();
+    protected final Map<Integer, BigDecimal> cpuUtilizationTime = new HashMap<>();
+    protected final Map<Integer, BigDecimal> jobMemMb = new HashMap<>();
 
     protected SlurmAnalyser(Path path) {
         this.path = path;
@@ -44,7 +44,7 @@ public abstract class SlurmAnalyser implements LineAnalyser{
                 case "MODEL_PATH" -> modelPath.put(modelNumber, equalSplit[1]);
                 case "TOOL_NAME" -> {
                     String[] pathSplit = equalSplit[1].split("/");
-                    toolName.put(modelNumber, pathSplit[pathSplit.length -1].replace("_i.sqsh", ""));
+                    toolName = pathSplit[pathSplit.length -1].replace("_i.sqsh", "");
                 }
                 case "REALTIME" -> wallClockInner.put(modelNumber, new BigDecimal(equalSplit[1]));
                 case "USERTIME" -> userClockInner.put(modelNumber, new BigDecimal(equalSplit[1]));
@@ -79,7 +79,7 @@ public abstract class SlurmAnalyser implements LineAnalyser{
         }
         SlurmAnalyser other = (SlurmAnalyser) lineAnalyser;
         other.modelPath.putAll(modelPath);
-        other.toolName.putAll(toolName);
+        if (!toolName.isEmpty()) other.toolName = toolName;
         other.wallClockInner.putAll(wallClockInner);
         other.userClockInner.putAll(userClockInner);
         other.sysClockInner.putAll(sysClockInner);
