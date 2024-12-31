@@ -1,7 +1,9 @@
 package de.uniulm.sp.fe4femo.helper;
 
+import de.uniulm.sp.fe4femo.helper.rtm.CadiBackAnalyser;
 import de.uniulm.sp.fe4femo.helper.rtm.KissatAnalyser;
 import de.uniulm.sp.fe4femo.helper.rtm.SharpSATAnalyser;
+import de.uniulm.sp.fe4femo.helper.rtm.SpurAnalyser;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -26,6 +28,8 @@ public class Main {
         switch (args[0]){
             case "sharpsat" -> handleSharpSAT(args);
             case "kissat" -> handleNormal(args, KissatAnalyser::new);
+            case "cadiback" -> handleNormal(args, CadiBackAnalyser::new);
+            case "spur" -> handleSpur(args);
             default -> LOGGER.error("Unrecognized command {}", args[0]);
         }
     }
@@ -54,6 +58,24 @@ public class Main {
             System.exit(1);
         }
 
+    }
+
+    private static void handleSpur(String[] args) {
+        if (args.length != 4) {
+            LOGGER.error("Too few CLI parameters! Supply <type> <spurNo> <inputFolder> <outputFolder>");
+            System.exit(1);
+        }
+        Path inputPath = Paths.get(args[2]);
+        Path outputPath = Paths.get(args[3]);
+
+        LineAnalyser analyser = Helper.analyseAll(inputPath, SpurAnalyser::new);
+        try {
+            Files.createDirectories(outputPath);
+            analyser.export(outputPath.resolve("spur_" + args[1] + ".csv"));
+        } catch (IOException e) {
+            LOGGER.error("Could not export analysis results", e);
+            System.exit(1);
+        }
     }
 
     private static void handleNormal(String[] args, Function<Path, LineAnalyser> analyserGenerator) {
