@@ -50,7 +50,7 @@ public class SharpSATAnalyser extends SlurmAnalyser {
     public void handleLine(String line) {
         super.handleLine(line);
 
-        if (modelNumber != -1) {
+        if (modelNumber != -1 && !toolName.isEmpty()) {
             String prefix = switch (toolName) {
                 case "approxmc" -> "s mc ";
                 case "countantom" -> "c model count............: ";
