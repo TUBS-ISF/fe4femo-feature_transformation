@@ -10,6 +10,10 @@ repositories {
     mavenCentral()
 }
 
+application {
+    mainClass = "de.uniulm.sp.fe4femo.helper.Main"
+}
+
 val log4j="2.24.2"
 
 dependencies {
@@ -21,15 +25,11 @@ dependencies {
     // https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core
     runtimeOnly("org.apache.logging.log4j:log4j-core:$log4j")
     runtimeOnly("org.apache.logging.log4j:log4j-layout-template-json:$log4j")
+
+    // https://mvnrepository.com/artifact/org.apache.commons/commons-csv
+    implementation("org.apache.commons:commons-csv:1.12.0")
 }
 
 tasks.test {
     useJUnitPlatform()
-}
-
-tasks.register("runApp2", JavaExec::class) {
-    description = ""
-    group = ApplicationPlugin.APPLICATION_GROUP
-    classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("de.uniulm.sp.fe4femo.helper.Main")
 }
