@@ -19,27 +19,23 @@ public class Helper {
     private Helper() {}
 
     public static LineAnalyser analyseAll(Path startPath, Function<Path, LineAnalyser> analyserGenerator)  {
-        return iterateFolder(startPath, path -> analyseFiles(path, analyserGenerator))
-                .reduce(analyserGenerator.apply(Path.of("")), LineAnalyser::accumulate);
-    }
-
-    private static Optional<LineAnalyser> analyseFiles(Path path, Function<Path, LineAnalyser> lineAnalyser) {
-        LineAnalyser analyser = lineAnalyser.apply(path);
-        try (Stream<String> lines = Files.lines(path)){
-            lines.forEachOrdered(analyser::handleLine);
-            return Optional.of(analyser);
+        try (Stream<Path> files = Files.walk(startPath)) {
+            return files.filter(Files::isRegularFile).flatMap(e -> analyseFiles(e, analyserGenerator))
+                    .reduce(analyserGenerator.apply(Path.of("")), LineAnalyser::accumulate);
         } catch (IOException e) {
-            LOGGER.error("Error in file analysis of file {}", path, e);
-            return Optional.empty();
+            LOGGER.error("Error in folder analysis of folder {}", startPath, e);
+            throw new RuntimeException("Error in folder analysis of folder " + startPath, e);
         }
     }
 
-    private static <R> Stream<R> iterateFolder(Path path, Function<Path, Optional<R>> function) {
-        try (Stream<Path> files =Files.walk(path)){
-            return files.filter(Files::isRegularFile).flatMap(e -> function.apply(e).stream());
+    private static Stream<LineAnalyser> analyseFiles(Path path, Function<Path, LineAnalyser> lineAnalyser) {
+        LineAnalyser analyser = lineAnalyser.apply(path);
+        try (Stream<String> lines = Files.lines(path)){
+            lines.forEachOrdered(analyser::handleLine);
+            return Stream.of(analyser);
         } catch (IOException e) {
-            LOGGER.error("Error in folder analysis of folder {}", path, e);
-            throw new RuntimeException("Error in folder analysis of folder " + path, e);
+            LOGGER.error("Error in file analysis of file {}", path, e);
+            return Stream.empty();
         }
     }
 
