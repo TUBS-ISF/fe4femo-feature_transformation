@@ -42,7 +42,7 @@ public abstract class SlurmAnalyser implements LineAnalyser{
             switch (equalSplit[0]) {
                 case "MODEL_NUMBER" -> modelNumber = Integer.parseInt(equalSplit[1]);
                 case "MODEL_PATH" -> modelPath.put(modelNumber, equalSplit[1]);
-                case "TOOL_NAME" -> {
+                case "CONTAINER" -> {
                     String[] pathSplit = equalSplit[1].split("/");
                     toolName = pathSplit[pathSplit.length -1].replace("_i.sqsh", "");
                 }
