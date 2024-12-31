@@ -8,6 +8,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -15,7 +16,7 @@ public class KissatAnalyser extends SlurmAnalyser {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    protected Map<Integer, Boolean> satisfiability;
+    protected Map<Integer, Boolean> satisfiability = new HashMap<>();
 
     public KissatAnalyser(Path path) {
         super(path);
