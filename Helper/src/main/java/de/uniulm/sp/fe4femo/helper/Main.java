@@ -48,7 +48,7 @@ public class Main {
                 exportList.add(new Helper.NamedMap(prefix + "weirdWallTimeS", analyser.wallClockOuter));
                 exportList.add(new Helper.NamedMap(prefix + "memUseMB", analyser.jobMemMb));
             }
-            Helper.exportCSV(outputFolder, analyserList.getFirst().modelPath.keySet(), exportList);
+            Helper.exportCSV(outputFolder.resolve("sharpsat.csv"), analyserList.getFirst().modelPath.keySet(), exportList);
         } catch (IOException e) {
             LOGGER.error("Could not export analysis results", e);
             System.exit(1);
