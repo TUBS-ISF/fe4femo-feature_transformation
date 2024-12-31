@@ -1,13 +1,14 @@
 package de.uniulm.sp.fe4femo.helper;
 
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -48,6 +49,24 @@ public class Helper {
         if (suffix.isEmpty()) return Optional.empty();
         return Optional.of(suffix);
     }
+
+    public static void exportCSV(Path outputPath, Collection<Integer> keys, List<NamedMap> inputMaps) throws IOException {
+        try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(outputPath), CSVFormat.DEFAULT)) {
+            List<String> header = inputMaps.stream().map(NamedMap::headerName).toList();
+            printer.print("modelNo");
+            printer.printRecord(header);
+            int[] keyList = keys.stream().mapToInt(Integer::intValue).sorted().toArray();
+            for (int modelNo : keyList) {
+                printer.print(modelNo);
+                for (NamedMap namedMap : inputMaps) {
+                    printer.print(namedMap.map.get(modelNo));
+                }
+                printer.println();
+            }
+        }
+    }
+
+    public record NamedMap(String headerName, Map<Integer, ?> map){}
 
 
 }

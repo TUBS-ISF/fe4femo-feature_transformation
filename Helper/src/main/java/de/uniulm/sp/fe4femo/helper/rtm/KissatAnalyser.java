@@ -1,15 +1,14 @@
 package de.uniulm.sp.fe4femo.helper.rtm;
 
+import de.uniulm.sp.fe4femo.helper.Helper;
 import de.uniulm.sp.fe4femo.helper.LineAnalyser;
 import de.uniulm.sp.fe4femo.helper.SlurmAnalyser;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVPrinter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 
 public class KissatAnalyser extends SlurmAnalyser {
@@ -20,14 +19,14 @@ public class KissatAnalyser extends SlurmAnalyser {
 
 
     @Override
-    public void export(Path outputPath) throws IOException { //TODO reuse common parts
-        try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(outputPath), CSVFormat.DEFAULT)){
-            printer.printRecord("ModelNo", "ModelPath", "isSAT", "wallclockTimeS", "memUseMB");
-            int[] keys = satisfiability.keySet().stream().mapToInt(Integer::intValue).sorted().toArray();
-            for (int i : keys) {
-                printer.printRecord(i, modelPath.get(i), satisfiability.get(i), wallClockInner.get(i), jobMemMb.get(i));
-            }
-        }
+    public void export(Path outputPath) throws IOException {
+        List<Helper.NamedMap> outputMaps = List.of(
+                new Helper.NamedMap("modelPath", modelPath),
+                new Helper.NamedMap("isSAT", satisfiability),
+                new Helper.NamedMap("wallclockTimeS", wallClockInner),
+                new Helper.NamedMap("memUseMB", jobMemMb)
+        );
+        Helper.exportCSV(outputPath, satisfiability.keySet(), outputMaps);
     }
 
     @Override
