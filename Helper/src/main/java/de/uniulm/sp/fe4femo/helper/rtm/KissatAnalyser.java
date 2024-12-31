@@ -29,6 +29,7 @@ public class KissatAnalyser extends SlurmAnalyser {
                 new Helper.NamedMap("modelPath", modelPath),
                 new Helper.NamedMap("isSAT", satisfiability),
                 new Helper.NamedMap("wallclockTimeS", wallClockInner),
+                new Helper.NamedMap("weirdWallTimeS", wallClockOuter),
                 new Helper.NamedMap("memUseMB", jobMemMb)
         );
         Helper.exportCSV(outputPath.resolve("sat.csv"), satisfiability.keySet(), outputMaps);
