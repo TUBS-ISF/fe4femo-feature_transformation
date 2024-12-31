@@ -19,12 +19,16 @@ public class Helper {
     private Helper() {}
 
     public static LineAnalyser analyseAll(Path startPath, Function<Path, LineAnalyser> analyserGenerator)  {
-        try (Stream<Path> files = Files.walk(startPath)) {
-            return files.filter(Files::isRegularFile).flatMap(e -> analyseFiles(e, analyserGenerator))
-                    .reduce(analyserGenerator.apply(Path.of("")), LineAnalyser::accumulate);
+        return getFilesInFolder(startPath).stream().parallel().flatMap(e -> analyseFiles(e, analyserGenerator))
+                .reduce(analyserGenerator.apply(Path.of("")), LineAnalyser::accumulate);
+    }
+
+    private static List<Path> getFilesInFolder(Path folder) {
+        try (Stream<Path> files = Files.walk(folder)) {
+            return files.filter(Files::isRegularFile).toList();
         } catch (IOException e) {
-            LOGGER.error("Error in folder analysis of folder {}", startPath, e);
-            throw new RuntimeException("Error in folder analysis of folder " + startPath, e);
+            LOGGER.error("Error in folder analysis of folder {}", folder, e);
+            throw new RuntimeException("Error in folder analysis of folder " + folder, e);
         }
     }
 
