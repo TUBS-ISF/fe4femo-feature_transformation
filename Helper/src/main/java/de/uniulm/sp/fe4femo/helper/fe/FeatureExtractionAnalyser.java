@@ -26,7 +26,8 @@ public class FeatureExtractionAnalyser extends SlurmAnalyser {
 
     private final Map<Integer, Map<String, String>> featureValues = new HashMap<>();
     private final Map<Integer, Map<String, Duration>> groupTime = new HashMap<>();
-    private final Map<String, String> groupAssociation  = new HashMap<>();
+    private final Map<String, List<String>> groupAssociation  = new HashMap<>();
+    private final Set<String> groupNames = new HashSet<>();
 
     public FeatureExtractionAnalyser(Path path) {
         super(path);
@@ -43,11 +44,17 @@ public class FeatureExtractionAnalyser extends SlurmAnalyser {
 
     private void exportMetricGroups(Path outputPath) throws IOException {
         try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(outputPath.resolve("groupMapping.csv")), CSVFormat.DEFAULT)) {
-            printer.printRecord("featureName", "groupName");
+            List<String> orderedGroupNames = groupNames.stream().sorted().toList();
+            printer.print("featureName");
+            printer.printRecord(orderedGroupNames);
             List<String> toSort = new ArrayList<>(groupAssociation.keySet());
             toSort.sort(null);
             for (String featureName : toSort) {
-                printer.printRecord(featureName, groupAssociation.get(featureName));
+                printer.print(featureName);
+                for (String groupName : orderedGroupNames) {
+                    printer.print(groupAssociation.get(featureName).contains(groupName));
+                }
+                printer.println();
             }
         }
 
@@ -116,7 +123,11 @@ public class FeatureExtractionAnalyser extends SlurmAnalyser {
             for (Result result : results) {
                 groupCounts.putIfAbsent(result.analysisName(), 0);
                 String groupName = result.analysisName() + "_" + groupCounts.get(result.analysisName());
-                result.featureValues().keySet().forEach(featureName -> groupAssociation.put(featureName, groupName));
+                groupNames.add(groupName);
+                result.featureValues().keySet().forEach(featureName -> {
+                    groupAssociation.putIfAbsent(featureName, new ArrayList<>());
+                    groupAssociation.get(featureName).add(groupName);
+                });
 
                 groupTimeInstance.put(groupName, result.duration());
 
