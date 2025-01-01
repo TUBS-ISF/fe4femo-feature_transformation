@@ -26,8 +26,7 @@ public class FeatureExtractionAnalyser extends SlurmAnalyser {
 
     private final Map<Integer, Map<String, String>> featureValues = new HashMap<>();
     private final Map<Integer, Map<String, Duration>> groupTime = new HashMap<>();
-    private final Map<String, List<String>> groupAssociation  = new HashMap<>();
-    private final Set<String> groupNames = new HashSet<>();
+    private final Map<String, String> groupAssociation  = new HashMap<>();
 
     public FeatureExtractionAnalyser(Path path) {
         super(path);
@@ -44,17 +43,11 @@ public class FeatureExtractionAnalyser extends SlurmAnalyser {
 
     private void exportMetricGroups(Path outputPath) throws IOException {
         try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(outputPath.resolve("groupMapping.csv")), CSVFormat.DEFAULT)) {
-            List<String> orderedGroupNames = groupNames.stream().sorted().toList();
-            printer.print("featureName");
-            printer.printRecord(orderedGroupNames);
+            printer.printRecord("featureName", "groupName");
             List<String> toSort = new ArrayList<>(groupAssociation.keySet());
             toSort.sort(null);
             for (String featureName : toSort) {
-                printer.print(featureName);
-                for (String groupName : orderedGroupNames) {
-                    printer.print(groupAssociation.get(featureName).contains(groupName));
-                }
-                printer.println();
+                printer.printRecord(featureName, groupAssociation.get(featureName));
             }
         }
 
@@ -116,24 +109,29 @@ public class FeatureExtractionAnalyser extends SlurmAnalyser {
             groupTime.putIfAbsent(modelNumber, new HashMap<>());
             Map<String, Duration> groupTimeInstance = groupTime.get(modelNumber);
 
+            featureValues.putIfAbsent(modelNumber, new HashMap<>());
+            Map<String, String> featureValueInstance = featureValues.get(modelNumber);
+
             List<Result> results = objectMapper.readValue(json, objectMapper.getTypeFactory().constructCollectionType(List.class, Result.class));
             featureValues.put(modelNumber, results.stream().flatMap(e -> e.featureValues().entrySet().stream()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> {
                 if (Objects.equals(a,b)) return a;
-                else throw new RuntimeException("Duplicate key with non-equal values: " + a + ", " + b);
+                else throw new IllegalStateException("Duplicate key with non-equal values: " + a + ", " + b);
             })));
 
             Map<String, Integer> groupCounts = new HashMap<>();
             for (Result result : results) {
                 groupCounts.putIfAbsent(result.analysisName(), 0);
                 String groupName = result.analysisName() + "_" + groupCounts.get(result.analysisName());
-                groupNames.add(groupName);
-                result.featureValues().keySet().forEach(featureName -> {
-                    groupAssociation.putIfAbsent(featureName, new ArrayList<>());
-                    groupAssociation.get(featureName).add(groupName);
-                });
-
+                // add group duration
                 groupTimeInstance.put(groupName, result.duration());
 
+                result.featureValues().forEach((featureName, featureValue) -> {
+                    String newFeatureName = groupName+ "/" +featureName;
+                    //add group association
+                    groupAssociation.put(newFeatureName, groupName);
+                    //add feature values
+                    featureValueInstance.put(newFeatureName, featureValue);
+                });
                 groupCounts.put(result.analysisName(), groupCounts.get(result.analysisName()) + 1);
             }
         } catch (JsonProcessingException e) {
