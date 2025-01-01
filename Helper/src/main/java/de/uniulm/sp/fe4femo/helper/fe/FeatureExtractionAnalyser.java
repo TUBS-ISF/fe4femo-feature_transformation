@@ -3,7 +3,6 @@ package de.uniulm.sp.fe4femo.helper.fe;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import de.uniulm.sp.fe4femo.featureextraction.analysis.Result;
 import de.uniulm.sp.fe4femo.helper.Helper;
 import de.uniulm.sp.fe4femo.helper.LineAnalyser;
 import de.uniulm.sp.fe4femo.helper.SlurmAnalyser;

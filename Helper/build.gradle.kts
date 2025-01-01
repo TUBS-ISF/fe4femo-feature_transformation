@@ -30,8 +30,6 @@ dependencies {
     // https://mvnrepository.com/artifact/org.apache.commons/commons-csv
     implementation("org.apache.commons:commons-csv:1.12.0")
 
-    implementation(files("../FeatureExtraction"))
-
     // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core
     implementation("com.fasterxml.jackson.core:jackson-core:$jackson")
     // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind
