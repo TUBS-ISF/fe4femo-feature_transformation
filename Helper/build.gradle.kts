@@ -15,6 +15,7 @@ application {
 }
 
 val log4j="2.24.2"
+val jackson = "2.18.2"
 
 dependencies {
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
@@ -28,6 +29,17 @@ dependencies {
 
     // https://mvnrepository.com/artifact/org.apache.commons/commons-csv
     implementation("org.apache.commons:commons-csv:1.12.0")
+
+    implementation(files("../FeatureExtraction"))
+
+    // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core
+    implementation("com.fasterxml.jackson.core:jackson-core:$jackson")
+    // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind
+    implementation("com.fasterxml.jackson.core:jackson-databind:$jackson")
+    // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-annotations
+    implementation("com.fasterxml.jackson.core:jackson-annotations:$jackson")
+    // https://mvnrepository.com/artifact/com.fasterxml.jackson.datatype/jackson-datatype-jsr310
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson")
 }
 
 tasks.test {

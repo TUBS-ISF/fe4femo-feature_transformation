@@ -1,5 +1,6 @@
 package de.uniulm.sp.fe4femo.helper;
 
+import de.uniulm.sp.fe4femo.helper.fe.FeatureExtractionAnalyser;
 import de.uniulm.sp.fe4femo.helper.rtm.CadiBackAnalyser;
 import de.uniulm.sp.fe4femo.helper.rtm.KissatAnalyser;
 import de.uniulm.sp.fe4femo.helper.rtm.SharpSATAnalyser;
@@ -30,6 +31,7 @@ public class Main {
             case "kissat" -> handleNormal(args, KissatAnalyser::new);
             case "cadiback" -> handleNormal(args, CadiBackAnalyser::new);
             case "spur" -> handleSpur(args);
+            case "fe" -> handleNormal(args, FeatureExtractionAnalyser::new);
             default -> LOGGER.error("Unrecognized command {}", args[0]);
         }
     }
