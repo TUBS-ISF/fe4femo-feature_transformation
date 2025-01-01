@@ -113,10 +113,6 @@ public class FeatureExtractionAnalyser extends SlurmAnalyser {
             Map<String, String> featureValueInstance = featureValues.get(modelNumber);
 
             List<Result> results = objectMapper.readValue(json, objectMapper.getTypeFactory().constructCollectionType(List.class, Result.class));
-            featureValues.put(modelNumber, results.stream().flatMap(e -> e.featureValues().entrySet().stream()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> {
-                if (Objects.equals(a,b)) return a;
-                else throw new IllegalStateException("Duplicate key with non-equal values: " + a + ", " + b);
-            })));
 
             Map<String, Integer> groupCounts = new HashMap<>();
             for (Result result : results) {
