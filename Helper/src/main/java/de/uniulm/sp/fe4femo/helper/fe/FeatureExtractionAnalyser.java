@@ -55,9 +55,10 @@ public class FeatureExtractionAnalyser extends SlurmAnalyser {
             printer.printRecord("modelNo", "groupName", "groupTimeS");
             for (Map.Entry<Integer, Map<String, Duration>> entry : groupTime.entrySet()) {
                 Integer modelNo = entry.getKey();
-                for (Map.Entry<String, Duration> subEntry : entry.getValue().entrySet()) {
-                    String groupName = subEntry.getKey();
-                    Duration duration = subEntry.getValue();
+                List<String> toSort = new ArrayList<>(entry.getValue().keySet());
+                toSort.sort(null);
+                for (String groupName : toSort) {
+                    Duration duration = entry.getValue().get(groupName);
                     printer.printRecord(modelNo, groupName, BigDecimal.valueOf(duration.toNanos(), 9).stripTrailingZeros());
                 }
             }
