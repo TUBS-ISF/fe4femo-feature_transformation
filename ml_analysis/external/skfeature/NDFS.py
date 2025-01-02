@@ -2,10 +2,12 @@ import numpy as np
 import sys
 import math
 import sklearn.cluster
-from construct_W import construct_W
+from sklearn.cluster import KMeans
+
+from external.skfeature.construct_W import construct_W
 
 
-def ndfs(X, **kwargs):
+def ndfs(X, gamma=10e8, W=None, alpha=1, beta=1, F=None, n_clusters=None, verbose=False):
     """
     This function implement unsupervised feature selection using nonnegative spectral analysis, i.e.,
     min_{F,W} Tr(F^T L F) + alpha*(||XW-F||_F^2 + beta*||W||_{2,1}) + gamma/2 * ||F^T F - I||_F^2
@@ -39,38 +41,15 @@ def ndfs(X, **kwargs):
     Reference:
         Li, Zechao, et al. "Unsupervised Feature Selection Using Nonnegative Spectral Analysis." AAAI. 2012.
     """
-
-    # default gamma is 10e8
-    if 'gamma' not in kwargs:
-        gamma = 10e8
-    else:
-        gamma = kwargs['gamma']
-    # use the default affinity matrix
-    if 'W' not in kwargs:
+    if W is None:
         W = construct_W(X)
-    else:
-        W = kwargs['W']
-    if 'alpha' not in kwargs:
-        alpha = 1
-    else:
-        alpha = kwargs['alpha']
-    if 'beta' not in kwargs:
-        beta = 1
-    else:
-        beta = kwargs['beta']
-    if 'F0' not in kwargs:
-        if 'n_clusters' not in kwargs:
-            print >> sys.stderr, "either F0 or n_clusters should be provided"
+
+    if F is None:
+        if n_clusters is None:
+            print("either F0 or n_clusters should be provided", file=sys.stderr)
+            sys.exit(1)
         else:
-            # initialize F
-            n_clusters = kwargs['n_clusters']
             F = kmeans_initialization(X, n_clusters)
-    else:
-        F = kwargs['F0']
-    if 'verbose' not in kwargs:
-        verbose = False
-    else:
-        verbose = kwargs['verbose']
 
     n_samples, n_features = X.shape
 
@@ -131,9 +110,9 @@ def kmeans_initialization(X, n_clusters):
     """
 
     n_samples, n_features = X.shape
-    kmeans = sklearn.cluster.KMeans(n_clusters=n_clusters, init='k-means++', n_init=10, max_iter=300,
-                                    tol=0.0001, precompute_distances=True, verbose=0,
-                                    random_state=None, copy_x=True, n_jobs=1)
+    kmeans = KMeans(n_clusters=n_clusters, init='k-means++', n_init='auto', max_iter=300,
+                    tol=0.0001, verbose=0,
+                    random_state=42, copy_x=True)
     kmeans.fit(X)
     labels = kmeans.labels_
     Y = np.zeros((n_samples, n_clusters))

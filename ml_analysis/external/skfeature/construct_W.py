@@ -68,7 +68,7 @@ def construct_W(X, **kwargs):
     if kwargs['neighbor_mode'] == 'supervised' and 'k' not in kwargs.keys():
         kwargs['k'] = 5
     if kwargs['neighbor_mode'] == 'supervised' and 'y' not in kwargs.keys():
-        print ('Warning: label is required in the supervised neighborMode!!!')
+        print('Warning: label is required in the supervised neighborMode!!!')
         exit(0)
 
     # default weight mode is 'binary', default t in heat kernel mode is 1
@@ -103,9 +103,9 @@ def construct_W(X, **kwargs):
                 dump = np.sort(D, axis=1)
                 idx = np.argsort(D, axis=1)
                 # choose the k-nearest neighbors for each instance
-                idx_new = idx[:, 0:k+1]
-                G = np.zeros((n_samples*(k+1), 3))
-                G[:, 0] = np.tile(np.arange(n_samples), (k+1, 1)).reshape(-1)
+                idx_new = idx[:, 0:k + 1]
+                G = np.zeros((n_samples * (k + 1), 3))
+                G[:, 0] = np.tile(np.arange(n_samples), (k + 1, 1)).reshape(-1)
                 G[:, 1] = np.ravel(idx_new, order='F')
                 G[:, 2] = 1
                 # build the sparse affinity matrix W
@@ -116,17 +116,17 @@ def construct_W(X, **kwargs):
 
             elif kwargs['metric'] == 'cosine':
                 # normalize the data first
-                X_normalized = np.power(np.sum(X*X, axis=1), 0.5)
+                X_normalized = np.power(np.sum(X * X, axis=1), 0.5)
                 for i in range(n_samples):
-                    X[i, :] = X[i, :]/max(1e-12, X_normalized[i])
+                    X[i, :] = X[i, :] / max(1e-12, X_normalized[i])
                 # compute pairwise cosine distances
                 D_cosine = np.dot(X, np.transpose(X))
                 # sort the distance matrix D in descending order
                 dump = np.sort(-D_cosine, axis=1)
                 idx = np.argsort(-D_cosine, axis=1)
-                idx_new = idx[:, 0:k+1]
-                G = np.zeros((n_samples*(k+1), 3))
-                G[:, 0] = np.tile(np.arange(n_samples), (k+1, 1)).reshape(-1)
+                idx_new = idx[:, 0:k + 1]
+                G = np.zeros((n_samples * (k + 1), 3))
+                G[:, 0] = np.tile(np.arange(n_samples), (k + 1, 1)).reshape(-1)
                 G[:, 1] = np.ravel(idx_new, order='F')
                 G[:, 2] = 1
                 # build the sparse affinity matrix W
@@ -143,12 +143,12 @@ def construct_W(X, **kwargs):
             # sort the distance matrix D in ascending order
             dump = np.sort(D, axis=1)
             idx = np.argsort(D, axis=1)
-            idx_new = idx[:, 0:k+1]
-            dump_new = dump[:, 0:k+1]
+            idx_new = idx[:, 0:k + 1]
+            dump_new = dump[:, 0:k + 1]
             # compute the pairwise heat kernel distances
-            dump_heat_kernel = np.exp(-dump_new/(2*t*t))
-            G = np.zeros((n_samples*(k+1), 3))
-            G[:, 0] = np.tile(np.arange(n_samples), (k+1, 1)).reshape(-1)
+            dump_heat_kernel = np.exp(-dump_new / (2 * t * t))
+            G = np.zeros((n_samples * (k + 1), 3))
+            G[:, 0] = np.tile(np.arange(n_samples), (k + 1, 1)).reshape(-1)
             G[:, 1] = np.ravel(idx_new, order='F')
             G[:, 2] = np.ravel(dump_heat_kernel, order='F')
             # build the sparse affinity matrix W
@@ -159,18 +159,18 @@ def construct_W(X, **kwargs):
 
         elif kwargs['weight_mode'] == 'cosine':
             # normalize the data first
-            X_normalized = np.power(np.sum(X*X, axis=1), 0.5)
+            X_normalized = np.power(np.sum(X * X, axis=1), 0.5)
             for i in range(n_samples):
-                    X[i, :] = X[i, :]/max(1e-12, X_normalized[i])
+                X[i, :] = X[i, :] / max(1e-12, X_normalized[i])
             # compute pairwise cosine distances
             D_cosine = np.dot(X, np.transpose(X))
             # sort the distance matrix D in ascending order
             dump = np.sort(-D_cosine, axis=1)
             idx = np.argsort(-D_cosine, axis=1)
-            idx_new = idx[:, 0:k+1]
-            dump_new = -dump[:, 0:k+1]
-            G = np.zeros((n_samples*(k+1), 3))
-            G[:, 0] = np.tile(np.arange(n_samples), (k+1, 1)).reshape(-1)
+            idx_new = idx[:, 0:k + 1]
+            dump_new = -dump[:, 0:k + 1]
+            G = np.zeros((n_samples * (k + 1), 3))
+            G[:, 0] = np.tile(np.arange(n_samples), (k + 1, 1)).reshape(-1)
             G[:, 1] = np.ravel(idx_new, order='F')
             G[:, 2] = np.ravel(dump_new, order='F')
             # build the sparse affinity matrix W
@@ -192,7 +192,7 @@ def construct_W(X, **kwargs):
             for i in range(n_classes):
                 class_idx = (y == label[i])
                 class_idx_all = (class_idx[:, np.newaxis] & class_idx[np.newaxis, :])
-                W[class_idx_all] = 1.0/np.sum(np.sum(class_idx))
+                W[class_idx_all] = 1.0 / np.sum(np.sum(class_idx))
             return W
 
         # construct the weight matrix W in a reliefF way, NH(x) and NM(x,y) denotes a set of k nearest
@@ -200,27 +200,27 @@ def construct_W(X, **kwargs):
         # W_ij = 1/k if x_j \in NH(x_i); W_ij = -1/(c-1)k if x_j \in NM(x_i, y)
         if kwargs['reliefF'] is True:
             # when xj in NH(xi)
-            G = np.zeros((n_samples*(k+1), 3))
+            G = np.zeros((n_samples * (k + 1), 3))
             id_now = 0
             for i in range(n_classes):
                 class_idx = np.column_stack(np.where(y == label[i]))[:, 0]
                 D = pairwise_distances(X[class_idx, :])
                 D **= 2
                 idx = np.argsort(D, axis=1)
-                idx_new = idx[:, 0:k+1]
+                idx_new = idx[:, 0:k + 1]
                 n_smp_class = (class_idx[idx_new[:]]).size
                 if len(class_idx) <= k:
                     k = len(class_idx) - 1
-                G[id_now:n_smp_class+id_now, 0] = np.tile(class_idx, (k+1, 1)).reshape(-1)
-                G[id_now:n_smp_class+id_now, 1] = np.ravel(class_idx[idx_new[:]], order='F')
-                G[id_now:n_smp_class+id_now, 2] = 1.0/k
+                G[id_now:n_smp_class + id_now, 0] = np.tile(class_idx, (k + 1, 1)).reshape(-1)
+                G[id_now:n_smp_class + id_now, 1] = np.ravel(class_idx[idx_new[:]], order='F')
+                G[id_now:n_smp_class + id_now, 2] = 1.0 / k
                 id_now += n_smp_class
             W1 = csc_matrix((G[:, 2], (G[:, 0], G[:, 1])), shape=(n_samples, n_samples))
             # when i = j, W_ij = 1
             for i in range(n_samples):
                 W1[i, i] = 1
             # when x_j in NM(x_i, y)
-            G = np.zeros((n_samples*k*(n_classes - 1), 3))
+            G = np.zeros((n_samples * k * (n_classes - 1), 3))
             id_now = 0
             for i in range(n_classes):
                 class_idx1 = np.column_stack(np.where(y == label[i]))[:, 0]
@@ -232,10 +232,10 @@ def construct_W(X, **kwargs):
                         D = pairwise_distances(X1, X2)
                         idx = np.argsort(D, axis=1)
                         idx_new = idx[:, 0:k]
-                        n_smp_class = len(class_idx1)*k
-                        G[id_now:n_smp_class+id_now, 0] = np.tile(class_idx1, (k, 1)).reshape(-1)
-                        G[id_now:n_smp_class+id_now, 1] = np.ravel(class_idx2[idx_new[:]], order='F')
-                        G[id_now:n_smp_class+id_now, 2] = -1.0/((n_classes-1)*k)
+                        n_smp_class = len(class_idx1) * k
+                        G[id_now:n_smp_class + id_now, 0] = np.tile(class_idx1, (k, 1)).reshape(-1)
+                        G[id_now:n_smp_class + id_now, 1] = np.ravel(class_idx2[idx_new[:]], order='F')
+                        G[id_now:n_smp_class + id_now, 2] = -1.0 / ((n_classes - 1) * k)
                         id_now += n_smp_class
             W2 = csc_matrix((G[:, 2], (G[:, 0], G[:, 1])), shape=(n_samples, n_samples))
             bigger = np.transpose(W2) > W2
@@ -245,7 +245,7 @@ def construct_W(X, **kwargs):
 
         if kwargs['weight_mode'] == 'binary':
             if kwargs['metric'] == 'euclidean':
-                G = np.zeros((n_samples*(k+1), 3))
+                G = np.zeros((n_samples * (k + 1), 3))
                 id_now = 0
                 for i in range(n_classes):
                     class_idx = np.column_stack(np.where(y == label[i]))[:, 0]
@@ -254,11 +254,11 @@ def construct_W(X, **kwargs):
                     D **= 2
                     # sort the distance matrix D in ascending order for instances in class i
                     idx = np.argsort(D, axis=1)
-                    idx_new = idx[:, 0:k+1]
-                    n_smp_class = len(class_idx)*(k+1)
-                    G[id_now:n_smp_class+id_now, 0] = np.tile(class_idx, (k+1, 1)).reshape(-1)
-                    G[id_now:n_smp_class+id_now, 1] = np.ravel(class_idx[idx_new[:]], order='F')
-                    G[id_now:n_smp_class+id_now, 2] = 1
+                    idx_new = idx[:, 0:k + 1]
+                    n_smp_class = len(class_idx) * (k + 1)
+                    G[id_now:n_smp_class + id_now, 0] = np.tile(class_idx, (k + 1, 1)).reshape(-1)
+                    G[id_now:n_smp_class + id_now, 1] = np.ravel(class_idx[idx_new[:]], order='F')
+                    G[id_now:n_smp_class + id_now, 2] = 1
                     id_now += n_smp_class
                 # build the sparse affinity matrix W
                 W = csc_matrix((G[:, 2], (G[:, 0], G[:, 1])), shape=(n_samples, n_samples))
@@ -268,10 +268,10 @@ def construct_W(X, **kwargs):
 
             if kwargs['metric'] == 'cosine':
                 # normalize the data first
-                X_normalized = np.power(np.sum(X*X, axis=1), 0.5)
+                X_normalized = np.power(np.sum(X * X, axis=1), 0.5)
                 for i in range(n_samples):
-                    X[i, :] = X[i, :]/max(1e-12, X_normalized[i])
-                G = np.zeros((n_samples*(k+1), 3))
+                    X[i, :] = X[i, :] / max(1e-12, X_normalized[i])
+                G = np.zeros((n_samples * (k + 1), 3))
                 id_now = 0
                 for i in range(n_classes):
                     class_idx = np.column_stack(np.where(y == label[i]))[:, 0]
@@ -279,11 +279,11 @@ def construct_W(X, **kwargs):
                     D_cosine = np.dot(X[class_idx, :], np.transpose(X[class_idx, :]))
                     # sort the distance matrix D in descending order for instances in class i
                     idx = np.argsort(-D_cosine, axis=1)
-                    idx_new = idx[:, 0:k+1]
-                    n_smp_class = len(class_idx)*(k+1)
-                    G[id_now:n_smp_class+id_now, 0] = np.tile(class_idx, (k+1, 1)).reshape(-1)
-                    G[id_now:n_smp_class+id_now, 1] = np.ravel(class_idx[idx_new[:]], order='F')
-                    G[id_now:n_smp_class+id_now, 2] = 1
+                    idx_new = idx[:, 0:k + 1]
+                    n_smp_class = len(class_idx) * (k + 1)
+                    G[id_now:n_smp_class + id_now, 0] = np.tile(class_idx, (k + 1, 1)).reshape(-1)
+                    G[id_now:n_smp_class + id_now, 1] = np.ravel(class_idx[idx_new[:]], order='F')
+                    G[id_now:n_smp_class + id_now, 2] = 1
                     id_now += n_smp_class
                 # build the sparse affinity matrix W
                 W = csc_matrix((G[:, 2], (G[:, 0], G[:, 1])), shape=(n_samples, n_samples))
@@ -292,7 +292,7 @@ def construct_W(X, **kwargs):
                 return W
 
         elif kwargs['weight_mode'] == 'heat_kernel':
-            G = np.zeros((n_samples*(k+1), 3))
+            G = np.zeros((n_samples * (k + 1), 3))
             id_now = 0
             for i in range(n_classes):
                 class_idx = np.column_stack(np.where(y == label[i]))[:, 0]
@@ -302,15 +302,15 @@ def construct_W(X, **kwargs):
                 # sort the distance matrix D in ascending order for instances in class i
                 dump = np.sort(D, axis=1)
                 idx = np.argsort(D, axis=1)
-                idx_new = idx[:, 0:k+1]
-                dump_new = dump[:, 0:k+1]
+                idx_new = idx[:, 0:k + 1]
+                dump_new = dump[:, 0:k + 1]
                 t = kwargs['t']
                 # compute pairwise heat kernel distances for instances in class i
-                dump_heat_kernel = np.exp(-dump_new/(2*t*t))
-                n_smp_class = len(class_idx)*(k+1)
-                G[id_now:n_smp_class+id_now, 0] = np.tile(class_idx, (k+1, 1)).reshape(-1)
-                G[id_now:n_smp_class+id_now, 1] = np.ravel(class_idx[idx_new[:]], order='F')
-                G[id_now:n_smp_class+id_now, 2] = np.ravel(dump_heat_kernel, order='F')
+                dump_heat_kernel = np.exp(-dump_new / (2 * t * t))
+                n_smp_class = len(class_idx) * (k + 1)
+                G[id_now:n_smp_class + id_now, 0] = np.tile(class_idx, (k + 1, 1)).reshape(-1)
+                G[id_now:n_smp_class + id_now, 1] = np.ravel(class_idx[idx_new[:]], order='F')
+                G[id_now:n_smp_class + id_now, 2] = np.ravel(dump_heat_kernel, order='F')
                 id_now += n_smp_class
             # build the sparse affinity matrix W
             W = csc_matrix((G[:, 2], (G[:, 0], G[:, 1])), shape=(n_samples, n_samples))
@@ -320,10 +320,10 @@ def construct_W(X, **kwargs):
 
         elif kwargs['weight_mode'] == 'cosine':
             # normalize the data first
-            X_normalized = np.power(np.sum(X*X, axis=1), 0.5)
+            X_normalized = np.power(np.sum(X * X, axis=1), 0.5)
             for i in range(n_samples):
-                X[i, :] = X[i, :]/max(1e-12, X_normalized[i])
-            G = np.zeros((n_samples*(k+1), 3))
+                X[i, :] = X[i, :] / max(1e-12, X_normalized[i])
+            G = np.zeros((n_samples * (k + 1), 3))
             id_now = 0
             for i in range(n_classes):
                 class_idx = np.column_stack(np.where(y == label[i]))[:, 0]
@@ -332,12 +332,12 @@ def construct_W(X, **kwargs):
                 # sort the distance matrix D in descending order for instances in class i
                 dump = np.sort(-D_cosine, axis=1)
                 idx = np.argsort(-D_cosine, axis=1)
-                idx_new = idx[:, 0:k+1]
-                dump_new = -dump[:, 0:k+1]
-                n_smp_class = len(class_idx)*(k+1)
-                G[id_now:n_smp_class+id_now, 0] = np.tile(class_idx, (k+1, 1)).reshape(-1)
-                G[id_now:n_smp_class+id_now, 1] = np.ravel(class_idx[idx_new[:]], order='F')
-                G[id_now:n_smp_class+id_now, 2] = np.ravel(dump_new, order='F')
+                idx_new = idx[:, 0:k + 1]
+                dump_new = -dump[:, 0:k + 1]
+                n_smp_class = len(class_idx) * (k + 1)
+                G[id_now:n_smp_class + id_now, 0] = np.tile(class_idx, (k + 1, 1)).reshape(-1)
+                G[id_now:n_smp_class + id_now, 1] = np.ravel(class_idx[idx_new[:]], order='F')
+                G[id_now:n_smp_class + id_now, 2] = np.ravel(dump_new, order='F')
                 id_now += n_smp_class
             # build the sparse affinity matrix W
             W = csc_matrix((G[:, 2], (G[:, 0], G[:, 1])), shape=(n_samples, n_samples))
