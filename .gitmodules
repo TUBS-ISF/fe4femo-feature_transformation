@@ -16,3 +16,6 @@
 [submodule "ml_analysis/external/HFMOEA"]
 	path = ml_analysis/external/HFMOEA
 	url = https://github.com/RSD6170/HFMOEA.git
+[submodule "ml_analysis/external/scikit-feature"]
+	path = ml_analysis/external/scikit-feature
+	url = https://github.com/RSD6170/scikit-feature.git
