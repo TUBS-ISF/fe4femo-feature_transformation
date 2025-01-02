@@ -13,3 +13,6 @@
 [submodule "FeatureExtraction/external/fm_characterization"]
 	path = FeatureExtraction/external/fm_characterization
 	url = https://github.com/RSD6170/fm_characterization.git
+[submodule "ml_analysis/external/HFMOEA"]
+	path = ml_analysis/external/HFMOEA
+	url = https://github.com/RSD6170/HFMOEA.git
