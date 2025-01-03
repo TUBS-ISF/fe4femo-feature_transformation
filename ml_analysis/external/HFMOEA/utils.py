@@ -4,7 +4,7 @@ import random
 import matplotlib.pyplot as plt
 import sklearn.svm
 import random
-from sklearn.metrics import classification_report, balanced_accuracy_score, confusion_matrix
+from sklearn.metrics import classification_report, balanced_accuracy_score, confusion_matrix, accuracy_score
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.preprocessing import label_binarize
 from sklearn.metrics import roc_curve, auc
@@ -20,12 +20,6 @@ def reduce_features(solution, features):
     return reduced_features
 
 
-def classification_accuracy(labels, predictions):
-    correct = np.where(labels == predictions)[0]
-    accuracy = correct.shape[0] / labels.shape[0]
-    return accuracy
-
-
 def metrics(labels, predictions, classes):
     print("Classification Report:")
     print(classification_report(labels, predictions, target_names=classes))
@@ -38,7 +32,6 @@ def metrics(labels, predictions, classes):
 
 def cal_pop_fitness(pop, train_datas, train_labels, test_datas, test_labels):
     pop = np.array(pop)
-    accuracies1 = np.zeros(pop.shape[0])
     accuracies2 = np.zeros(pop.shape[0])
     idx = 0
 
@@ -52,12 +45,11 @@ def cal_pop_fitness(pop, train_datas, train_labels, test_datas, test_labels):
         SVM_classifier = sklearn.svm.SVC(kernel='rbf', gamma='scale', C=5000, probability=True)
         SVM_classifier.fit(X, y)
         predictions2 = SVM_classifier.predict(reduced_test_features)
-        decision2 = SVM_classifier.predict_proba(reduced_test_features)
 
-        accuracies2[idx] = classification_accuracy(test_labels, predictions2)
+        accuracies2[idx] = accuracy_score(test_labels, predictions2)
 
         idx = idx + 1
-    return accuracies2, predictions2, decision2
+    return accuracies2
 
 
 def select_mating_pool(pop, fitness, num_parents):
@@ -219,14 +211,12 @@ def crowding_distance(values1, values2, front):
 
 # First function to optimize
 def function1(x, X_train, y_train, X_test, y_test):
-    value, _, _ = cal_pop_fitness(x, X_train, y_train, X_test, y_test)
-    return value
+    return cal_pop_fitness(x, X_train, y_train, X_test, y_test)
 
 
 # Second function to optimize
 def function2(x):
-    value = np.where(x == 1)[0].shape[0]
-    return -value
+    return -(np.where(x == 1)[0].shape[0] / x.shape[0])
 
 
 def check_sol(sol):
@@ -234,3 +224,35 @@ def check_sol(sol):
         if False not in (s == np.zeros(shape=(s.shape))):
             sol[i, :] = np.random.randint(low=0, high=2, size=sol[i].shape)
     return sol
+
+def is_pareto_efficient(costs, return_mask = True):
+    """
+    Find the pareto-efficient points
+    :param costs: An (n_points, n_costs) array
+    :param return_mask: True to return a mask
+    :return: An array of indices of pareto-efficient points.
+        If return_mask is True, this will be an (n_points, ) boolean array
+        Otherwise it will be a (n_efficient_points, ) integer array of indices.
+    """
+    is_efficient = np.arange(costs.shape[0])
+    n_points = costs.shape[0]
+    next_point_index = 0  # Next index in the is_efficient array to search for
+    while next_point_index<len(costs):
+        nondominated_point_mask = np.any(costs<costs[next_point_index], axis=1)
+        nondominated_point_mask[next_point_index] = True
+        is_efficient = is_efficient[nondominated_point_mask]  # Remove dominated points
+        costs = costs[nondominated_point_mask]
+        next_point_index = np.sum(nondominated_point_mask[:next_point_index])+1
+    if return_mask:
+        is_efficient_mask = np.zeros(n_points, dtype = bool)
+        is_efficient_mask[is_efficient] = True
+        return is_efficient_mask
+    else:
+        return is_efficient
+
+def is_pareto_efficient_indexed_reordered(costs, return_mask=True):
+    ixs = np.argsort(((costs-costs.mean(axis=0))/(costs.std(axis=0)+1e-7)).sum(axis=1))
+    costs = costs[ixs]
+    is_efficient = is_pareto_efficient(costs, return_mask=return_mask)
+    is_efficient[ixs] = is_efficient.copy()
+    return is_efficient

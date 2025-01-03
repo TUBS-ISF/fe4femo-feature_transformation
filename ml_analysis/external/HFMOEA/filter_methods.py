@@ -3,7 +3,7 @@ from sklearn.feature_selection import *
 from sklearn import datasets
 import pandas as pd
 from scipy.stats import spearmanr
-from ReliefF import ReliefF
+from skrebate import ReliefF
 
 
 # -------------------------  utilities  -------------------------------------------#
@@ -276,14 +276,14 @@ def Relief(data, target):
     result.features = feature_values
 
     # generate the ReliefF scores
-    relief = ReliefF(n_neighbors=5, n_features_to_keep=num_features)
-    relief.fit_transform(data, target)
-    result.scores = normalize(relief.feature_scores)
-    result.ranks = np.argsort(np.argsort(-relief.feature_scores))
+    relief = ReliefF(n_neighbors=5, n_features_to_select=num_features)
+    relief.fit(feature_values, target)
+    result.scores = normalize(relief.feature_importances_)
+    result.ranks = np.argsort(np.argsort(-relief.feature_importances_))
 
     # produce scores and ranks from the information matrix
-    Relief_scores = normalize(relief.feature_scores)
-    Relief_ranks = np.argsort(np.argsort(-relief.feature_scores))
+    Relief_scores = normalize(relief.feature_importances_)
+    Relief_ranks = np.argsort(np.argsort(-relief.feature_importances_))
 
     # assign the results to the appropriate fields
     result.scores = Relief_scores
