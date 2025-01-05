@@ -187,7 +187,7 @@ public class AnalysisFMChara extends Analysis {
                 Map<String, String> output = result.output().lines()
                         .dropWhile(e -> !Objects.equals("###---###", e)).skip(1)
                         .map(e -> e.split(" ", 2))
-                        .collect(Collectors.toMap(e -> e[0], e -> e[1]));
+                        .collect(Collectors.toMap(e -> e[0], e -> e[1].replace("?", "").trim()));
                 if (output.isEmpty()) {
                     LOGGER.error("Missing output in FMChara output parsing with input: {}", result.output());
                     throw new IllegalStateException("Missing Output in FMChara");

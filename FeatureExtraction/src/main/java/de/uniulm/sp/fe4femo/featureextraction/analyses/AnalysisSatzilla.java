@@ -70,6 +70,7 @@ public class AnalysisSatzilla extends Analysis {
                     String[] featureValues = lines[lines.length-1].split(",");
                     Map<String, String> values = new HashMap<>();
                     for (int i = 0; i < featureNames.length; i++) {
+                        if (featureNames[i].contains("c Unit prop probe...")) continue;
                         values.put(featureNames[i], featureValues[i]);
                     }
                     yield new IntraStepResult(values, result.status());
