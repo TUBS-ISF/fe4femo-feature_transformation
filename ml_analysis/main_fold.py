@@ -19,6 +19,7 @@ def main(pathOutput : str):
         arguments = ["sbatch", "--partition=multiple", f"--output={pathOutput}/{i}.out", "slurm_scripts/run.sh", "--foldNo", f"{i}" ]
 
         arguments.extend(sys.argv[1:])
+        print(f"Submit fold {i} with arguments:\n {arguments}")
         subprocess.run(arguments, shell=True)
 
 
