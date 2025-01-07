@@ -6,7 +6,7 @@ RUN conda install -c conda-forge conda-pack
 
 COPY environment.yml environment.yml
 RUN conda env create -f environment.yml &&\
-    conda-pack -j -1 -n ml_env -o /venv_ml --format no-archive &&\
+    conda-pack -j -1 -n ml_analysis -o /venv_ml --format no-archive &&\
     /venv_ml/bin/conda-unpack
 
 
