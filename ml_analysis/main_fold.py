@@ -20,7 +20,7 @@ def main(pathOutput : str):
 
         arguments.extend(sys.argv[1:])
         print(f"Submit fold {i} with arguments:\n {arguments}")
-        subprocess.run(arguments, shell=True)
+        subprocess.run(arguments)
 
 
 if __name__ == '__main__':
