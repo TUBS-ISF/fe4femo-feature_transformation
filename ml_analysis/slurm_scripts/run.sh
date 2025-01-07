@@ -26,5 +26,5 @@ echo -e "########\nCONTAINER START"
 
 srun --container-image="$container_path" --container-name=${container}:no_exec \
    --container-mounts=/etc/slurm/task_prolog:/etc/slurm/task_prolog,/scratch:/scratch,$TMPDIR/in:/in,$TMPDIR/out:/out,$TMPDIR/tmp:/tmp \
-   --container-workdir=/app/ --no-container-entrypoint /venv_ml/bin/python generate_fold_model.py "$@"
+   --container-workdir=/app/ --no-container-entrypoint conda run --no-capture-output -n ml_analysis python generate_fold_model.py "$@"
 
