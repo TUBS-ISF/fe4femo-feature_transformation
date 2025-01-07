@@ -22,7 +22,7 @@ echo -e "CONTAINER=${container_path}"
 echo -e "########\nCONTAINER START"
 
 # helper: srun --container-image=$HOME/fe4femo/ml_analysis/slurm_scripts/ml_analysis_i.sqsh --container-name=ml_analysis:no_exec    --container-mounts=/etc/slurm/task_prolog:/etc/slurm/task_prolog,/scratch:/scratch    --container-workdir=/app/ --time=10 --partition=dev_single --no-container-entrypoint /bin/bash
-srun --container-image="$container_path" --container-name=${container}:no_exec \
+srun --exact --container-image="$container_path" --container-name=${container}:no_exec \
    --container-mounts=/etc/slurm/task_prolog:/etc/slurm/task_prolog,/scratch:/scratch,$TMPDIR/in:/in,$TMPDIR/out:/out,$TMPDIR/tmp:/tmp \
-   --container-workdir=/app/ --no-container-entrypoint conda run --no-capture-output -n ml_analysis python generate_fold_model.py "$@"
+   --container-workdir=/app/ --no-container-entrypoint conda run --no-capture-output -n ml_analysis python generate_fold_model.py $@
 
