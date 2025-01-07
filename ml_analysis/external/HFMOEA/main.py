@@ -102,5 +102,5 @@ def compute(data, target, topk=10, pop_size=100, max_gen=100, mutation_probabili
 def reduceFeaturesMaxAcc(data, target, topk=10, pop_size=100, max_gen=100, mutation_probability=0.06):
     pareto_front = compute(data, target, topk, pop_size, max_gen, mutation_probability)
     acc, size, config = max(pareto_front, key=itemgetter(0))
-    return data.loc[:, [ i == 1 for i in config]]
+    return [ i == 1 for i in config]
 

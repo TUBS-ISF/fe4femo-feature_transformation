@@ -20,11 +20,11 @@ def compute_feature_contribution(matrix : np.ndarray, position : int, full_entro
     partial_entropy = compute_dataset_entropy(np.delete(matrix, position, 1))
     return full_entropy - partial_entropy
 
-def keep_high_contrib_features(df : pd.DataFrame) -> pd.DataFrame:
+def keep_high_contrib_features(df : pd.DataFrame) -> list[bool]:
     np_view = df.to_numpy()
     full_entropy = compute_dataset_entropy(np_view)
     contributions = np.array([compute_feature_contribution(np_view, i, full_entropy) for i in range(np_view.shape[1])])
     min_acceptance = contributions.mean() + contributions.std()
     bool_mask = [ x > min_acceptance for x in contributions]
-    return df.loc[:, bool_mask]
+    return bool_mask
 
