@@ -26,7 +26,7 @@ def objective_function_zoo(model, X, y, no_use_X, no_use_y, inner_cv):
     scores = cross_val_score(model, X, y, cv=inner_cv)  # change cv?
     return mean(scores)
 
-def get_feature_selector(features : str, isClassification : bool, X_train : pd.DataFrame, y_train : pd.Series, X_test : pd.DataFrame, selector_args, estimator, group_dict : dict[str, list[str]], parallelism : int = 1,):
+def get_feature_selection(features : str, isClassification : bool, X_train : pd.DataFrame, y_train : pd.Series, X_test : pd.DataFrame, selector_args, estimator, group_dict : dict[str, list[str]], parallelism : int = 1, ):
     inner_cv = KFold(n_splits=3, shuffle=True, random_state=42)
     match features:
         case "all":
