@@ -8,8 +8,7 @@
 
 export OMP_NUM_THREADS=$((${SLURM_CPUS_PER_TASK}/2))
 
-perMetricTimeout=3600
-container="ml"
+container="ml_analysis"
 
 inputpath=$HOME/fe4femo/runtime_measurements/feature-model-benchmark/feature_models
 
@@ -27,5 +26,5 @@ echo -e "########\nCONTAINER START"
 
 srun --container-image="$container_path" --container-name=${container}:no_exec \
    --container-mounts=/etc/slurm/task_prolog:/etc/slurm/task_prolog,/scratch:/scratch,$TMPDIR/in:/in,$TMPDIR/out:/out,$TMPDIR/tmp:/tmp \
-   --container-workdir=/app/ --no-container-entrypoint /opt/.../python generate_fold_model.py "$@"
+   --container-workdir=/app/ --no-container-entrypoint /venv_ml/bin/python generate_fold_model.py "$@"
 
