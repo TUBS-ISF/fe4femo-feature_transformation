@@ -158,4 +158,4 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
 if __name__ == '__main__':
     args = parse_input()
 
-    main(args.pathData, args.pathOutput, args.features, args.task, args.model, args.modelHPO, args.HPOits, args.foldNo)
+    main(os.path.expandvars(args.pathData), os.path.expandvars(args.pathOutput), args.features, args.task, args.model, args.modelHPO, args.HPOits, args.foldNo)
