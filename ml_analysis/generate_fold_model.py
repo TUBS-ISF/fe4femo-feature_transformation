@@ -182,9 +182,10 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                     "run_config": run_config,
                     "study": copyStudy(study)  #todo investigate if works
                 }
-                path = run_config["path_output"] + run_config["name"] + ".pkl"
-                with open(path, "wb") as f:
-                    cloudpickle.dump(output, f)
+                for i, v in output.items():
+                    path = run_config["path_output"] + run_config["name"]+ "__" + i + ".pkl"
+                    with open(path, "wb") as f:
+                        cloudpickle.dump(v, f)
                 print(f"Exported model at {path}")
 
 
