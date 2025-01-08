@@ -5,6 +5,7 @@
 #SBATCH --cpus-per-task=10
 #SBATCH --mem-per-cpu=1125
 #SBATCH --nodes=2,4
+#SBATCH --use-min-nodes
 
 
 export OMP_NUM_THREADS=$((${SLURM_CPUS_PER_TASK}/2))
