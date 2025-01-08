@@ -23,7 +23,9 @@ suffix_time = "_wallclockTimeS"
 
 
 def load_dataset(path : str, subpath : str) -> pd.DataFrame:
-    return pd.read_csv(path+ "/" + subpath, header=0, low_memory=False, index_col="modelNo")
+    df = pd.read_csv(path+ "/" + subpath, header=0, low_memory=False, index_col="modelNo")
+    df.replace([np.inf, -np.inf], np.nan, inplace=True)
+    return df
 
 
 
