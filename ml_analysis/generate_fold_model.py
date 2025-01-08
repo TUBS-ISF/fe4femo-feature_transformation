@@ -11,6 +11,7 @@ from distributed import worker_client
 from sklearn.metrics import matthews_corrcoef, r2_score
 from sklearn.model_selection import StratifiedKFold
 
+from helper.SlurmMemRunner import SLURMMemRunner
 from helper.feature_selection import get_selection_HPO_space, get_feature_selection
 from helper.input_parser import parse_input
 from helper.load_dataset import generate_xy_split, get_dataset, get_flat_models, is_task_classification, \
@@ -85,12 +86,12 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
         "interface": "ib0",
     }
     worker_options = {
-        "local_directory": "/out/dask_tmp/",
+        "local_directory": "$TMPDIR/",
         "nthreads": 4,
         "interface": "ib0",
         "memory_limit": f"{int(os.getenv("SLURM_CPUS_PER_TASK", 2)) * int(os.getenv("SLURM_MEM_PER_CPU", 2000))}MB"
     }
-    with (SLURMRunner(scheduler_file=os.path.expandvars("$HOME") + "/tmp/scheduler_files/scheduler-{job_id}.json",
+    with (SLURMMemRunner(scheduler_file=os.path.expandvars("$HOME") + "/tmp/scheduler_files/scheduler-{job_id}.json",
                       worker_options=worker_options, scheduler_options=scheduler_options) as runner):
         with Client(runner) as client:
             print(f"Dask dashboard is available at {client.dashboard_link}")
