@@ -1,3 +1,6 @@
+#images
+**/*.sqsh
+
 # Git
 .git
 .gitignore
