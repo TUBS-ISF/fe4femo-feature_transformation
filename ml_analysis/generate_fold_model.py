@@ -39,10 +39,10 @@ def compute_fold(dask_X, dask_y, dask_train_index, dask_test_index, model, featu
     model_config = dask.compute(dask_model_config, traverse=False)[0]
     selector_config = dask.compute(dask_selector_config, traverse=False)[0]
     feature_groups = dask.compute(dask_feature_groups, traverse=False)[0]
-    X_train = X[train_index]
-    X_test = X[test_index]
-    y_train = y[train_index]
-    y_test = y[test_index]
+    X_train = X.iloc[train_index]
+    X_test = X.iloc[test_index]
+    y_train = y.iloc[train_index]
+    y_test = y.iloc[test_index]
 
     model_instance_selector = get_model(model, is_classification, 1, model_config )
     X_train, X_test = get_feature_selection(features, is_classification, X_train, y_train, X_test, selector_config, model_instance_selector, feature_groups)
