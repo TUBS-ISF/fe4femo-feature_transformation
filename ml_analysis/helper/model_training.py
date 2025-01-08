@@ -34,7 +34,7 @@ def get_model_HPO_space(model : str, trial : Trial, isClassification : bool) -> 
         case "randomForest":
             return {
                 "n_estimators" : trial.suggest_int("n_estimators", 10, 1000),
-                "max_depth" : trial.suggest_categorical("max_depth", ["sqrt", "log2", 0.5, 1, 0.2]),
+                "max_depth" : trial.suggest_categorical("max_depth", [None, 10, 50, 100, 500, 1000]),
             }
         case "gradboostForest":
             return {
