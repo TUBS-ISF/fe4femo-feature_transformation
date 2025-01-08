@@ -32,15 +32,17 @@ from helper.optuna_helper import copyStudy
 # als separate Main: Multi-Objective für RQ2b
 
 def compute_fold(dask_X, dask_y, dask_train_index, dask_test_index, model, features, is_classification, dask_model_config, dask_selector_config, dask_feature_groups)  -> float:
-    train_index = dask.compute(dask_train_index, traverse=False)
-    test_index = dask.compute(dask_test_index, traverse=False)
-    X = dask.compute(dask_X, traverse=False)
-    y = dask.compute(dask_y, traverse=False)
-    model_config = dask.compute(dask_model_config, traverse=False)
-    selector_config = dask.compute(dask_selector_config, traverse=False)
-    feature_groups = dask.compute(dask_feature_groups, traverse=False)
-    X_train, X_test = X[train_index], X[test_index]
-    y_train, y_test = y[train_index], y[test_index]
+    train_index = dask.compute(dask_train_index, traverse=False)[0]
+    test_index = dask.compute(dask_test_index, traverse=False)[0]
+    X = dask.compute(dask_X, traverse=False)[0]
+    y = dask.compute(dask_y, traverse=False)[0]
+    model_config = dask.compute(dask_model_config, traverse=False)[0]
+    selector_config = dask.compute(dask_selector_config, traverse=False)[0]
+    feature_groups = dask.compute(dask_feature_groups, traverse=False)[0]
+    X_train = X[train_index]
+    X_test = X[test_index]
+    y_train = y[train_index]
+    y_test = y[test_index]
 
     model_instance_selector = get_model(model, is_classification, 1, model_config )
     X_train, X_test = get_feature_selection(features, is_classification, X_train, y_train, X_test, selector_config, model_instance_selector, feature_groups)
@@ -57,12 +59,12 @@ def compute_fold(dask_X, dask_y, dask_train_index, dask_test_index, model, featu
 
 def objective(trial: optuna.Trial, dask_X, dask_y, folds, features, model, should_modelHPO, is_classification, dask_feature_groups) -> float:
 
-    feature_groups = dask.compute(dask_feature_groups, traverse=False) if features == "optuna-combined" else None
+    feature_groups = dask.compute(dask_feature_groups, traverse=False)[0] if features == "optuna-combined" else None
 
     model_config = get_model_HPO_space(model, trial, is_classification) if should_modelHPO else None
     selector_config = get_selection_HPO_space(features, trial, is_classification, feature_groups)
-    dask_model_config = dask.compute(model_config)
-    dask_selector_config = dask.compute(selector_config)
+    dask_model_config = dask.compute(model_config)[0]
+    dask_selector_config = dask.compute(selector_config)[0]
 
     with worker_client() as client:
         futures = [client.submit(compute_fold, dask_X, dask_y, dask_train_index, dask_test_index, model, features, is_classification, dask_model_config, dask_selector_config, dask_feature_groups) for i, (dask_train_index, dask_test_index) in folds.items() ]
