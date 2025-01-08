@@ -120,7 +120,7 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
     with (SLURMMemRunner(scheduler_file=str(scheduler_path)+"/scheduler-{job_id}.json",
                       worker_options=worker_options, scheduler_options=scheduler_options) as runner):
         with Client(runner) as client:
-            with performance_report(filename=run_config["path_output"] + run_config["name"] + ".html"):
+            with performance_report(filename=run_config["path_output"] + "/" + run_config["name"] + ".html"):
                 print(f"Dask dashboard is available at {client.dashboard_link}")
                 client.wait_for_workers(runner.n_workers)
 
@@ -143,7 +143,9 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                 is_classification = is_task_classification(task)
                 objective_function = lambda trial: objective(trial, X_train_dask, y_train_dask, folds, features, model, modelHPO, is_classification, feature_groups)
 
-                storage = optuna.integration.dask.DaskStorage()
+                journal_path = run_config["path_output"] + "/" + run_config["name"] + ".journal"
+                journal = optuna.storages.JournalStorage(optuna.storages.journal.JournalFileBackend(journal_path))
+                storage = optuna.integration.dask.DaskStorage(journal)
                 study = optuna.create_study(storage=storage, direction="maximize")
 
                 n_jobs = math.ceil((int(os.getenv("SLURM_NTASKS", 7)) - 2) / 8) #2 less than tasks for scheduler and main-node
@@ -180,12 +182,12 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                     "y_test": y_test,
                     "best_params": best_params,
                     "run_config": run_config,
-                    "study": copyStudy(study)  #todo investigate if works
+                    "journal_path": journal_path
                 }
-                for i, v in output.items():
-                    path = run_config["path_output"] + run_config["name"]+ "__" + i + ".pkl"
-                    with open(path, "wb") as f:
-                        cloudpickle.dump(v, f)
+
+                path = run_config["path_output"] + "/"  + run_config["name"] + ".pkl"
+                with open(path, "wb") as f:
+                    cloudpickle.dump(output, f)
                 print(f"Exported model at {path}")
 
 
