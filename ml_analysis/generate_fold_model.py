@@ -108,8 +108,8 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
             splits = kf.split(X_train, get_flat_models(X_train))
 
             # dask export for better cluster behaviour
-            X_train = dask.delayed(X_train, pure=True)
-            y_train = dask.delayed(y_train, pure=True)
+            X_train_dask = dask.delayed(X_train, pure=True)
+            y_train_dask = dask.delayed(y_train, pure=True)
 
             folds = {
                 i: (dask.delayed(train_index, pure=True), dask.delayed(test_index, pure=True)) for i, (train_index, test_index) in enumerate(splits)
@@ -118,7 +118,7 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
             feature_groups = load_feature_groups(pathData)
             feature_groups = dask.delayed(feature_groups)
             is_classification = is_task_classification(task)
-            objective_function = lambda trial: objective(trial, X_train, y_train, folds, features, model, modelHPO, is_classification, feature_groups)
+            objective_function = lambda trial: objective(trial, X_train_dask, y_train_dask, folds, features, model, modelHPO, is_classification, feature_groups)
 
             storage = optuna.integration.dask.DaskStorage()
             study = optuna.create_study(storage=storage, direction="maximize")
