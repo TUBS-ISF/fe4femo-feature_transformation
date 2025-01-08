@@ -55,9 +55,7 @@ def compute_fold(dask_X, dask_y, dask_train_index, dask_test_index, model, featu
         return 1 - ((1-r2)* ((n-1)/(n-p-1))) # adjusted R2
 
 
-def objective(trial: optuna.Trial, dask_X, dask_y, dask_folds, features, model, should_modelHPO, is_classification, dask_feature_groups) -> float:
-
-    folds = dask.compute(dask_folds, traverse=False)
+def objective(trial: optuna.Trial, dask_X, dask_y, folds, features, model, should_modelHPO, is_classification, dask_feature_groups) -> float:
 
     feature_groups = dask.compute(dask_feature_groups, traverse=False) if features == "optuna-combined" else None
 
