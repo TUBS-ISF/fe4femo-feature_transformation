@@ -4,7 +4,7 @@
 #SBATCH --ntasks=100
 #SBATCH --cpus-per-task=6
 #SBATCH --mem-per-cpu=1125
-#SBATCH --nodes=2,70
+#SBATCH --nodes=2-70
 #SBATCH --use-min-nodes
 
 

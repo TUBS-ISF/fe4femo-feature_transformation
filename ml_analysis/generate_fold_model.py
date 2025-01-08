@@ -147,7 +147,7 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
             storage = optuna.integration.dask.DaskStorage()
             study = optuna.create_study(storage=storage, direction="maximize")
 
-            n_jobs = math.ceil((int(os.getenv("SLURM_NTASKS", 7)) - 2) / 10) #2 less than tasks for scheduler and main-node
+            n_jobs = math.ceil((int(os.getenv("SLURM_NTASKS", 7)) - 2) / 8) #2 less than tasks for scheduler and main-node
             n_trials = (hpo_its / n_jobs) + 1
             futures = [
                 client.submit(study.optimize, objective_function, n_trials, pure=False) for _ in range(n_jobs)
