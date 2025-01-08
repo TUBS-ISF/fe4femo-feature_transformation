@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=1:0:0
+#SBATCH --time=0:30:0
 #SBATCH --job-name=eval_model
 #SBATCH --ntasks=10
 #SBATCH --cpus-per-task=10
