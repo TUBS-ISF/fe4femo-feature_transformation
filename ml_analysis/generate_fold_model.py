@@ -1,6 +1,7 @@
 import os
 import tempfile
 
+import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import RobustScaler
 
@@ -36,7 +37,7 @@ from helper.optuna_helper import copyStudy
 # als separate Main: Multi-Objective für RQ2b
 
 def impute_and_scale(X_train, X_test):
-    imputer = SimpleImputer(keep_empty_features=True)
+    imputer = SimpleImputer(keep_empty_features=True, missing_values=pd.NA)
     scaler = RobustScaler()
 
     X_train = imputer.fit_transform(X_train)
