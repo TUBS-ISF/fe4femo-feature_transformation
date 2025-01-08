@@ -16,7 +16,7 @@ import optuna
 from dask.distributed import Client
 from dask_jobqueue.slurm import SLURMRunner
 import dask
-from distributed import worker_client
+from distributed import worker_client, performance_report
 from sklearn.metrics import matthews_corrcoef, r2_score, d2_absolute_error_score
 from sklearn.model_selection import StratifiedKFold
 
@@ -120,71 +120,72 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
     with (SLURMMemRunner(scheduler_file=str(scheduler_path)+"/scheduler-{job_id}.json",
                       worker_options=worker_options, scheduler_options=scheduler_options) as runner):
         with Client(runner) as client:
-            print(f"Dask dashboard is available at {client.dashboard_link}")
-            client.wait_for_workers(runner.n_workers)
+            with performance_report(filename=run_config["path_output"] + run_config["name"] + ".html"):
+                print(f"Dask dashboard is available at {client.dashboard_link}")
+                client.wait_for_workers(runner.n_workers)
 
-            X, y = get_dataset(pathData, task)
-            X_train, X_test, y_train, y_test = generate_xy_split(X, y, pathData+"/folds.txt", foldNo)
+                X, y = get_dataset(pathData, task)
+                X_train, X_test, y_train, y_test = generate_xy_split(X, y, pathData+"/folds.txt", foldNo)
 
-            kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
-            splits = kf.split(X_train, get_flat_models(X_train))
+                kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
+                splits = kf.split(X_train, get_flat_models(X_train))
 
-            # dask export for better cluster behaviour
-            X_train_dask = dask.delayed(X_train, pure=True)
-            y_train_dask = dask.delayed(y_train, pure=True)
+                # dask export for better cluster behaviour
+                X_train_dask = dask.delayed(X_train, pure=True)
+                y_train_dask = dask.delayed(y_train, pure=True)
 
-            folds = {
-                i: (dask.delayed(train_index, pure=True), dask.delayed(test_index, pure=True)) for i, (train_index, test_index) in enumerate(splits)
-            }
+                folds = {
+                    i: (dask.delayed(train_index, pure=True), dask.delayed(test_index, pure=True)) for i, (train_index, test_index) in enumerate(splits)
+                }
 
-            feature_groups = load_feature_groups(pathData)
-            feature_groups = dask.delayed(feature_groups)
-            is_classification = is_task_classification(task)
-            objective_function = lambda trial: objective(trial, X_train_dask, y_train_dask, folds, features, model, modelHPO, is_classification, feature_groups)
+                feature_groups = load_feature_groups(pathData)
+                feature_groups = dask.delayed(feature_groups)
+                is_classification = is_task_classification(task)
+                objective_function = lambda trial: objective(trial, X_train_dask, y_train_dask, folds, features, model, modelHPO, is_classification, feature_groups)
 
-            storage = optuna.integration.dask.DaskStorage()
-            study = optuna.create_study(storage=storage, direction="maximize")
+                storage = optuna.integration.dask.DaskStorage()
+                study = optuna.create_study(storage=storage, direction="maximize")
 
-            n_jobs = math.ceil((int(os.getenv("SLURM_NTASKS", 7)) - 2) / 8) #2 less than tasks for scheduler and main-node
-            n_trials = (hpo_its / n_jobs) + 1
-            futures = [
-                client.submit(study.optimize, objective_function, n_trials, pure=False) for _ in range(n_jobs)
-            ]
+                n_jobs = math.ceil((int(os.getenv("SLURM_NTASKS", 7)) - 2) / 8) #2 less than tasks for scheduler and main-node
+                n_trials = math.ceil(hpo_its / n_jobs)
+                futures = [
+                    client.submit(study.optimize, objective_function, n_trials, pure=False) for _ in range(n_jobs)
+                ]
 
-            dask.distributed.wait(futures)
+                dask.distributed.wait(futures)
 
-            # train complete model with HPO values
-            best_params = study.best_params
-            frozen_best_trial = study.best_trial
+                # train complete model with HPO values
+                best_params = study.best_params
+                frozen_best_trial = study.best_trial
 
-            #todo work with best trial
-            with joblib.parallel_backend('dask'):
-                # feature preprocessing
-                X_train, X_test = impute_and_scale(X_train, X_test)
+                #todo work with best trial
+                with joblib.parallel_backend('dask'):
+                    # feature preprocessing
+                    X_train, X_test = impute_and_scale(X_train, X_test)
 
-                # feature selection + model training
-                model_config = get_model_HPO_space(model, frozen_best_trial, is_classification) if modelHPO else None
-                selector_config = get_selection_HPO_space(features, frozen_best_trial, is_classification, feature_groups)
-                model_instance_selector = get_model(model, is_classification, 1, model_config)
-                X_train, X_test = get_feature_selection(features, is_classification, X_train, y_train, X_test,
-                                                        selector_config, model_instance_selector, feature_groups, parallelism=n_jobs)
-                model_instance = get_model(model, is_classification, n_jobs, model_config)
-                model_instance.fit(X_train, y_train)
-            model_complete = model_instance
+                    # feature selection + model training
+                    model_config = get_model_HPO_space(model, frozen_best_trial, is_classification) if modelHPO else None
+                    selector_config = get_selection_HPO_space(features, frozen_best_trial, is_classification, feature_groups)
+                    model_instance_selector = get_model(model, is_classification, 1, model_config)
+                    X_train, X_test = get_feature_selection(features, is_classification, X_train, y_train, X_test,
+                                                            selector_config, model_instance_selector, feature_groups, parallelism=n_jobs)
+                    model_instance = get_model(model, is_classification, n_jobs, model_config)
+                    model_instance.fit(X_train, y_train)
+                model_complete = model_instance
 
-            # export for later use
-            output = {
-                "model": model_complete,
-                "X_test": X_test,
-                "y_test": y_test,
-                "best_params": best_params,
-                "run_config": run_config,
-                "study": copyStudy(study)  #todo investigate if works
-            }
-            path = run_config["path_output"] + run_config["name"] + ".pkl"
-            with open(path, "wb") as f:
-                cloudpickle.dump(output, f)
-            print(f"Exported model at {path}")
+                # export for later use
+                output = {
+                    "model": model_complete,
+                    "X_test": X_test,
+                    "y_test": y_test,
+                    "best_params": best_params,
+                    "run_config": run_config,
+                    "study": copyStudy(study)  #todo investigate if works
+                }
+                path = run_config["path_output"] + run_config["name"] + ".pkl"
+                with open(path, "wb") as f:
+                    cloudpickle.dump(output, f)
+                print(f"Exported model at {path}")
 
 
 
