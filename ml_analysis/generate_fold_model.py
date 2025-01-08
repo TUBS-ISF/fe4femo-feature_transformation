@@ -1,4 +1,6 @@
 import os
+import tempfile
+os.environ['MPLCONFIGDIR'] = tempfile.mkdtemp()
 from pathlib import Path
 from statistics import mean
 
