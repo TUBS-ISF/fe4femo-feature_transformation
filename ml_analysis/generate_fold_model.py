@@ -75,7 +75,8 @@ def compute_fold(dask_X, dask_y, dask_train_index, dask_test_index, model, featu
         return matthews_corrcoef(y_test, y_pred)
     else:
         r2 = r2_score(y_test, y_pred)
-        n, p = X_test.shape
+        n = len(y_test)
+        p = X_test.shape[1]
         return 1 - ((1-r2)* ((n-1)/(n-p-1))) # adjusted R2
 
 
