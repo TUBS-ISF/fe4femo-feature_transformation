@@ -28,7 +28,7 @@ def load_dataset(path : str, subpath : str) -> pd.DataFrame:
 
 
 def load_feature_data(main_path : str) -> pd.DataFrame:
-    df = load_dataset(main_path, "/featureExtraction/values.csv")
+    df = load_dataset(main_path, "featureExtraction/values.csv")
     df['FM_Characterization_1/FM_Characterization/ANALYSIS/Partial_variability/value'] = df['FM_Characterization_1/FM_Characterization/ANALYSIS/Partial_variability/value'].astype(float)
     df['FM_Characterization_1/FM_Characterization/ANALYSIS/Configurations/value'] = df['FM_Characterization_1/FM_Characterization/ANALYSIS/Configurations/value'].astype(float)
     for index, row in df.dtypes[df.dtypes == "object"].items():
@@ -54,37 +54,37 @@ def filter_SATfeatPy(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def load_sat_runtime(main_path : str) -> pd.DataFrame:
-    df = load_dataset(main_path, "/runtime/sat.csv")
+    df = load_dataset(main_path, "runtime/sat.csv")
     return df.loc[:, 'wallclockTimeS'].astype(float)
 
 
 def load_sat_mem(main_path : str) -> pd.DataFrame:
-    df = load_dataset(main_path, "/runtime/sat.csv")
+    df = load_dataset(main_path, "runtime/sat.csv")
     return df.loc[:, 'memUseMB'].astype(float)
 
 
 def load_backbone_runtime(main_path : str) -> pd.DataFrame:
-    df = load_dataset(main_path, "/runtime/backbone.csv")
+    df = load_dataset(main_path, "runtime/backbone.csv")
     return df.loc[:, 'wallclockTimeS'].astype(float)
 
 
 def load_backbone_mem(main_path : str) -> pd.DataFrame:
-    df = load_dataset(main_path, "/runtime/backbone.csv")
+    df = load_dataset(main_path, "runtime/backbone.csv")
     return df.loc[:, 'memUseMB'].astype(float)
 
 
 def load_backbone_size(main_path : str) -> pd.DataFrame:
-    df = load_dataset(main_path, "/runtime/backbone.csv")
+    df = load_dataset(main_path, "runtime/backbone.csv")
     return df.loc[:, 'backboneSize'].astype(int)
 
 
 def load_spur_runtime(main_path : str, s : int) -> pd.DataFrame:
-    df = load_dataset(main_path, f"/runtime/spur_{s}.csv")
+    df = load_dataset(main_path, f"runtime/spur_{s}.csv")
     return df.loc[:, 'wallclockTimeS'].astype(float)
 
 
 def load_spur_mem(main_path : str, s : int) -> pd.DataFrame:
-    df = load_dataset(main_path, f"/runtime/spur_{s}.csv")
+    df = load_dataset(main_path, f"runtime/spur_{s}.csv")
     return df.loc[:, 'memUseMB'].astype(float)
 
 
@@ -108,11 +108,11 @@ def check_best_sSAT_solver(row : pd.Series) -> str:
 
 
 def load_algo_selection(main_path : str) -> pd.DataFrame:
-    df = load_dataset(main_path, "/runtime/sharpsat.csv")
+    df = load_dataset(main_path, "runtime/sharpsat.csv")
     return df.apply(check_best_sSAT_solver, axis=1)
 
 def load_value_ssat(main_path : str) -> pd.DataFrame:
-    df = load_dataset(main_path, "/runtime/sharpsat.csv")
+    df = load_dataset(main_path, "runtime/sharpsat.csv")
     return df.apply(check_ssat_value, axis=1)
 
 def get_flat_models(df: pd.DataFrame) -> pd.Series:
