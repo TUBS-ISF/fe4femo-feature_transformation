@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --time=1:0:0
 #SBATCH --job-name=eval_model
-#SBATCH --ntasks=40
+#SBATCH --ntasks=10
 #SBATCH --cpus-per-task=10
 #SBATCH --mem-per-cpu=1125
 #SBATCH --nodes=2,70
