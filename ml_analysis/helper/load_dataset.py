@@ -24,6 +24,13 @@ suffix_time = "_wallclockTimeS"
 
 def load_dataset(path : str, subpath : str) -> pd.DataFrame:
     df = pd.read_csv(path+ "/" + subpath, header=0, low_memory=False, index_col="modelNo")
+    df.replace({False: 0, True: 1, None: pd.NA}, inplace=True)
+    for index, type in df.dtypes.items():
+        df[index] = pd.to_numeric(df[index], errors="coerce", downcast="float")
+    for index, type in df.dtypes.items():
+        if type == "float64":
+            df[index] = np.log2(df[index])
+    df = df.astype('float32')
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     return df
 
@@ -31,13 +38,8 @@ def load_dataset(path : str, subpath : str) -> pd.DataFrame:
 
 def load_feature_data(main_path : str) -> pd.DataFrame:
     df = load_dataset(main_path, "featureExtraction/values.csv")
-    df['FM_Characterization_1/FM_Characterization/ANALYSIS/Partial_variability/value'] = df['FM_Characterization_1/FM_Characterization/ANALYSIS/Partial_variability/value'].astype(float)
-    df['FM_Characterization_1/FM_Characterization/ANALYSIS/Configurations/value'] = df['FM_Characterization_1/FM_Characterization/ANALYSIS/Configurations/value'].astype(float)
-    for index, row in df.dtypes[df.dtypes == "object"].items():
-        df[index] = df[index].astype("boolean")
     df.columns = df.columns.map(str)
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
-    df.replace({False: 0, True: 1, None : pd.NA}, inplace=True)
     return df
 
 
