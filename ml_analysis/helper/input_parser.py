@@ -3,8 +3,8 @@ import argparse
 
 def parse_input() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Model Evaluation')
-    parser.add_argument('pathData', type=str, help='Path to data-folder')
-    parser.add_argument('pathOutput', type=str, help='Path to save output to')
+    parser.add_argument('pathData', type=str, help='Path to data-folder, relative to user-home')
+    parser.add_argument('pathOutput', type=str, help='Path to save output to, relative to user-home')
     parser.add_argument("--features", help="Feature Subset to use, defaults to all",
                         choices=["all", "SATzilla", "SATfeatPy", "FMBA", "FM_Chara",
                                  "kbest-mutalinfo", "multisurf", "mRMR", "SFS-forward", "SFS-backward", "harris-hawks",

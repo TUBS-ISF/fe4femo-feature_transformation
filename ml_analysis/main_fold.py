@@ -1,4 +1,5 @@
 import argparse
+import os
 import subprocess
 import sys
 
@@ -16,7 +17,7 @@ from helper.input_parser import parse_input
 
 def main(pathOutput : str):
     for i in range(10):
-        arguments = ["sbatch", "--partition=multiple", f"--output={pathOutput}/{i}.out", "slurm_scripts/run.sh", "--foldNo", f"{i}" ]
+        arguments = ["sbatch", "--partition=multiple", f"--output={os.getenv("HOME")}/{pathOutput}/{i}.out", "slurm_scripts/run.sh", "--foldNo", f"{i}" ]
 
         arguments.extend(sys.argv[1:])
         print(f"Submit fold {i} with arguments:\n {arguments}")
