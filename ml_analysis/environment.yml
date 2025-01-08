@@ -187,6 +187,7 @@ dependencies:
       - kiwisolver==1.4.8
       - matplotlib==3.10.0
       - mrmr-selection==0.2.8
+      - optuna-integration==4.1.0
       - patsy==1.0.1
       - pillow==11.1.0
       - plotly==5.24.1
