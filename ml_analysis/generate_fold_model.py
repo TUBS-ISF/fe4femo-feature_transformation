@@ -113,7 +113,7 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
     }
     worker_options = {
         "local_directory": "$TMPDIR/",
-        "nthreads": 1,
+        "nthreads": 2,
         "interface": "ib0",
         "memory_limit": f"{int(os.getenv("SLURM_CPUS_PER_TASK", 2)) * int(os.getenv("SLURM_MEM_PER_CPU", 2000))}MB"
     }
