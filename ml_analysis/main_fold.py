@@ -17,9 +17,9 @@ from helper.input_parser import parse_input
 # als separate Main: Multi-Objective für RQ2b
 
 def main(pathOutput : str):
-    Path(f"{os.getenv("HOME")}/{pathOutput}").mkdir(parents=True, exist_ok=True)
+    Path(f"{os.environ.get("HOME")}/{pathOutput}").mkdir(parents=True, exist_ok=True)
     for i in range(10):
-        arguments = ["sbatch", "--partition=multiple", f"--output={os.getenv("HOME")}/{pathOutput}/{i}.out", "slurm_scripts/run.sh", "--foldNo", f"{i}" ]
+        arguments = ["sbatch", "--partition=multiple", f"--output={os.environ.get("HOME")}/{pathOutput}/{i}.out", "slurm_scripts/run.sh", "--foldNo", f"{i}" ]
 
         arguments.extend(sys.argv[1:])
         print(f"Submit fold {i} with arguments:\n {arguments}")

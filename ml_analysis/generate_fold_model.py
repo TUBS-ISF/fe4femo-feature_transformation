@@ -93,7 +93,9 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
         "interface": "ib0",
         "memory_limit": f"{int(os.getenv("SLURM_CPUS_PER_TASK", 2)) * int(os.getenv("SLURM_MEM_PER_CPU", 2000))}MB"
     }
-    with (SLURMMemRunner(scheduler_file=os.path.expandvars("$HOME") + "/tmp/scheduler_files/scheduler-{job_id}.json",
+    scheduler_path = Path(os.path.expandvars("$HOME") + "/tmp/scheduler_files")
+    scheduler_path.mkdir(parents=True, exist_ok=True)
+    with (SLURMMemRunner(scheduler_file=str(scheduler_path)+"/scheduler-{job_id}.json",
                       worker_options=worker_options, scheduler_options=scheduler_options) as runner):
         with Client(runner) as client:
             print(f"Dask dashboard is available at {client.dashboard_link}")
@@ -161,4 +163,4 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
 if __name__ == '__main__':
     args = parse_input()
 
-    main(os.getenv("HOME")+"/"+os.path.expandvars(args.pathData), os.getenv("HOME")+"/"+os.path.expandvars(args.pathOutput), args.features, args.task, args.model, args.modelHPO, args.HPOits, args.foldNo)
+    main(os.environ.get("HOME")+"/"+os.path.expandvars(args.pathData), os.environ.get("HOME")+"/"+os.path.expandvars(args.pathOutput), args.features, args.task, args.model, args.modelHPO, args.HPOits, args.foldNo)
