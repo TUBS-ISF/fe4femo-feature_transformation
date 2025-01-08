@@ -2,6 +2,7 @@ import math
 import os
 import tempfile
 
+import cloudpickle
 import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import RobustScaler
@@ -180,8 +181,10 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                 "run_config": run_config,
                 "study": copyStudy(study)  #todo investigate if works
             }
-            pickle_path = joblib.dump(output, run_config["path_output"] + run_config["name"] + ".z", compress=True, protocol=5)
-            print(f"Exported model at {pickle_path}")
+            path = run_config["path_output"] + run_config["name"] + ".pkl"
+            with open(path, "wb") as f:
+                cloudpickle.dump(output, f)
+            print(f"Exported model at {path}")
 
 
 
