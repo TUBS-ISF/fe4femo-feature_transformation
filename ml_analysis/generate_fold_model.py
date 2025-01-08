@@ -1,5 +1,9 @@
 import os
 import tempfile
+
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import RobustScaler
+
 os.environ['MPLCONFIGDIR'] = tempfile.mkdtemp()
 from pathlib import Path
 from statistics import mean
@@ -31,6 +35,19 @@ from helper.optuna_helper import copyStudy
 
 # als separate Main: Multi-Objective für RQ2b
 
+def impute_and_scale(X_train, X_test):
+    imputer = SimpleImputer(keep_empty_features=True)
+    scaler = RobustScaler()
+
+    X_train = imputer.fit_transform(X_train)
+    X_train = scaler.fit_transform(X_train)
+
+    X_test = imputer.transform(X_test)
+    X_test = scaler.transform(X_test)
+
+    return X_train, X_test
+
+
 def compute_fold(dask_X, dask_y, dask_train_index, dask_test_index, model, features, is_classification, dask_model_config, dask_selector_config, dask_feature_groups)  -> float:
     train_index = dask.compute(dask_train_index, traverse=False)[0]
     test_index = dask.compute(dask_test_index, traverse=False)[0]
@@ -44,6 +61,10 @@ def compute_fold(dask_X, dask_y, dask_train_index, dask_test_index, model, featu
     y_train = y.iloc[train_index]
     y_test = y.iloc[test_index]
 
+    # feature preprocessing
+    X_train, X_test = impute_and_scale(X_train, X_test)
+
+    # feature selection + model training
     model_instance_selector = get_model(model, is_classification, 1, model_config )
     X_train, X_test = get_feature_selection(features, is_classification, X_train, y_train, X_test, selector_config, model_instance_selector, feature_groups)
     model_instance = get_model(model, is_classification, 1, model_config )
@@ -137,6 +158,10 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
 
             #todo work with best trial
             with joblib.parallel_backend('dask'):
+                # feature preprocessing
+                X_train, X_test = impute_and_scale(X_train, X_test)
+
+                # feature selection + model training
                 model_config = get_model_HPO_space(model, frozen_best_trial, is_classification) if modelHPO else None
                 selector_config = get_selection_HPO_space(features, frozen_best_trial, is_classification, feature_groups)
                 model_instance_selector = get_model(model, is_classification, 1, model_config)
