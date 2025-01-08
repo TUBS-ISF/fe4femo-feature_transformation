@@ -16,7 +16,7 @@ from dask.distributed import Client
 from dask_jobqueue.slurm import SLURMRunner
 import dask
 from distributed import worker_client
-from sklearn.metrics import matthews_corrcoef, r2_score
+from sklearn.metrics import matthews_corrcoef, r2_score, d2_absolute_error_score
 from sklearn.model_selection import StratifiedKFold
 
 from helper.SlurmMemRunner import SLURMMemRunner
@@ -75,10 +75,7 @@ def compute_fold(dask_X, dask_y, dask_train_index, dask_test_index, model, featu
     if is_classification:
         return matthews_corrcoef(y_test, y_pred)
     else:
-        r2 = r2_score(y_test, y_pred)
-        n = len(y_test)
-        p = X_test.shape[1]
-        return 1 - ((1-r2)* ((n-1)/(n-p-1))) # adjusted R2
+        return d2_absolute_error_score(y_test, y_pred)
 
 
 def objective(trial: optuna.Trial, dask_X, dask_y, folds, features, model, should_modelHPO, is_classification, dask_feature_groups) -> float:
