@@ -36,6 +36,7 @@ def load_feature_data(main_path : str) -> pd.DataFrame:
     for index, row in df.dtypes[df.dtypes == "object"].items():
         df[index] = df[index].astype("boolean")
     df.columns = df.columns.map(str)
+    df.replace([np.inf, -np.inf], np.nan, inplace=True)
     return df
 
 
