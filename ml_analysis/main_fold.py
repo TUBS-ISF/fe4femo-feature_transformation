@@ -16,17 +16,16 @@ from helper.input_parser import parse_input
 
 # als separate Main: Multi-Objective für RQ2b
 
-def main(pathOutput : str):
-    outputdir = os.environ.get("HOME")+"/"+pathOutput
+
+if __name__ == '__main__':
+    args = parse_input()
+    outputdir = os.environ.get("HOME") + "/" + args.pathOutput
     Path(outputdir).mkdir(parents=True, exist_ok=True)
     for i in range(10):
-        arguments = ["sbatch", "--partition=multiple_il", f"--output={outputdir}/{i}.out", "slurm_scripts/run.sh", "--foldNo", f"{i}" ]
+        name = f"{args.task}_{args.features}_{args.model}_{args.modelHPO}_{args.hpo_its}_{args.foldNo}"
+        arguments = ["sbatch", "--partition=multiple_il", f"--output={outputdir}/{name}_{i}.out", "slurm_scripts/run.sh",
+                     "--foldNo", f"{i}"]
 
         arguments.extend(sys.argv[1:])
         print(f"Submit fold {i} with arguments:\n {arguments}")
         subprocess.run(arguments)
-
-
-if __name__ == '__main__':
-    args = parse_input()
-    main(args.pathOutput)
