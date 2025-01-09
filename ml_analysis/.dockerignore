@@ -1,5 +1,6 @@
 #images
 **/*.sqsh
+copy
 
 # Git
 .git

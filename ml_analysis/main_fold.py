@@ -20,7 +20,7 @@ def main(pathOutput : str):
     outputdir = os.environ.get("HOME")+"/"+pathOutput
     Path(outputdir).mkdir(parents=True, exist_ok=True)
     for i in range(10):
-        arguments = ["sbatch", "--partition=multiple", f"--output={outputdir}/{i}.out", "slurm_scripts/run.sh", "--foldNo", f"{i}" ]
+        arguments = ["sbatch", "--partition=multiple_il", f"--output={outputdir}/{i}.out", "slurm_scripts/run.sh", "--foldNo", f"{i}" ]
 
         arguments.extend(sys.argv[1:])
         print(f"Submit fold {i} with arguments:\n {arguments}")

@@ -75,7 +75,7 @@ def get_feature_selection(features : str, isClassification : bool, X_train : pd.
             feature_mask = reduceFeaturesMaxAcc(X_train, y_train, **selector_args)
             return  X_train.loc[:, feature_mask], X_test.loc[:, feature_mask]
         case "embedded-tree":
-            forest = RandomForestClassifier(n_estimators=selector_args["n_estimators"], max_depth=selector_args["max_depth"]) if isClassification else RandomForestRegressor(n_estimators=selector_args["n_estimators"], max_depth=selector_args["max_depth"])
+            forest = RandomForestClassifier(n_estimators=selector_args["n_estimators"], max_depth=selector_args["max_depth"], n_jobs=parallelism) if isClassification else RandomForestRegressor(n_estimators=selector_args["n_estimators"], max_depth=selector_args["max_depth"], n_jobs=parallelism)
             model = SelectFromModel(forest, max_features=selector_args["max_features"])
             model.fit(X_train, y_train)
             return model.transform(X_train), model.transform(X_test)

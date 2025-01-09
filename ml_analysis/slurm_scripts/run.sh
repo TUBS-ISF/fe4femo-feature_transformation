@@ -1,14 +1,14 @@
 #!/bin/bash
-#SBATCH --time=3:0:0
+#SBATCH --time=2:0:0
 #SBATCH --job-name=eval_model
-#SBATCH --ntasks=100
-#SBATCH --cpus-per-task=4
-#SBATCH --mem-per-cpu=1125
+#SBATCH --ntasks=64
+#SBATCH --cpus-per-task=8
+#SBATCH --mem-per-cpu=1950
 #SBATCH --nodes=2-70
 #SBATCH --use-min-nodes
 
 
-export OMP_NUM_THREADS=$((${SLURM_CPUS_PER_TASK}/2))
+export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
 echo -e "JOB_ID=${SLURM_JOB_ID}"
 
 container="ml_analysis"

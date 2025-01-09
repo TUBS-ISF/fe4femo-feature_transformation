@@ -69,8 +69,8 @@ def compute_fold(dask_X, dask_y, dask_train_index, dask_test_index, model, featu
 
     # feature selection + model training
     model_instance_selector = get_model(model, is_classification, 1, model_config )
-    X_train, X_test = get_feature_selection(features, is_classification, X_train, y_train, X_test, selector_config, model_instance_selector, feature_groups)
-    model_instance = get_model(model, is_classification, 1, model_config )
+    X_train, X_test = get_feature_selection(features, is_classification, X_train, y_train, X_test, selector_config, model_instance_selector, feature_groups, parallelism=8)
+    model_instance = get_model(model, is_classification, 8, model_config )
     model_instance.fit(X_train, y_train)
     y_pred = model_instance.predict(X_test)
     if is_classification:
@@ -90,7 +90,8 @@ def objective(trial: optuna.Trial, dask_X, dask_y, folds, features, model, shoul
 
     with worker_client() as client:
         futures = [client.submit(compute_fold, dask_X, dask_y, dask_train_index, dask_test_index, model, features, is_classification, dask_model_config, dask_selector_config, dask_feature_groups) for i, (dask_train_index, dask_test_index) in folds.items() ]
-        return mean(client.gather(futures))
+        results = client.gather(futures)
+    return mean(results)
 
 def main(pathData: str, pathOutput: str, features: str, task: str, model: str, modelHPO: bool, hpo_its: int, foldNo : int):
     Path(pathOutput).mkdir(parents=True, exist_ok=True)
@@ -148,7 +149,7 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                 storage = optuna.integration.dask.DaskStorage(journal)
                 study = optuna.create_study(storage=storage, direction="maximize")
 
-                n_jobs = math.ceil((int(os.getenv("SLURM_NTASKS", 7)) - 2) / 8) #2 less than tasks for scheduler and main-node
+                n_jobs = math.ceil((int(os.getenv("SLURM_NTASKS", 7)) - 2) / 3) #2 less than tasks for scheduler and main-node
                 n_trials = math.ceil(hpo_its / n_jobs)
                 futures = [
                     client.submit(study.optimize, objective_function, n_trials, pure=False) for _ in range(n_jobs)
