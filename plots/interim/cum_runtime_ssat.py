@@ -10,7 +10,7 @@ ax = plt.gca()
 
 from cycler import cycler
 colormap = plt.get_cmap("gist_ncar")
-ax.set_prop_cycle(cycler('color', [colormap(i) for i in np.linspace(0, 0.9, 3)]))
+ax.set_prop_cycle(cycler('color', [colormap(i) for i in np.linspace(0, 0.9, 7)]))
 
 cols = {
     "approxmc" : "ApproxMC",
