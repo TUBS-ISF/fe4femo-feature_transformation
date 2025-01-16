@@ -27,7 +27,6 @@ def keep_high_contrib_features(df : pd.DataFrame) -> list[bool]:
     np_view = df.to_numpy()
     full_entropy = compute_dataset_entropy(np_view)
     contributions = np.array([compute_feature_contribution(np_view, i, full_entropy) for i in range(np_view.shape[1])])
-    print(contributions)
     min_acceptance = contributions.mean() + contributions.std()
     bool_mask = [ x > min_acceptance for x in contributions]
     return bool_mask
