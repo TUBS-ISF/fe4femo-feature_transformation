@@ -6,7 +6,7 @@ def parse_input() -> argparse.Namespace:
     parser.add_argument('pathData', type=str, help='Path to data-folder, relative to user-home')
     parser.add_argument('pathOutput', type=str, help='Path to save output to, relative to user-home')
     parser.add_argument("--features", help="Feature Subset to use, defaults to all",
-                        choices=["all", "SATzilla", "SATfeatPy", "FMBA", "FM_Chara",
+                        choices=["all", "prefilter", "SATzilla", "SATfeatPy", "FMBA", "FM_Chara",
                                  "kbest-mutalinfo", "multisurf", "mRMR", "RFE", "harris-hawks",
                                  "genetic", "HFMOEA", "embedded-tree", "SVD-entropy", "NDFS", "optuna-combined"],
                         default="all")

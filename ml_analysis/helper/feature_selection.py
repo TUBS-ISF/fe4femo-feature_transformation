@@ -9,7 +9,7 @@ from functools import partial
 
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.feature_selection import SelectKBest, mutual_info_classif, mutual_info_regression, \
-    SequentialFeatureSelector, SelectFromModel, RFECV
+    SequentialFeatureSelector, SelectFromModel, RFECV, VarianceThreshold
 from sklearn.model_selection import KFold, cross_val_score
 from skrebate import MultiSURF
 from zoofs import HarrisHawkOptimization, GeneticOptimization
@@ -26,20 +26,47 @@ def objective_function_zoo(model, X, y, no_use_X, no_use_y, inner_cv, n_jobs):
     scores = cross_val_score(model, X, y, cv=inner_cv, n_jobs=n_jobs)  # change cv?
     return mean(scores)
 
-def get_feature_selection(features : str, isClassification : bool, X_train : pd.DataFrame, y_train : pd.Series, X_test : pd.DataFrame, selector_args, estimator, group_dict : dict[str, list[str]], parallelism : int = 1, ):
+
+def prefilter_features(X_train_in : pd.DataFrame, X_test_in : pd.DataFrame, y_train : pd.Series, threshold : float):
+    variance_filter = VarianceThreshold()
+    variance_filter.set_output(transform="pandas")
+    X_train = variance_filter.fit_transform(X_train_in)
+    X_test = variance_filter.transform(X_test_in)
+
+    # https://stackoverflow.com/a/44674459 + own correlation to target
+    col_corr = set()
+    corr_solution = X_train.corrwith(y_train, axis=0, method="spearman").abs()
+    corr_matrix = X_train.corr(method="spearman").abs()
+    for i in range(len(corr_matrix.columns)):
+        for j in range(i):
+            if(corr_matrix.iloc[i, j]) >= threshold:
+                if corr_solution.iat[i] > corr_solution.iat[j] and (corr_matrix.columns[i] not in col_corr):
+                    col_corr.add(corr_matrix.columns[j])
+                if corr_solution.iat[j] > corr_solution.iat[i] and (corr_matrix.columns[j] not in col_corr):
+                    col_corr.add(corr_matrix.columns[i])
+    to_keep = set(X_train.columns) - set(col_corr)
+    return X_train[list(to_keep)], X_test[list(to_keep)]
+
+def get_feature_selection(features : str, isClassification : bool, X_train_orig : pd.DataFrame, y_train : pd.Series, X_test_orig : pd.DataFrame, selector_args, estimator, group_dict : dict[str, list[str]], parallelism : int = 1, threshold : float = .9):
+    match features: #without prefiltering
+        case "all":
+            return X_train_orig, X_test_orig
+        case "SATzilla":
+            return filter_SATzilla(X_train_orig), filter_SATzilla(X_test_orig)
+        case "SATfeatPy":
+            return filter_SATfeatPy(X_train_orig), filter_SATfeatPy(X_test_orig)
+        case "FMBA":
+            return filter_FMBA(X_train_orig), filter_FMBA(X_test_orig)
+        case "FM_Chara":
+            return filter_FMChara(X_train_orig), filter_FMChara(X_test_orig)
+
+
     inner_cv = KFold(n_splits=4, shuffle=True, random_state=42)
     per_estimator_parallel = parallelism // inner_cv.n_splits
-    match features:
-        case "all":
+    X_train, X_test = prefilter_features(X_train_orig, X_test_orig, y_train, threshold) #todo leaking?
+    match features: # with prefiltering
+        case "prefilter":
             return X_train, X_test
-        case "SATzilla":
-            return filter_SATzilla(X_train), filter_SATzilla(X_test)
-        case "SATfeatPy":
-            return filter_SATfeatPy(X_train), filter_SATfeatPy(X_test)
-        case "FMBA":
-            return filter_FMBA(X_train), filter_FMBA(X_test)
-        case "FM_Chara":
-            return filter_FMChara(X_train), filter_FMChara(X_test)
         case "kbest-mutalinfo":
             score_func = partial(mutual_info_classif, random_state=42, n_jobs=parallelism, n_neighbors=selector_args["n_neighbors"] ) if isClassification else partial(mutual_info_regression, random_state=42, n_jobs=parallelism, n_neighbors=selector_args["n_neighbors"])
             selector = SelectKBest(score_func, k=selector_args["k"])
@@ -101,7 +128,7 @@ def get_feature_selection(features : str, isClassification : bool, X_train : pd.
 def get_selection_HPO_space(features : str, trial : Trial, isClassification : bool, group_dict : dict[str, list[str]], no_features: int) -> dict[str, Any]:
     min_features = min(5, no_features)
     match features:
-        case "all" | "SATzilla" | "SATfeatPy" | "FMBA" | "FM_Chara":
+        case "all" | "SATzilla" | "SATfeatPy" | "FMBA" | "FM_Chara" | "prefilter":
             return {}
         case "kbest-mutalinfo":
             return {
