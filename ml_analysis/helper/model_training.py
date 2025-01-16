@@ -19,12 +19,18 @@ def get_model(model : str, isClassification : bool, parallelism : int = 1, model
         case "gradboostForest":
             return xgb.XGBClassifier(**model_args) if isClassification else xgb.XGBRegressor(**model_args)
         case "SVM":
+            del model_args["n_jobs"]
+            if not isClassification :
+                del model_args["random_state"]
             return SVC(**model_args) if isClassification else SVR(**model_args)
         case "kNN":
+            del model_args["random_state"]
             return KNeighborsClassifier(**model_args) if isClassification else KNeighborsRegressor(**model_args)
         case "adaboost":
+            del model_args["n_jobs"]
             return AdaBoostClassifier(**model_args) if isClassification else AdaBoostRegressor(**model_args)
         case "MLP":
+            del model_args["n_jobs"]
             return MLPClassifier(**model_args) if isClassification else MLPRegressor(**model_args)
         case _:
             raise ValueError("Unknown model")

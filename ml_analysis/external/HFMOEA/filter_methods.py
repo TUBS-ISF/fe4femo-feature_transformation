@@ -3,6 +3,7 @@ from sklearn.feature_selection import *
 from sklearn import datasets
 import pandas as pd
 from scipy.stats import spearmanr
+from sklearn.preprocessing import KBinsDiscretizer
 from skrebate import ReliefF
 
 
@@ -28,7 +29,9 @@ class Result():
     # -------------------------  Chi-Square  -------------------------------------------#
 
 
-def chi_square(data, target):
+def chi_square(data, target, is_classification):
+    if not is_classification:
+        return None
     data = data.clip(min=0)
     chi, _ = chi2(data, target)
     feature_values = np.array(data)
@@ -41,8 +44,8 @@ def chi_square(data, target):
 
 
 # -------------------------  Information Gain  -------------------------------------------#
-def info_gain(data, target):
-    importances = mutual_info_classif(data, target)
+def info_gain(data, target, is_classification):
+    importances = mutual_info_classif(data, target) if is_classification else mutual_info_regression(data, target)
     feature_values = np.array(data)
     result = Result()
     result.features = feature_values
@@ -53,7 +56,7 @@ def info_gain(data, target):
 
 
 # -------------------------  Mean Absolute Deviation  -------------------------------------------#
-def MAD(data, target):
+def MAD(data, target, is_classification):
     mean_abs_diff = np.sum(np.abs(data - np.mean(data, axis=0)), axis=0) / data.shape[0]
     feature_values = np.array(data)
     result = Result()
@@ -65,7 +68,8 @@ def MAD(data, target):
 
 
 # -------------------------  Dispersion Ratio  -------------------------------------------#
-def Dispersion_ratio(data, target):
+def Dispersion_ratio(data, target, is_classification):
+    data = data.copy()
     data[np.where(data == 0)[0]] = 1
     am = np.mean(data, axis=0)
     gm = np.power(np.prod(data, axis=0), 1 / data.shape[0])
@@ -80,9 +84,14 @@ def Dispersion_ratio(data, target):
 
 
 # -------------------------  Pasi Luukka  -------------------------------------------#
-def feature_selection_sim(in_data, target, measure='luca', p=1):
+def feature_selection_sim(in_data, target, is_classification, measure='luca', p=1):
     d = pd.DataFrame(in_data)
     t = pd.DataFrame(target)
+    if not is_classification:
+        discretizer = KBinsDiscretizer(100, encode='ordinal')
+        discretizer.set_output(transform="pandas")
+        t = discretizer.fit_transform(t)
+
     data = pd.concat([d, t], axis=1)
 
     # Feature selection method using similarity measure and fuzzy entroropy
@@ -132,7 +141,7 @@ def feature_selection_sim(in_data, target, measure='luca', p=1):
     idealvec_s = idealvec_s + tmp
     maxs_v = data_v.max(axis=0)
     data_v = np.dot(data_v, np.diag(maxs_v ** (-1)))
-    tmp2 = [];
+    tmp2 = []
     for k in range(l):
         tmp2.append(abs(maxs_v))
 
@@ -175,7 +184,7 @@ def feature_selection_sim(in_data, target, measure='luca', p=1):
 
 
 # -------------------------  Fisher Score  -------------------------------------------#
-def Fisher_score(data, target):
+def Fisher_score(data, target, is_classification):
     mean = np.mean(data)
     sigma = np.var(data)
     unique = np.unique(target)
@@ -206,29 +215,23 @@ def Fisher_score(data, target):
 
 
 # -------------------------  Mutual Information  -------------------------------------------#
-def MI(data, target):
+def MI(data, target, is_classification):
     # function that assigns scores to features according to Mutual Information (MI)
     # the rankings should be done in increasing order of the MI scores
 
     # initialize the variables and result structure
     feature_values = np.array(data)
     num_features = feature_values.shape[1]
-    MI_mat = np.zeros((num_features, num_features))
     MI_values_feat = np.zeros(num_features)
-    MI_values_class = np.zeros(num_features)
+
     result = Result()
     result.features = feature_values
     weight_feat = 0.3  # weightage provided to feature-feature correlation
     weight_class = 0.7  # weightage provided to feature-class correlation
 
-    # generate the information matrix
-    for ind_1 in range(num_features):
-        for ind_2 in range(num_features):
-            MI_mat[ind_1, ind_2] = MI_mat[ind_2, ind_1] = compute_MI(feature_values[:, ind_1], feature_values[:, ind_2])
-
     for ind in range(num_features):
-        MI_values_feat[ind] = -np.sum(abs(MI_mat[ind, :]))
-        MI_values_class[ind] = compute_MI(feature_values[:, ind], target)
+        MI_values_feat[ind] = -np.sum(abs(compute_MI(feature_values, feature_values[:, ind], is_classification)))
+    MI_values_class = compute_MI(feature_values, target, is_classification)
 
     # produce scores and ranks from the information matrix
     MI_values_feat = normalize(MI_values_feat)
@@ -244,28 +247,13 @@ def MI(data, target):
     return result
 
 
-def compute_MI(x, y):
+def compute_MI(X, y, is_classification):
     # function to compute mutual information between two variables
-    sum_mi = 0.0
-    x_value_list = np.unique(x)
-    y_value_list = np.unique(y)
-    Px = np.array([len(x[x == xval]) / float(len(x)) for xval in x_value_list])  # P(x)
-    Py = np.array([len(y[y == yval]) / float(len(y)) for yval in y_value_list])  # P(y)
-    for i in range(len(x_value_list)):
-        if Px[i] == 0.:
-            continue
-        sy = y[x == x_value_list[i]]
-        if len(sy) == 0:
-            continue
-        pxy = np.array([len(sy[sy == yval]) / float(len(y)) for yval in y_value_list])  # p(x,y)
-        t = pxy[Py > 0.] / Py[Py > 0.] / Px[i]  # log(P(x,y)/( P(x)*P(y))
-        sum_mi += sum(pxy[t > 0] * np.log2(t[t > 0]))  # sum ( P(x,y)* log(P(x,y)/( P(x)*P(y)) )
-
-    return sum_mi
+    return mutual_info_classif(X, y, random_state=42) if is_classification else mutual_info_regression(X, y, random_state=42)
 
 
 # -------------------------  Relief  -------------------------------------------#
-def Relief(data, target):
+def Relief(data, target, is_classification):
     # function that assigns scores to features according to Relief algorithm
     # the rankings should be done in increasing order of the Relief scores
 
@@ -294,7 +282,7 @@ def Relief(data, target):
 
 
 # -------------------------  Spearman's Correlation Coefficient  -------------------------------------------#
-def SCC(data, target):
+def SCC(data, target, is_classification):
     # function that assigns scores to features according to Spearman's Correlation Coefficient (SCC)
     # the rankings should be done in increasing order of the SCC scores
 
@@ -311,7 +299,7 @@ def SCC(data, target):
 
     # generate the correlation matrix
     for ind_1 in range(num_features):
-        for ind_2 in range(num_features):
+        for ind_2 in range(ind_1 +1,num_features):
             SCC_mat[ind_1, ind_2] = SCC_mat[ind_2, ind_1] = compute_SCC(feature_values[:, ind_1],
                                                                         feature_values[:, ind_2])
 
@@ -347,7 +335,7 @@ def compute_SCC(x, y):
 
 
 # -------------------------  Pearson's Correlation Coefficient  -------------------------------------------#
-def PCC(data, target):
+def PCC(data, target, is_classification):
     # function that assigns scores to features according to Pearson's Correlation Coefficient (PCC)
     # the rankings should be done in increasing order of the PCC scores
 

@@ -81,6 +81,7 @@ def load_backbone_mem(main_path : str) -> pd.DataFrame:
 
 def load_backbone_size(main_path : str) -> pd.DataFrame:
     df = load_dataset(main_path, "runtime/backbone.csv")
+    df = df.fillna(-1)
     return df.loc[:, 'backboneSize'].astype(int)
 
 

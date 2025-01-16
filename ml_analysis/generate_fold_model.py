@@ -5,7 +5,7 @@ import tempfile
 import cloudpickle
 import pandas as pd
 from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import RobustScaler
+from sklearn.preprocessing import RobustScaler, LabelEncoder
 
 os.environ['MPLCONFIGDIR'] = tempfile.mkdtemp()
 from pathlib import Path
@@ -41,6 +41,9 @@ from helper.optuna_helper import copyStudy
 def impute_and_scale(X_train, X_test):
     imputer = SimpleImputer(keep_empty_features=True, missing_values=pd.NA)
     scaler = RobustScaler()
+
+    imputer.set_output(transform="pandas")
+    scaler.set_output(transform="pandas")
 
     X_train = imputer.fit_transform(X_train)
     X_train = scaler.fit_transform(X_train)
@@ -84,7 +87,7 @@ def objective(trial: optuna.Trial, dask_X, dask_y, folds, features, model, shoul
     feature_groups = dask.compute(dask_feature_groups, traverse=False)[0] if features == "optuna-combined" else None
 
     model_config = get_model_HPO_space(model, trial, is_classification) if should_modelHPO else None
-    selector_config = get_selection_HPO_space(features, trial, is_classification, feature_groups)
+    selector_config = get_selection_HPO_space(features, trial, is_classification, feature_groups, dask_X.compute()[0].shape[1])
     dask_model_config = dask.compute(model_config)[0]
     dask_selector_config = dask.compute(selector_config)[0]
 
@@ -126,6 +129,12 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                 client.wait_for_workers(runner.n_workers)
 
                 X, y = get_dataset(pathData, task)
+                is_classification = is_task_classification(task)
+                label_encoder = None
+                if is_classification:
+                    label_encoder = LabelEncoder()
+                    y = label_encoder.fit_transform(y)
+                    y = pd.Series(y)
                 X_train, X_test, y_train, y_test = generate_xy_split(X, y, pathData+"/folds.txt", foldNo)
 
                 kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
@@ -141,7 +150,6 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
 
                 feature_groups = load_feature_groups(pathData)
                 feature_groups = dask.delayed(feature_groups)
-                is_classification = is_task_classification(task)
                 objective_function = lambda trial: objective(trial, X_train_dask, y_train_dask, folds, features, model, modelHPO, is_classification, feature_groups)
 
                 journal_path = run_config["path_output"] + "/" + run_config["name"] + ".journal"
@@ -168,7 +176,7 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
 
                     # feature selection + model training
                     model_config = get_model_HPO_space(model, frozen_best_trial, is_classification) if modelHPO else None
-                    selector_config = get_selection_HPO_space(features, frozen_best_trial, is_classification, feature_groups)
+                    selector_config = get_selection_HPO_space(features, frozen_best_trial, is_classification, feature_groups, X_train.shape[1])
                     model_instance_selector = get_model(model, is_classification, 1, model_config)
                     X_train, X_test = get_feature_selection(features, is_classification, X_train, y_train, X_test,
                                                             selector_config, model_instance_selector, feature_groups, parallelism=n_jobs)
@@ -181,6 +189,7 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                     "model": model_complete,
                     "X_test": X_test,
                     "y_test": y_test,
+                    "label_encoder" : label_encoder,
                     "best_params": best_params,
                     "run_config": run_config,
                     "journal_path": journal_path

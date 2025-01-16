@@ -1,5 +1,7 @@
 from operator import itemgetter
 
+from joblib import Parallel, delayed
+
 from external.HFMOEA.filter_methods import *
 import time
 import csv
@@ -12,24 +14,20 @@ import pandas as pd
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 
-def compute(data, target, topk=10, pop_size=100, max_gen=100, mutation_probability=0.06):
+def initialization_helper(function, data, target, is_classification):
+    ret_value = function(data, target, is_classification)
+    print(f"Finished initializing {function.__name__}")
+    return ret_value
+
+
+def compute(data, target, is_classification, topk=10, pop_size=100, max_gen=100, mutation_probability=0.06, n_jobs=1):
     data = data.to_numpy()
     target = target.to_numpy()
     num_feat = data.shape[1]
 
-    sol = []
-    sol.append(MI(data, target))
-    sol.append(SCC(data, target))
-    sol.append(Relief(data, target))
-    sol.append(PCC(data, target))
-    sol.append(chi_square(data, target))
-    sol.append(info_gain(data, target))
-    sol.append(MAD(data, target))
-    sol.append(Dispersion_ratio(data, target))
-    sol.append(feature_selection_sim(data, target))
-    sol.append(Fisher_score(data, target))
-
-
+    functions = [MI, SCC, Relief, PCC, chi_square, info_gain, MAD, Dispersion_ratio, feature_selection_sim, Fisher_score]
+    sol = Parallel(n_jobs=n_jobs)(delayed(initialization_helper)(fun, data, target, is_classification) for fun in functions)
+    sol = [x for x in sol if x is not None]
 
     if pop_size < 10:
         pop_size = 10
@@ -99,8 +97,8 @@ def compute(data, target, topk=10, pop_size=100, max_gen=100, mutation_probabili
     pareto_front = [ (-1 * df[index][0], df[index][1], solution[index]) for index, isOptimal in enumerate(pareto_index) if isOptimal]
     return pareto_front
 
-def reduceFeaturesMaxAcc(data, target, topk=10, pop_size=100, max_gen=100, mutation_probability=0.06):
-    pareto_front = compute(data, target, topk, pop_size, max_gen, mutation_probability)
+def reduceFeaturesMaxAcc(data, target, is_classification, topk=10, pop_size=100, max_gen=100, mutation_probability=0.06, n_jobs=1):
+    pareto_front = compute(data, target, is_classification, topk, pop_size, max_gen, mutation_probability, n_jobs)
     acc, size, config = max(pareto_front, key=itemgetter(0))
     return [ i == 1 for i in config]
 

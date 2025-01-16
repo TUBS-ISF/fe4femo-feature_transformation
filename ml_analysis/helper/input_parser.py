@@ -7,7 +7,7 @@ def parse_input() -> argparse.Namespace:
     parser.add_argument('pathOutput', type=str, help='Path to save output to, relative to user-home')
     parser.add_argument("--features", help="Feature Subset to use, defaults to all",
                         choices=["all", "SATzilla", "SATfeatPy", "FMBA", "FM_Chara",
-                                 "kbest-mutalinfo", "multisurf", "mRMR", "SFS-forward", "SFS-backward", "harris-hawks",
+                                 "kbest-mutalinfo", "multisurf", "mRMR", "RFE", "harris-hawks",
                                  "genetic", "HFMOEA", "embedded-tree", "SVD-entropy", "NDFS", "optuna-combined"],
                         default="all")
     parser.add_argument("--task", help="ML-Task to execute",
@@ -20,5 +20,7 @@ def parse_input() -> argparse.Namespace:
     parser.add_argument("--HPOits", help="Number of HPO iterations (if modelHPO true, used for both at the same time)",
                         default=100, type=int)
     parser.add_argument("--foldNo", help="Fold to compute (starting from 0)", type=int, default=0)
-
-    return parser.parse_args()
+    result = parser.parse_args()
+    if result.features == "RFE" and not (result.model == "gradboostForest" or result.model == "randomForest" or result.model == "adaboost"):
+        raise ValueError("RFE can only be used with gradboostForest, randomForest or adaboost")
+    return result

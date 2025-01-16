@@ -9,7 +9,10 @@ def compute_dataset_entropy(matrix : np.ndarray) -> float:
     eigenvalues = svdval * svdval
     cumulator = 0
     eigenvalues_sum = sum(eigenvalues)
-    for eigenvalue in eigenvalues:
+    for i in range(rank):
+        eigenvalue = eigenvalues[i]
+        if eigenvalue == 0:
+            continue
         vj = eigenvalue / eigenvalues_sum
         cumulator += vj * np.log2(vj)
     return -1 * (1/ np.log2(rank)) * cumulator
@@ -24,6 +27,7 @@ def keep_high_contrib_features(df : pd.DataFrame) -> list[bool]:
     np_view = df.to_numpy()
     full_entropy = compute_dataset_entropy(np_view)
     contributions = np.array([compute_feature_contribution(np_view, i, full_entropy) for i in range(np_view.shape[1])])
+    print(contributions)
     min_acceptance = contributions.mean() + contributions.std()
     bool_mask = [ x > min_acceptance for x in contributions]
     return bool_mask
