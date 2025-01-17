@@ -59,6 +59,8 @@ def get_feature_selection(features : str, isClassification : bool, X_train_orig 
             return filter_FMBA(X_train_orig), filter_FMBA(X_test_orig)
         case "FM_Chara":
             return filter_FMChara(X_train_orig), filter_FMChara(X_test_orig)
+        case _:
+            pass
 
 
     inner_cv = KFold(n_splits=4, shuffle=True, random_state=42)
@@ -123,6 +125,8 @@ def get_feature_selection(features : str, isClassification : bool, X_train_orig 
             selected_feature_names_list = [v for k, v in group_dict.items() if selector_args[k]]
             selected_feature_names = list(itertools.chain.from_iterable(selected_feature_names_list))
             return X_train[selected_feature_names], X_test[selected_feature_names]
+        case _:
+            raise ValueError("Invalid Feature Subset")
 
 
 def get_selection_HPO_space(features : str, trial : Trial, isClassification : bool, group_dict : dict[str, list[str]], no_features: int) -> dict[str, Any]:
@@ -190,3 +194,5 @@ def get_selection_HPO_space(features : str, trial : Trial, isClassification : bo
             return {
                 group_name : trial.suggest_categorical(group_name, [True, False]) for group_name in group_dict.keys()
             }
+        case _:
+            raise ValueError("Invalid Feature Subset")
