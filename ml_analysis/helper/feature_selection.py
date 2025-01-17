@@ -48,25 +48,20 @@ def prefilter_features(X_train_in : pd.DataFrame, X_test_in : pd.DataFrame, y_tr
     return X_train[list(to_keep)], X_test[list(to_keep)]
 
 def get_feature_selection(features : str, isClassification : bool, X_train_orig : pd.DataFrame, y_train : pd.Series, X_test_orig : pd.DataFrame, selector_args, estimator, group_dict : dict[str, list[str]], parallelism : int = 1, threshold : float = .9):
-    match features: #without prefiltering
-        case "all":
-            return X_train_orig, X_test_orig
-        case "SATzilla":
-            return filter_SATzilla(X_train_orig), filter_SATzilla(X_test_orig)
-        case "SATfeatPy":
-            return filter_SATfeatPy(X_train_orig), filter_SATfeatPy(X_test_orig)
-        case "FMBA":
-            return filter_FMBA(X_train_orig), filter_FMBA(X_test_orig)
-        case "FM_Chara":
-            return filter_FMChara(X_train_orig), filter_FMChara(X_test_orig)
-        case _:
-            pass
-
-
     inner_cv = KFold(n_splits=4, shuffle=True, random_state=42)
     per_estimator_parallel = parallelism // inner_cv.n_splits
     X_train, X_test = prefilter_features(X_train_orig, X_test_orig, y_train, threshold) #todo leaking?
     match features: # with prefiltering
+        case "all":
+            return X_train_orig, X_test_orig
+        case "SATzilla":
+            return filter_SATzilla(X_train), filter_SATzilla(X_test)
+        case "SATfeatPy":
+            return filter_SATfeatPy(X_train), filter_SATfeatPy(X_test)
+        case "FMBA":
+            return filter_FMBA(X_train), filter_FMBA(X_test)
+        case "FM_Chara":
+            return filter_FMChara(X_train), filter_FMChara(X_test)
         case "prefilter":
             return X_train, X_test
         case "kbest-mutalinfo":
