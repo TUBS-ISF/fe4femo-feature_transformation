@@ -39,7 +39,7 @@ from helper.optuna_helper import copyStudy
 # als separate Main: Multi-Objective für RQ2b
 
 def impute_and_scale(X_train, X_test):
-    imputer = SimpleImputer(keep_empty_features=True, missing_values=pd.NA)
+    imputer = SimpleImputer(keep_empty_features=False, missing_values=pd.NA)
     scaler = RobustScaler()
 
     imputer.set_output(transform="pandas")
@@ -54,22 +54,8 @@ def impute_and_scale(X_train, X_test):
     return X_train, X_test
 
 
-def compute_fold(dask_X, dask_y, dask_train_index, dask_test_index, model, features, is_classification, dask_model_config, dask_selector_config, dask_feature_groups, precomputed)  -> float:
-    train_index = dask.compute(dask_train_index, traverse=False)[0]
-    test_index = dask.compute(dask_test_index, traverse=False)[0]
-    X = dask.compute(dask_X, traverse=False)[0]
-    y = dask.compute(dask_y, traverse=False)[0]
-    model_config = dask.compute(dask_model_config, traverse=False)[0]
-    selector_config = dask.compute(dask_selector_config, traverse=False)[0]
-    feature_groups = dask.compute(dask_feature_groups, traverse=False)[0]
-    X_train = X.iloc[train_index]
-    X_test = X.iloc[test_index]
-    y_train = y.iloc[train_index]
-    y_test = y.iloc[test_index]
-
-    # feature preprocessing
-    X_train, X_test = impute_and_scale(X_train, X_test)
-
+def compute_fold( X_train_test, y_train, y_test, model, features, is_classification, model_config, selector_config, feature_groups, precomputed)  -> float:
+    X_train, X_test = X_train_test
     # feature selection + model training
     model_instance_selector = get_model(model, is_classification, 1, model_config )
     X_train, X_test = get_feature_selection(features, is_classification, X_train, y_train, X_test, selector_config, model_instance_selector, feature_groups, parallelism=8, precomputed=precomputed)
@@ -82,18 +68,14 @@ def compute_fold(dask_X, dask_y, dask_train_index, dask_test_index, model, featu
         return d2_absolute_error_score(y_test, y_pred)
 
 
-def objective(trial: optuna.Trial, dask_X, dask_y, folds, features, model, should_modelHPO, is_classification, dask_feature_groups) -> float:
-
-    feature_groups = dask.compute(dask_feature_groups, traverse=False)[0] if features == "optuna-combined" else None
-
+def objective(trial: optuna.Trial, folds, features, model, should_modelHPO, is_classification, feature_groups, feature_count) -> float:
     model_config = get_model_HPO_space(model, trial, is_classification) if should_modelHPO else None
-    X = dask_X.compute()
-    selector_config = get_selection_HPO_space(features, trial, is_classification, feature_groups, X.shape[1])
-    dask_model_config = dask.compute(model_config)[0]
-    dask_selector_config = dask.compute(selector_config)[0]
-
+    selector_config = get_selection_HPO_space(features, trial, is_classification, feature_groups, feature_count)
     with worker_client() as client:
-        futures = [client.submit(compute_fold, dask_X, dask_y, dask_train_index, dask_test_index, model, features, is_classification, dask_model_config, dask_selector_config, dask_feature_groups, future_precompute) for i, (dask_train_index, dask_test_index, future_precompute) in folds.items() ]
+        futures = [
+            client.submit(compute_fold,  X_train_test, y_train, y_test, model, features, is_classification,
+                          model_config, selector_config, feature_groups, future_precompute)
+            for i, ( X_train_test, y_train, y_test, future_precompute) in folds.items()]
         results = client.gather(futures)
     return mean(results)
 
@@ -138,23 +120,27 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                     y = pd.Series(y)
                 X_train, X_test, y_train, y_test = generate_xy_split(X, y, pathData+"/folds.txt", foldNo)
 
+                feature_count = X_train.shape[1]
+
                 kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
                 splits = kf.split(X_train, get_flat_models(X_train))
 
                 # dask export for better cluster behaviour
-                X_train_dask = dask.delayed(X_train, pure=True)
-                y_train_dask = dask.delayed(y_train, pure=True)
 
-                folds = {
-                    i: (
-                        dask.delayed(train_index, pure=True), dask.delayed(test_index, pure=True),
-                        client.submit(precompute_feature_selection, features, is_classification, X_train.iloc[train_index], y_train.iloc[train_index], X_train.iloc[test_index], 0.9, 8, pure=True) # do computation instantly
-                        ) for i, (train_index, test_index) in enumerate(splits)
-                }
+                folds = {}
+                for i, (train_index, test_index) in enumerate(splits):
+                    X_train_inner = client.scatter(X_train.iloc[train_index])
+                    X_test_inner = client.scatter(X_train.iloc[test_index])
+                    y_train_inner = client.scatter(y_train.iloc[train_index])
+                    y_test_inner = client.scatter(y_train.iloc[test_index])
+                    # feature preprocessing
+                    X_traintest_inner = client.submit(impute_and_scale, X_train_inner, X_test_inner)
+                    future_pre = client.submit(precompute_feature_selection, features, is_classification, X_traintest_inner, y_train_inner, 0.9, 8, pure=True)
+                    folds[i] = X_traintest_inner, y_train_inner, y_test_inner, future_pre
 
                 feature_groups = load_feature_groups(pathData)
-                feature_groups = dask.delayed(feature_groups)
-                objective_function = lambda trial: objective(trial, X_train_dask, y_train_dask, folds, features, model, modelHPO, is_classification, feature_groups)
+                feature_groups = client.scatter(feature_groups)
+                objective_function = lambda trial: objective(trial, folds, features, model, modelHPO, is_classification, feature_groups, feature_count)
 
                 journal_path = run_config["path_output"] + "/" + run_config["name"] + ".journal"
                 journal = optuna.storages.JournalStorage(optuna.storages.journal.JournalFileBackend(journal_path))

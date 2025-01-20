@@ -47,7 +47,8 @@ def prefilter_features(X_train_in : pd.DataFrame, X_test_in : pd.DataFrame, y_tr
     to_keep = set(X_train.columns) - set(col_corr)
     return X_train[list(to_keep)], X_test[list(to_keep)]
 
-def precompute_feature_selection(features: str, isClassification : bool, X_train_orig : pd.DataFrame, y_train : pd.Series, X_test_orig : pd.DataFrame, threshold : float = .9, parallelism : int = 1, ):
+def precompute_feature_selection(features: str, isClassification : bool, X_train_test_orig : (pd.DataFrame, pd.DataFrame), y_train : pd.Series, threshold : float = .9, parallelism : int = 1, ):
+    X_train_orig, X_test_orig = X_train_test_orig
     if features == "all": # do not prefilter for all
         return {
             "X_train": X_train_orig,
@@ -106,7 +107,7 @@ def get_feature_selection(features : str, isClassification : bool, X_train_orig 
     inner_cv = KFold(n_splits=4, shuffle=True, random_state=42)
     per_estimator_parallel = parallelism // inner_cv.n_splits
     if precomputed is None:
-        precomputed = precompute_feature_selection(features=features, isClassification=isClassification, X_train_orig=X_train_orig, y_train=y_train, X_test_orig=X_test_orig, threshold=threshold, parallelism=parallelism)
+        precomputed = precompute_feature_selection(features=features, isClassification=isClassification, X_train_test_orig=(X_train_orig, X_test_orig), y_train=y_train, threshold=threshold, parallelism=parallelism)
     max_features = precomputed["X_train"].shape[1]
     match features:
         case "all" | "SATzilla" | "SATfeatPy" | "FMBA" | "FM_Chara" | "prefilter":
