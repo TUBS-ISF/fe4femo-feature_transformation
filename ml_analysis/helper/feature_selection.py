@@ -2,6 +2,7 @@ import itertools
 from statistics import mean
 from typing import Any
 
+import joblib
 import pandas as pd
 from mrmr import mrmr_classif, mrmr_regression
 from optuna import Trial
@@ -11,10 +12,10 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.feature_selection import SelectKBest, mutual_info_classif, mutual_info_regression, \
     SequentialFeatureSelector, SelectFromModel, RFECV, VarianceThreshold
 from sklearn.model_selection import KFold, cross_val_score
-from skrebate import MultiSURF
 from zoofs import HarrisHawkOptimization, GeneticOptimization
 
 from external.HFMOEA.main import reduceFeaturesMaxAcc, compute_sol
+from external.multisurf_parallel import MultiSURF_Parallel
 from external.skfeature.NDFS import ndfs
 from external.skfeature.sparse_learning import feature_ranking
 from external.svd_entropy import keep_high_contrib_features
@@ -77,8 +78,9 @@ def precompute_feature_selection(features: str, isClassification : bool, X_train
         case "kbest-mutalinfo":
             pass
         case "multisurf":
-            selector = MultiSURF(n_jobs=parallelism)
-            selector.fit(X_train.to_numpy(), y_train.to_numpy())
+            with joblib.parallel_config(backend="dask"):
+                selector = MultiSURF_Parallel(n_jobs=parallelism)
+                selector.fit(X_train.to_numpy(), y_train.to_numpy())
             ret_dict["top_features"] = selector.top_features_
         case "mRMR":
             pass
