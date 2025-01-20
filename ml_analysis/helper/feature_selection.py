@@ -49,7 +49,10 @@ def prefilter_features(X_train_in : pd.DataFrame, X_test_in : pd.DataFrame, y_tr
 
 def precompute_feature_selection(features: str, isClassification : bool, X_train_orig : pd.DataFrame, y_train : pd.Series, X_test_orig : pd.DataFrame, threshold : float = .9, parallelism : int = 1, ):
     if features == "all": # do not prefilter for all
-        return None
+        return {
+            "X_train": X_train_orig,
+            "X_test": X_test_orig,
+        }
     X_train, X_test = prefilter_features(X_train_orig, X_test_orig, y_train, threshold)  # todo leaking?
     ret_dict = {
         "X_train": X_train,
@@ -106,9 +109,7 @@ def get_feature_selection(features : str, isClassification : bool, X_train_orig 
         precomputed = precompute_feature_selection(features=features, isClassification=isClassification, X_train_orig=X_train_orig, y_train=y_train, X_test_orig=X_test_orig, threshold=threshold, parallelism=parallelism)
     max_features = precomputed["X_train"].shape[1]
     match features:
-        case "all":
-            return X_train_orig, X_test_orig
-        case "SATzilla" | "SATfeatPy" | "FMBA" | "FM_Chara" | "prefilter":
+        case "all" | "SATzilla" | "SATfeatPy" | "FMBA" | "FM_Chara" | "prefilter":
             return precomputed["X_train"], precomputed["X_test"]
         case "kbest-mutalinfo":
             X_train = precomputed["X_train"]
