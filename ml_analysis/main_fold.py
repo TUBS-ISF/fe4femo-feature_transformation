@@ -24,7 +24,7 @@ if __name__ == '__main__':
     for i in range(10):
         name = f"{args.task}_{args.features}_{args.model}_{args.modelHPO}_{args.HPOits}_{args.foldNo}"
         arguments = ["sbatch", "--partition=multiple_il", f"--output={outputdir}/{name}_{i}.out", "slurm_scripts/run.sh",
-                     "--foldNo", f"{i}"]
+                     "--foldNo", f"{i}"] #TODO different time for different combinations
 
         arguments.extend(sys.argv[1:])
         print(f"Submit fold {i} with arguments:\n {arguments}")

@@ -21,7 +21,7 @@ from sklearn.metrics import matthews_corrcoef, r2_score, d2_absolute_error_score
 from sklearn.model_selection import StratifiedKFold
 
 from helper.SlurmMemRunner import SLURMMemRunner
-from helper.feature_selection import get_selection_HPO_space, get_feature_selection
+from helper.feature_selection import get_selection_HPO_space, get_feature_selection, precompute_feature_selection
 from helper.input_parser import parse_input
 from helper.load_dataset import generate_xy_split, get_dataset, get_flat_models, is_task_classification, \
     load_feature_groups
@@ -54,7 +54,7 @@ def impute_and_scale(X_train, X_test):
     return X_train, X_test
 
 
-def compute_fold(dask_X, dask_y, dask_train_index, dask_test_index, model, features, is_classification, dask_model_config, dask_selector_config, dask_feature_groups)  -> float:
+def compute_fold(dask_X, dask_y, dask_train_index, dask_test_index, model, features, is_classification, dask_model_config, dask_selector_config, dask_feature_groups, future_precompute)  -> float:
     train_index = dask.compute(dask_train_index, traverse=False)[0]
     test_index = dask.compute(dask_test_index, traverse=False)[0]
     X = dask.compute(dask_X, traverse=False)[0]
@@ -69,10 +69,12 @@ def compute_fold(dask_X, dask_y, dask_train_index, dask_test_index, model, featu
 
     # feature preprocessing
     X_train, X_test = impute_and_scale(X_train, X_test)
+    with worker_client() as client:
+        precomputed = future_precompute.result()
 
     # feature selection + model training
     model_instance_selector = get_model(model, is_classification, 1, model_config )
-    X_train, X_test = get_feature_selection(features, is_classification, X_train, y_train, X_test, selector_config, model_instance_selector, feature_groups, parallelism=8)
+    X_train, X_test = get_feature_selection(features, is_classification, X_train, y_train, X_test, selector_config, model_instance_selector, feature_groups, parallelism=8, precomputed=precomputed)
     model_instance = get_model(model, is_classification, 8, model_config )
     model_instance.fit(X_train, y_train)
     y_pred = model_instance.predict(X_test)
@@ -87,12 +89,13 @@ def objective(trial: optuna.Trial, dask_X, dask_y, folds, features, model, shoul
     feature_groups = dask.compute(dask_feature_groups, traverse=False)[0] if features == "optuna-combined" else None
 
     model_config = get_model_HPO_space(model, trial, is_classification) if should_modelHPO else None
-    selector_config = get_selection_HPO_space(features, trial, is_classification, feature_groups, dask_X.compute()[0].shape[1])
+    X = dask_X.compute()
+    selector_config = get_selection_HPO_space(features, trial, is_classification, feature_groups, X.shape[1])
     dask_model_config = dask.compute(model_config)[0]
     dask_selector_config = dask.compute(selector_config)[0]
 
     with worker_client() as client:
-        futures = [client.submit(compute_fold, dask_X, dask_y, dask_train_index, dask_test_index, model, features, is_classification, dask_model_config, dask_selector_config, dask_feature_groups) for i, (dask_train_index, dask_test_index) in folds.items() ]
+        futures = [client.submit(compute_fold, dask_X, dask_y, dask_train_index, dask_test_index, model, features, is_classification, dask_model_config, dask_selector_config, dask_feature_groups, future_precompute) for i, (dask_train_index, dask_test_index, future_precompute) in folds.items() ]
         results = client.gather(futures)
     return mean(results)
 
@@ -145,7 +148,10 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                 y_train_dask = dask.delayed(y_train, pure=True)
 
                 folds = {
-                    i: (dask.delayed(train_index, pure=True), dask.delayed(test_index, pure=True)) for i, (train_index, test_index) in enumerate(splits)
+                    i: (
+                        dask.delayed(train_index, pure=True), dask.delayed(test_index, pure=True),
+                        client.submit(precompute_feature_selection, features, is_classification, X_train.iloc[train_index], y_train.iloc[train_index], X_train.iloc[test_index], 0.9, 8, pure=True) # do computation instantly
+                        ) for i, (train_index, test_index) in enumerate(splits)
                 }
 
                 feature_groups = load_feature_groups(pathData)

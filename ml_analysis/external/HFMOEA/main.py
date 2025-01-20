@@ -19,15 +19,14 @@ def initialization_helper(function, data, target, is_classification):
     print(f"Finished initializing {function.__name__}")
     return ret_value
 
-
-def compute(data, target, is_classification, topk=10, pop_size=100, max_gen=100, mutation_probability=0.06, n_jobs=1):
-    data = data.to_numpy()
-    target = target.to_numpy()
-    num_feat = data.shape[1]
-
+def compute_sol(data : np.ndarray, target : np.ndarray, is_classification : bool, n_jobs : int = 1):
     functions = [MI, SCC, Relief, PCC, chi_square, info_gain, MAD, Dispersion_ratio, feature_selection_sim, Fisher_score]
     sol = Parallel(n_jobs=n_jobs)(delayed(initialization_helper)(fun, data, target, is_classification) for fun in functions)
-    sol = [x for x in sol if x is not None]
+    return [x for x in sol if x is not None]
+
+def compute(data : np.ndarray, target : np.ndarray, is_classification : bool, topk=10, pop_size=100, max_gen=100, mutation_probability=0.06, n_jobs=1, sol = None):
+    if sol is None:
+        compute_sol(data, target, is_classification, n_jobs=n_jobs)
 
     if pop_size < 10:
         pop_size = 10
@@ -97,8 +96,8 @@ def compute(data, target, is_classification, topk=10, pop_size=100, max_gen=100,
     pareto_front = [ (-1 * df[index][0], df[index][1], solution[index]) for index, isOptimal in enumerate(pareto_index) if isOptimal]
     return pareto_front
 
-def reduceFeaturesMaxAcc(data, target, is_classification, topk=10, pop_size=100, max_gen=100, mutation_probability=0.06, n_jobs=1):
-    pareto_front = compute(data, target, is_classification, topk, pop_size, max_gen, mutation_probability, n_jobs)
+def reduceFeaturesMaxAcc(data : np.ndarray, target : np.ndarray, is_classification : bool, topk=10, pop_size=100, max_gen=100, mutation_probability=0.06, n_jobs=1, sol=None):
+    pareto_front = compute(data, target, is_classification, topk, pop_size, max_gen, mutation_probability, n_jobs, sol)
     acc, size, config = max(pareto_front, key=itemgetter(0))
     return [ i == 1 for i in config]
 
