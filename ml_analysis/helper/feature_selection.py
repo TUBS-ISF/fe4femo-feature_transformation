@@ -51,95 +51,52 @@ def precompute_feature_selection(features: str, isClassification : bool, X_train
     if features == "all": # do not prefilter for all
         return None
     X_train, X_test = prefilter_features(X_train_orig, X_test_orig, y_train, threshold)  # todo leaking?
+    ret_dict = {
+        "X_train": X_train,
+        "X_test": X_test,
+    }
     match features:
-        case "all":
-            return None
         case "SATzilla":
-            return {
-                "X_train": filter_SATzilla(X_train),
-                "X_test": filter_SATzilla(X_test),
-            }
+            ret_dict["X_train"] = filter_SATzilla(X_train)
+            ret_dict["X_test"] = filter_SATzilla(X_test)
         case "SATfeatPy":
-            return {
-                "X_train": filter_SATfeatPy(X_train),
-                "X_test": filter_SATfeatPy(X_test),
-            }
+            ret_dict["X_train"] = filter_SATfeatPy(X_train)
+            ret_dict["X_test"] = filter_SATfeatPy(X_test)
         case "FMBA":
-            return {
-                "X_train": filter_FMBA(X_train),
-                "X_test": filter_FMBA(X_test),
-            }
+            ret_dict["X_train"] = filter_FMBA(X_train)
+            ret_dict["X_test"] = filter_FMBA(X_test)
         case "FM_Chara":
-            return {
-                "X_train": filter_FMChara(X_train),
-                "X_test": filter_FMChara(X_test),
-            }
+            ret_dict["X_train"] = filter_FMChara(X_train)
+            ret_dict["X_test"] = filter_FMChara(X_test)
         case "prefilter":
-            return {
-                "X_train" : X_train,
-                "X_test" : X_test,
-            }
+            pass
         case "kbest-mutalinfo":
-            return {
-                "X_train": X_train,
-                "X_test": X_test,
-            }
+            pass
         case "multisurf":
             selector = MultiSURF(n_jobs=parallelism)
             selector.fit(X_train.to_numpy(), y_train.to_numpy())
-            return {
-                "X_train": X_train,
-                "X_test": X_test,
-                "top_features" : selector.top_features_
-            }
+            ret_dict["top_features"] = selector.top_features_
         case "mRMR":
-            return {
-                "X_train": X_train,
-                "X_test": X_test,
-            }
+            pass
         case "RFE":
-            return {
-                "X_train": X_train,
-                "X_test": X_test,
-            }
+            pass
         case "harris-hawks":
-            return {
-                "X_train": X_train,
-                "X_test": X_test,
-            }
+            pass
         case "genetic":
-            return {
-                "X_train": X_train,
-                "X_test": X_test,
-            }
+            pass
         case "HFMOEA":
-            return {
-                "X_train": X_train,
-                "X_test": X_test,
-                "sol" : compute_sol(X_train.to_numpy(), y_train.to_numpy(), isClassification, parallelism)
-            }
+            ret_dict["sol"] = compute_sol(X_train.to_numpy(), y_train.to_numpy(), isClassification, parallelism)
         case "embedded-tree":
-            return {
-                "X_train": X_train,
-                "X_test": X_test,
-            }
+            pass
         case "SVD-entropy":
-            return {
-                "X_train": X_train,
-                "X_test": X_test,
-            }
+            pass
         case "NDFS":
-            return {
-                "X_train": X_train,
-                "X_test": X_test,
-            }
+            pass
         case "optuna-combined":
-            return {
-                "X_train": X_train,
-                "X_test": X_test,
-            }
+            pass
         case _:
             raise ValueError("Invalid Feature Subset")
+    return ret_dict
 
 
 def get_feature_selection(features : str, isClassification : bool, X_train_orig : pd.DataFrame, y_train : pd.Series, X_test_orig : pd.DataFrame, selector_args, estimator, group_dict : dict[str, list[str]], parallelism : int = 1, threshold : float = .9, precomputed = None):
@@ -147,7 +104,8 @@ def get_feature_selection(features : str, isClassification : bool, X_train_orig 
     per_estimator_parallel = parallelism // inner_cv.n_splits
     if precomputed is None:
         precomputed = precompute_feature_selection(features=features, isClassification=isClassification, X_train_orig=X_train_orig, y_train=y_train, X_test_orig=X_test_orig, threshold=threshold, parallelism=parallelism)
-    match features: # with prefiltering
+    max_features = precomputed["X_train"].shape[1]
+    match features:
         case "all":
             return X_train_orig, X_test_orig
         case "SATzilla" | "SATfeatPy" | "FMBA" | "FM_Chara" | "prefilter":
@@ -156,24 +114,26 @@ def get_feature_selection(features : str, isClassification : bool, X_train_orig 
             X_train = precomputed["X_train"]
             X_test = precomputed["X_test"]
             score_func = partial(mutual_info_classif, random_state=42, n_jobs=parallelism, n_neighbors=selector_args["n_neighbors"] ) if isClassification else partial(mutual_info_regression, random_state=42, n_jobs=parallelism, n_neighbors=selector_args["n_neighbors"])
-            selector = SelectKBest(score_func, k=selector_args["k"])
+            selector = SelectKBest(score_func, k=min(max_features, selector_args["k"]))# limit to max feature count after preprocessing
             selector.set_output(transform="pandas")
             selector.fit(X_train, y_train)
             return selector.transform(X_train), selector.transform(X_test)
         case "multisurf":
             X_train = precomputed["X_train"]
             X_test = precomputed["X_test"]
-            row_index_to_select = precomputed["top_features"][:selector_args["n_features_to_select"]]
+            row_index_to_select = precomputed["top_features"][:min(max_features, selector_args["n_features_to_select"])]# limit to max feature count after preprocessing
             return X_train.iloc[:, row_index_to_select], X_test.iloc[:, row_index_to_select]
         case "mRMR":
             X_train = precomputed["X_train"]
             X_test = precomputed["X_test"]
+            selector_args["K"] = min(max_features, selector_args["K"]) # limit to max feature count after preprocessing
             selected_feature_names = mrmr_classif(X_train, y_train, **selector_args, n_jobs=parallelism, show_progress=False) if isClassification else mrmr_regression(X_train, y_train, **selector_args, n_jobs=parallelism, show_progress=False)
             return X_train[selected_feature_names], X_test[selected_feature_names]
         case "RFE":
             X_train = precomputed["X_train"]
             X_test = precomputed["X_test"]
             estimator.set_params(n_jobs=per_estimator_parallel)
+            selector_args["min_features_to_select"] = min(max_features, selector_args["min_features_to_select"])  # limit to max feature count after preprocessing
             selector = RFECV(estimator, cv=inner_cv, step=selector_args["step"], min_features_to_select=selector_args["min_features_to_select"], n_jobs=inner_cv.n_splits)
             selector.set_output(transform="pandas")
             selector.fit(X_train, y_train)
@@ -199,12 +159,14 @@ def get_feature_selection(features : str, isClassification : bool, X_train_orig 
         case "HFMOEA":
             X_train_np = precomputed["X_train"].to_numpy()
             y_train_np = y_train.to_numpy()
+            selector_args["topk"] = min(max_features, selector_args["topk"])  # limit to max feature count after preprocessing
             feature_mask = reduceFeaturesMaxAcc(X_train_np, y_train_np, **selector_args, n_jobs=parallelism, is_classification=isClassification, sol=precomputed["sol"])
             return  precomputed["X_train"].loc[:, feature_mask], precomputed["X_test"].loc[:, feature_mask]
         case "embedded-tree":
             X_train = precomputed["X_train"]
             X_test = precomputed["X_test"]
             forest = RandomForestClassifier(n_estimators=selector_args["e_n_estimators"], max_depth=selector_args["e_max_depth"], n_jobs=parallelism) if isClassification else RandomForestRegressor(n_estimators=selector_args["e_n_estimators"], max_depth=selector_args["e_max_depth"], n_jobs=parallelism)
+            selector_args["e_max_features"] = min(max_features, selector_args["e_max_features"])  # limit to max feature count after preprocessing
             model = SelectFromModel(forest, max_features=selector_args["e_max_features"])
             model.set_output(transform="pandas")
             model.fit(X_train, y_train)
@@ -220,6 +182,7 @@ def get_feature_selection(features : str, isClassification : bool, X_train_orig 
             np_view = X_test.to_numpy()
             W = ndfs(np_view, n_clusters=selector_args["n_clusters"], alpha=selector_args["alpha"], beta=selector_args["beta"])
             ranking = feature_ranking(W)
+            selector_args["n_features_to_select"] = min(max_features, selector_args["n_features_to_select"])  # limit to max feature count after preprocessing
             sliced = ranking[:selector_args["n_features_to_select"]]
             return X_train.iloc[:, sliced], X_test.iloc[:, sliced]
         case "optuna-combined":
