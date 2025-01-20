@@ -54,7 +54,7 @@ def impute_and_scale(X_train, X_test):
     return X_train, X_test
 
 
-def compute_fold(dask_X, dask_y, dask_train_index, dask_test_index, model, features, is_classification, dask_model_config, dask_selector_config, dask_feature_groups, future_precompute)  -> float:
+def compute_fold(dask_X, dask_y, dask_train_index, dask_test_index, model, features, is_classification, dask_model_config, dask_selector_config, dask_feature_groups, precomputed)  -> float:
     train_index = dask.compute(dask_train_index, traverse=False)[0]
     test_index = dask.compute(dask_test_index, traverse=False)[0]
     X = dask.compute(dask_X, traverse=False)[0]
@@ -69,8 +69,6 @@ def compute_fold(dask_X, dask_y, dask_train_index, dask_test_index, model, featu
 
     # feature preprocessing
     X_train, X_test = impute_and_scale(X_train, X_test)
-    with worker_client() as client:
-        precomputed = future_precompute.result()
 
     # feature selection + model training
     model_instance_selector = get_model(model, is_classification, 1, model_config )
@@ -205,7 +203,7 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                 with open(path, "wb") as f:
                     cloudpickle.dump(output, f)
                 print(f"Exported model at {path}")
-
+            client.shutdown()
 
 
 if __name__ == '__main__':

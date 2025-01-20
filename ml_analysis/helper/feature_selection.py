@@ -48,6 +48,8 @@ def prefilter_features(X_train_in : pd.DataFrame, X_test_in : pd.DataFrame, y_tr
     return X_train[list(to_keep)], X_test[list(to_keep)]
 
 def precompute_feature_selection(features: str, isClassification : bool, X_train_orig : pd.DataFrame, y_train : pd.Series, X_test_orig : pd.DataFrame, threshold : float = .9, parallelism : int = 1, ):
+    if features == "all": # do not prefilter for all
+        return None
     X_train, X_test = prefilter_features(X_train_orig, X_test_orig, y_train, threshold)  # todo leaking?
     match features:
         case "all":
