@@ -100,7 +100,7 @@ def objective(trial: optuna.Trial, dask_X, dask_y, folds, features, model, shoul
 def main(pathData: str, pathOutput: str, features: str, task: str, model: str, modelHPO: bool, hpo_its: int, foldNo : int):
     Path(pathOutput).mkdir(parents=True, exist_ok=True)
     run_config = {
-        "name": f"{task}_{features}_{model}_{modelHPO}_{hpo_its}_{foldNo}",
+        "name": f"{task}#{features}#{model}#{modelHPO}#{hpo_its}#{foldNo}",
         "path_data": pathData,
         "path_output": pathOutput,
         "features": features,
