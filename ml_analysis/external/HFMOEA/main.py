@@ -1,5 +1,6 @@
 from operator import itemgetter
 
+from distributed import Variable
 from joblib import Parallel, delayed
 
 from external.HFMOEA.filter_methods import *
@@ -14,14 +15,14 @@ import pandas as pd
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 
-def initialization_helper(function, data, target, is_classification):
-    ret_value = function(data, target, is_classification)
-    print(f"Finished initializing {function.__name__}")
-    return ret_value
 
 def compute_sol(data : np.ndarray, target : np.ndarray, is_classification : bool, n_jobs : int = 1):
     functions = [MI, SCC, Relief, PCC, chi_square, info_gain, MAD, Dispersion_ratio, feature_selection_sim, Fisher_score]
-    sol = Parallel(n_jobs=n_jobs)(delayed(initialization_helper)(fun, data, target, is_classification) for fun in functions)
+    with worker_client() as client:
+        data = client.scatter(data)
+        target = client.scatter(target)
+        sol_future = [ client.submit(fun, data, target, is_classification) for fun in functions]
+        sol = client.gather(sol_future)
     return [x for x in sol if x is not None]
 
 def compute(data : np.ndarray, target : np.ndarray, is_classification : bool, topk=10, pop_size=100, max_gen=100, mutation_probability=0.06, n_jobs=1, sol = None):
@@ -58,7 +59,7 @@ def compute(data : np.ndarray, target : np.ndarray, is_classification : bool, to
         solution2 = mutation(solution2, num_mutations=num_mutations)
         solution2 = check_sol(solution2)
         function1_values_new = function1(solution2, X_train, y_train, X_test,
-                                      y_test).tolist()  # [function1(solution2[i])for i in range(0,2*pop_size)]
+                                      y_test, is_classification) # [function1(solution2[i])for i in range(0,2*pop_size)]
         function2_values_new = [function2(solution2[i]) for i in range(0, pop_size)]
         non_dominated_sorted_solution2 = fast_non_dominated_sort(function1_values_new[:], function2_values_new[:])
         crowding_distance_values2 = []
@@ -83,7 +84,7 @@ def compute(data : np.ndarray, target : np.ndarray, is_classification : bool, to
         solution = [solution2[i] for i in new_solution]
         gen_no = gen_no + 1
 
-    function1_values = function1(np.array(solution), X_train, y_train, X_test, y_test).tolist()
+    function1_values = function1(np.array(solution), X_train, y_train, X_test, y_test, is_classification)
     function2_values = [function2(solution[i]) for i in range(0, pop_size)]
     # Lets plot the final front now
 

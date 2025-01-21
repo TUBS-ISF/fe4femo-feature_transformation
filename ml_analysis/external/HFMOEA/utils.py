@@ -1,15 +1,15 @@
 import numpy as np
 import math
-import random
-import matplotlib.pyplot as plt
 import sklearn.svm
-import random
-from sklearn.metrics import classification_report, balanced_accuracy_score, confusion_matrix, accuracy_score
-from sklearn.base import BaseEstimator, ClassifierMixin
+from distributed import worker_client
+from sklearn.metrics import classification_report, balanced_accuracy_score, confusion_matrix, accuracy_score, \
+    matthews_corrcoef, d2_absolute_error_score
 from sklearn.preprocessing import label_binarize
 from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
 import warnings
+
+from sklearn.svm import SVC, SVR
 
 warnings.filterwarnings("ignore")
 
@@ -28,28 +28,6 @@ def metrics(labels, predictions, classes):
     print(matrix)
     print("Classwise Accuracy :{}".format(matrix.diagonal() / matrix.sum(axis=1)))
     print("Balanced Accuracy Score: ", balanced_accuracy_score(labels, predictions))
-
-
-def cal_pop_fitness(pop, train_datas, train_labels, test_datas, test_labels):
-    pop = np.array(pop)
-    accuracies2 = np.zeros(pop.shape[0])
-    idx = 0
-
-    for curr_solution in pop:
-        reduced_train_features = reduce_features(curr_solution, train_datas)
-        reduced_test_features = reduce_features(curr_solution, test_datas)
-        X = reduced_train_features
-        y = train_labels
-
-        ## SVM CLASSIFIER ##
-        SVM_classifier = sklearn.svm.SVC(kernel='rbf', gamma='scale', C=5000, probability=True)
-        SVM_classifier.fit(X, y)
-        predictions2 = SVM_classifier.predict(reduced_test_features)
-
-        accuracies2[idx] = accuracy_score(test_labels, predictions2)
-
-        idx = idx + 1
-    return accuracies2
 
 
 def select_mating_pool(pop, fitness, num_parents):
@@ -208,10 +186,27 @@ def crowding_distance(values1, values2, front):
         distance[k] = distance[k] + (values1[sorted2[k + 1]] - values2[sorted2[k - 1]]) / kk
     return distance
 
+def compute_score(curr_solution, X_train, y_train, X_test, y_test, is_classification):
+    reduced_train_features = reduce_features(curr_solution, X_train)
+    reduced_test_features = reduce_features(curr_solution, X_test)
+    X = reduced_train_features
+    y = y_train
+
+    ## SVM CLASSIFIER ##
+    SVM = SVC(kernel='rbf', gamma='scale', C=5000) if is_classification else SVR(kernel='rbf', gamma='scale', C=5000)
+    SVM.fit(X, y)
+    y_pred = SVM.predict(reduced_test_features)
+    if is_classification:
+        return matthews_corrcoef(y_test, y_pred)
+    else:
+        return d2_absolute_error_score(y_test, y_pred)
 
 # First function to optimize
-def function1(x, X_train, y_train, X_test, y_test):
-    return cal_pop_fitness(x, X_train, y_train, X_test, y_test)
+def function1(x, X_train, y_train, X_test, y_test, is_classification):
+    with worker_client() as client:
+        accuracies_future = [ client.submit(compute_score, curr_solution, X_train, y_train, X_test, y_test, is_classification, pure=False) for curr_solution in x ]
+        accuracies2 = client.gather(accuracies_future)
+    return accuracies2
 
 
 # Second function to optimize

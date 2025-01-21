@@ -1,4 +1,5 @@
 import numpy as np
+from distributed import worker_client
 from sklearn.feature_selection import *
 from sklearn import datasets
 import pandas as pd
@@ -120,7 +121,6 @@ def feature_selection_sim(in_data, target, is_classification, measure='luca', p=
     m = data.shape[0]  # -samples
     t = data.shape[1] - 1  # -features
 
-    dataold = data.copy()
 
     idealvec_s = np.zeros((l, t))
     for k in range(l):
@@ -151,16 +151,11 @@ def feature_selection_sim(in_data, target, is_classification, measure='luca', p=
     data = pd.concat([data_vv, data_c], axis=1, ignore_index=False)
 
     # sample data
-    datalearn_s = data.iloc[:, :-1]
+    datalearn_s = (data.iloc[:, :-1]).to_numpy()
 
     # similarities
-    sim = np.zeros((t, m, l))
-
-    for j in range(m):
-        for i in range(t):
-            for k in range(l):
-                sim[i, j, k] = (1 - abs(idealvec_s[k, i] ** p - datalearn_s.iloc[j, i]) ** p) ** (1 / p)
-
+    sim = (1 - np.abs(idealvec_s.T[:, :, None] ** p - datalearn_s.T[:, None, :]) ** p) ** (1 / p)
+    sim = np.moveaxis(sim, -1, -2)
     sim = sim.reshape(t, m * l)
 
     # possibility for two different entropy measures
@@ -222,16 +217,19 @@ def MI(data, target, is_classification):
     # initialize the variables and result structure
     feature_values = np.array(data)
     num_features = feature_values.shape[1]
-    MI_values_feat = np.zeros(num_features)
 
     result = Result()
     result.features = feature_values
     weight_feat = 0.3  # weightage provided to feature-feature correlation
     weight_class = 0.7  # weightage provided to feature-class correlation
 
-    for ind in range(num_features):
-        MI_values_feat[ind] = -np.sum(abs(compute_MI(feature_values, feature_values[:, ind], is_classification)))
-    MI_values_class = compute_MI(feature_values, target, is_classification)
+    with worker_client() as client:
+        fv = client.scatter(feature_values)
+        MI_future = [client.submit(compute_MI_mod, fv, ind, is_classification) for ind in range(num_features)]
+        MI_val_future = client.submit(compute_MI, fv, target, is_classification)
+        MI_sol = client.gather(MI_future)
+        MI_values_class = client.gather(MI_val_future)
+    MI_values_feat = np.array(MI_sol)
 
     # produce scores and ranks from the information matrix
     MI_values_feat = normalize(MI_values_feat)
@@ -246,10 +244,12 @@ def MI(data, target, is_classification):
 
     return result
 
+def compute_MI_mod(feature_values, ind, is_classification):
+    return -np.sum(abs(compute_MI(feature_values, feature_values[:, ind], is_classification)))
 
 def compute_MI(X, y, is_classification):
     # function to compute mutual information between two variables
-    return mutual_info_classif(X, y, random_state=42) if is_classification else mutual_info_regression(X, y, random_state=42)
+    return mutual_info_classif(X, y, random_state=42, n_jobs=-1) if is_classification else mutual_info_regression(X, y, random_state=42, n_jobs=-1)
 
 
 # -------------------------  Relief  -------------------------------------------#
