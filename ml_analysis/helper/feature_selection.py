@@ -15,6 +15,8 @@ from sklearn.model_selection import KFold, cross_val_score
 from zoofs import HarrisHawkOptimization, GeneticOptimization
 
 from external.HFMOEA.main import reduceFeaturesMaxAcc, compute_sol
+from external.genetic_parallel import GeneticParallel
+from external.harrishawk_parallel import HarrisHawkParallel
 from external.multisurf_parallel import MultiSURF_Parallel
 from external.skfeature.NDFS import ndfs
 from external.skfeature.sparse_learning import feature_ranking
@@ -148,7 +150,7 @@ def get_feature_selection(features : str, isClassification : bool, X_train_orig 
             estimator.set_params(n_jobs=per_estimator_parallel)
             X_copy = pd.DataFrame(X_train)
             y_copy = pd.DataFrame(y_train)
-            selector = HarrisHawkOptimization(partial(objective_function_zoo, inner_cv=inner_cv, n_jobs=inner_cv.n_splits), **selector_args, minimize=False)
+            selector = HarrisHawkParallel(partial(objective_function_zoo, inner_cv=inner_cv, n_jobs=inner_cv.n_splits), **selector_args, minimize=False)
             selected_feature_names = selector.fit(estimator, X_copy, y_copy, X_copy, y_copy, verbose=False)
             return X_train[selected_feature_names], X_test[selected_feature_names]
         case "genetic":
@@ -157,7 +159,7 @@ def get_feature_selection(features : str, isClassification : bool, X_train_orig 
             estimator.set_params(n_jobs=per_estimator_parallel)
             X_copy = pd.DataFrame(X_train)
             y_copy = pd.DataFrame(y_train)
-            selector = GeneticOptimization(partial(objective_function_zoo, inner_cv=inner_cv, n_jobs=inner_cv.n_splits), **selector_args, minimize=False)
+            selector = GeneticParallel(partial(objective_function_zoo, inner_cv=inner_cv, n_jobs=inner_cv.n_splits), **selector_args, minimize=False)
             selected_feature_names = selector.fit(estimator, X_copy, y_copy, X_copy, y_copy, verbose=False)
             return X_train[selected_feature_names], X_test[selected_feature_names]
         case "HFMOEA":
