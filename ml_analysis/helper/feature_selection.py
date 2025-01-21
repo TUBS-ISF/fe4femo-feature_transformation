@@ -97,7 +97,9 @@ def precompute_feature_selection(features: str, isClassification : bool, X_train
         case "embedded-tree":
             pass
         case "SVD-entropy":
-            pass
+            with joblib.parallel_config(backend="dask"):
+                mask = keep_high_contrib_features(X_train, parallelism)
+            ret_dict["mask"] = mask
         case "NDFS":
             pass
         case "optuna-combined":
@@ -180,7 +182,7 @@ def get_feature_selection(features : str, isClassification : bool, X_train_orig 
         case "SVD-entropy":
             X_train = precomputed["X_train"]
             X_test = precomputed["X_test"]
-            boolean_mask = keep_high_contrib_features(X_train)
+            boolean_mask = precomputed["mask"]
             return X_train.loc[:, boolean_mask], X_test.loc[:, boolean_mask]
         case "NDFS":
             X_train = precomputed["X_train"]
