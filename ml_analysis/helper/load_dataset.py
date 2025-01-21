@@ -163,7 +163,7 @@ def is_task_classification(task : str) -> bool:
 
 def load_feature_groups(path: str) -> dict[str, list[str]]:
     df = pd.read_csv(path+"/featureExtraction/groupMapping.csv", header=0)
-    return df.groupby("groupName")['featureName'].apply(list).to_dict
+    return df.groupby("groupName")['featureName'].apply(list).to_dict()
 
 def generate_xy_split(X, y, fold_path, foldNo) -> tuple:
     with open(fold_path) as f:

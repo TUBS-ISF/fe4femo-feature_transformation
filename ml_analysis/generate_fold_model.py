@@ -139,7 +139,6 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                     folds[i] = X_traintest_inner, y_train_inner, y_test_inner, future_pre
 
                 feature_groups = load_feature_groups(pathData)
-                feature_groups = client.scatter(feature_groups)
                 objective_function = lambda trial: objective(trial, folds, features, model, modelHPO, is_classification, feature_groups, feature_count)
 
                 journal_path = run_config["path_output"] + "/" + run_config["name"] + ".journal"
