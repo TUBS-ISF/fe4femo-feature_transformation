@@ -27,7 +27,7 @@ if __name__ == '__main__':
     pathData = "raphael-dunkel-master/data/"
     task = "runtime_backbone"
     model = "randomForest"
-    hpo_its = "250"
+    hpo_its = "150"
 
     for feature in features:
         name = f"{args.task}#{args.features}#{args.model}#{args.modelHPO}#{args.HPOits}#{i}"
