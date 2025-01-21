@@ -17,7 +17,6 @@ from helper.input_parser import parse_input
 
 
 if __name__ == '__main__':
-    args = parse_input()
     outputdir = "fe4femo/ml_analysis/out/selector_test/"
     Path(outputdir).mkdir(parents=True, exist_ok=True)
     i = 0
@@ -30,7 +29,7 @@ if __name__ == '__main__':
     hpo_its = "150"
 
     for feature in features:
-        name = f"{args.task}#{args.features}#{args.model}#{args.modelHPO}#{args.HPOits}#{i}"
+        name = f"{task}#{feature}#{model}#true#{hpo_its}#{i}"
         arguments = ["sbatch", "--partition=multiple_il", f"--output={outputdir}/{name}.out", "../slurm_scripts/run.sh",
                      "--foldNo", f"{i}", "--features", feature, "--task", task, "--model", model, "--modelHPO", "--HPOits", hpo_its, pathData, outputdir ]
         print(f"Submit fold {i} with arguments:\n {arguments}")
