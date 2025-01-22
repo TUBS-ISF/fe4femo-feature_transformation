@@ -1,3 +1,4 @@
+import os
 import subprocess
 from pathlib import Path
 
@@ -25,8 +26,8 @@ if __name__ == '__main__':
     hpo_its = "150"
 
     for feature in features:
-        name = f"{task}#{feature}#{model}#true#{hpo_its}#{i}"
-        arguments = ["sbatch", "--partition=multiple_il", f"--output={outputdir}/{name}.out", "../slurm_scripts/run.sh",
+        name = f"{task}#{feature}#{model}#True#{hpo_its}#{i}"
+        arguments = ["sbatch", "--partition=multiple_il", f"--output={os.environ["HOME"]}/{outputdir}/{name}.out", "../slurm_scripts/run.sh",
                      "--foldNo", f"{i}", "--features", feature, "--task", task, "--model", model, "--modelHPO", "--HPOits", hpo_its, pathData, outputdir ]
         print(f"Submit fold {i} with arguments:\n {arguments}")
         subprocess.run(arguments)
