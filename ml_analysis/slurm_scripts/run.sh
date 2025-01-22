@@ -8,7 +8,7 @@
 #SBATCH --use-min-nodes
 
 
-export OMP_NUM_THREADS=$(( ${SLURM_CPUS_PER_TASK} - 1 < 1 ? 1 : ${SLURM_CPUS_PER_TASK} - 1 ))
+export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
 echo -e "JOB_ID=${SLURM_JOB_ID}"
 echo -e "OMP_THREADS=${OMP_NUM_THREADS}"
 

@@ -110,7 +110,7 @@ def precompute_feature_selection(features: str, isClassification : bool, X_train
 
 
 def get_feature_selection(features : str, isClassification : bool, X_train_orig : pd.DataFrame, y_train : pd.Series, X_test_orig : pd.DataFrame, selector_args, estimator, group_dict : dict[str, list[str]], parallelism : int = 1, threshold : float = .9, precomputed = None):
-    inner_cv = KFold(n_splits=3, shuffle=True, random_state=42)
+    inner_cv = KFold(n_splits=4, shuffle=True, random_state=42)
     per_estimator_parallel = parallelism // inner_cv.n_splits
     if precomputed is None:
         precomputed = precompute_feature_selection(features=features, isClassification=isClassification, X_train_test_orig=(X_train_orig, X_test_orig), y_train=y_train, threshold=threshold, parallelism=parallelism)

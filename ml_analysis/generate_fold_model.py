@@ -60,7 +60,7 @@ def compute_fold( X_train_test, y_train, y_test, model, features, is_classificat
     # feature selection + model training
     model_instance_selector = get_model(model, is_classification, 1, model_config )
     X_train, X_test = get_feature_selection(features, is_classification, X_train, y_train, X_test, selector_config, model_instance_selector, feature_groups, parallelism=7, precomputed=precomputed)
-    model_instance = get_model(model, is_classification, 7, model_config )
+    model_instance = get_model(model, is_classification, 8, model_config )
     model_instance.fit(X_train.to_numpy(copy=True), y_train.to_numpy(copy=True))
     y_pred = model_instance.predict(X_test.to_numpy(copy=True))
     if is_classification:
@@ -136,7 +136,7 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                     y_test_inner = client.scatter(y_train.iloc[test_index])
                     # feature preprocessing
                     X_traintest_inner = client.submit(impute_and_scale, X_train_inner, X_test_inner)
-                    future_pre = client.submit(precompute_feature_selection, features, is_classification, X_traintest_inner, y_train_inner, 0.9, 7, pure=True)
+                    future_pre = client.submit(precompute_feature_selection, features, is_classification, X_traintest_inner, y_train_inner, 0.9, 8, pure=True)
                     folds[i] = X_traintest_inner, y_train_inner, y_test_inner, future_pre
 
                 feature_groups = load_feature_groups(pathData)
