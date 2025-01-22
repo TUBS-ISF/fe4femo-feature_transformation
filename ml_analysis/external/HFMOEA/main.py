@@ -52,7 +52,7 @@ def compute(data : np.ndarray, target : np.ndarray, is_classification : bool, to
     solution = initial_chromosome
     gen_no = 1
     while (gen_no <= max_gen):
-        print("Generation number: ", gen_no)
+        #print("Generation number: ", gen_no)
 
         # Generating offsprings
         solution2 = crossover(np.array(solution), offspring_size=(pop_size, num_features))
