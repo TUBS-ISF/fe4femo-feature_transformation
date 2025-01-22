@@ -174,10 +174,10 @@ def get_feature_selection(features : str, isClassification : bool, X_train_orig 
             X_train = precomputed["X_train"]
             X_test = precomputed["X_test"]
             forest = RandomForestClassifier(n_estimators=selector_args["e_n_estimators"], max_depth=selector_args["e_max_depth"], n_jobs=parallelism) if isClassification else RandomForestRegressor(n_estimators=selector_args["e_n_estimators"], max_depth=selector_args["e_max_depth"], n_jobs=parallelism)
+            forest.fit(X_train, y_train)
             selector_args["e_max_features"] = min(max_features, selector_args["e_max_features"])  # limit to max feature count after preprocessing
-            model = SelectFromModel(forest, max_features=selector_args["e_max_features"])
+            model = SelectFromModel(forest, max_features=selector_args["e_max_features"], prefit=True)
             model.set_output(transform="pandas")
-            model.fit(X_train, y_train)
             return model.transform(X_train), model.transform(X_test)
         case "SVD-entropy":
             X_train = precomputed["X_train"]
