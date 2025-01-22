@@ -5,8 +5,6 @@ import numpy as np
 from distributed import worker_client
 from zoofs import HarrisHawkOptimization
 
-from tester.test_ml import X_train
-
 
 class HarrisHawkParallel(HarrisHawkOptimization):
 
@@ -38,7 +36,7 @@ class HarrisHawkParallel(HarrisHawkOptimization):
                 if feature_hash in self.feature_score_hash.keys():
                     score = self.feature_score_hash[feature_hash]
                 else:
-                    score = client.submit(self._negatable_objective, self.objective_function, model, X_train,
+                    score = client.submit(self._negatable_objective, self.objective_function, model, x_train,
                                               y_train, chosen_features, self.kwargs, self.minimize)
                 future_tuple = (feature_hash, individual, score)
                 future_scores.append(future_tuple)
