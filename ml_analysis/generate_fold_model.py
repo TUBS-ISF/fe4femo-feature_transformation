@@ -61,8 +61,8 @@ def compute_fold( X_train_test, y_train, y_test, model, features, is_classificat
     model_instance_selector = get_model(model, is_classification, 1, model_config )
     X_train, X_test = get_feature_selection(features, is_classification, X_train, y_train, X_test, selector_config, model_instance_selector, feature_groups, parallelism=7, precomputed=precomputed)
     model_instance = get_model(model, is_classification, 7, model_config )
-    model_instance.fit(X_train, y_train)
-    y_pred = model_instance.predict(X_test)
+    model_instance.fit(X_train.to_numpy(copy=True), y_train.to_numpy(copy=True))
+    y_pred = model_instance.predict(X_test.to_numpy(copy=True))
     if is_classification:
         return matthews_corrcoef(y_test, y_pred)
     else:
@@ -118,7 +118,7 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                 if is_classification:
                     label_encoder = LabelEncoder()
                     y = label_encoder.fit_transform(y)
-                    y = pd.Series(y)
+                y = pd.to_numeric(y, downcast='float')
                 X_train, X_test, y_train, y_test = generate_xy_split(X, y, pathData+"/folds.txt", foldNo)
 
                 feature_count = X_train.shape[1]
@@ -172,7 +172,7 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                 end_FS = time.time()
                 model_instance = get_model(model, is_classification, n_jobs, model_config)
                 start_Model =time.time()
-                model_instance.fit(X_train, y_train)
+                model_instance.fit(X_train.to_numpy(copy=True), y_train.to_numpy(copy=True))
                 end_Model =time.time()
                 model_complete = model_instance
 
