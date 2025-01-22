@@ -221,7 +221,7 @@ def get_selection_HPO_space(features : str, trial : Trial, isClassification : bo
         case "mRMR":
             return {
                 "K" : trial.suggest_int("K", min_features, no_features),
-                "relevance" : trial.suggest_categorical("relevance", ["f", "ks", "rf"]),
+                "relevance" : trial.suggest_categorical("relevance", ["f", "rf"]),
                 "denominator" : trial.suggest_categorical("denominator", ["max", "mean"]),
             }
         case "RFE":
