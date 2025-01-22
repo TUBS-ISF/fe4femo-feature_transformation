@@ -24,10 +24,10 @@ if __name__ == '__main__':
     task = "runtime_backbone"
     model = "randomForest"
     hpo_its = "150"
-
+    home = os.getenv('HOME', "/home/ul/ul_student/ul_ppm61")
     for feature in features:
         name = f"{task}#{feature}#{model}#True#{hpo_its}#{i}"
-        arguments = ["sbatch", "--partition=multiple_il", f"--output={os.environ["HOME"]}/{outputdir}/{name}.out", "../slurm_scripts/run.sh",
+        arguments = ["sbatch", "--partition=multiple_il", f"--output={home}/{outputdir}/{name}.out", "../slurm_scripts/run.sh",
                      "--foldNo", f"{i}", "--features", feature, "--task", task, "--model", model, "--modelHPO", "--HPOits", hpo_its, pathData, outputdir ]
         print(f"Submit fold {i} with arguments:\n {arguments}")
         subprocess.run(arguments)
