@@ -8,8 +8,9 @@
 #SBATCH --use-min-nodes
 
 
-export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
+export OMP_NUM_THREADS=$(( ${SLURM_CPUS_PER_TASK} - 1 < 1 ? 1 : ${SLURM_CPUS_PER_TASK} - 1 ))
 echo -e "JOB_ID=${SLURM_JOB_ID}"
+echo -e "OMP_THREADS=${OMP_NUM_THREADS}"
 
 container="ml_analysis"
 
