@@ -10,6 +10,7 @@ SHELL ["conda", "run", "-n", "ml_analysis", "/bin/bash", "-c"]
 RUN mkdir /in && mkdir /out
 
 ENV PYTHONDONTWRITEBYTECODE='false'
+ENV PYTHONWARNINGS='module'
 RUN python -m sklearnex.glob patch_sklearn
 
 COPY . .
