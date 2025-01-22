@@ -15,7 +15,7 @@ from pathlib import Path
 
 if __name__ == '__main__':
     outputdir = "fe4femo/ml_analysis/out/selector_test/"
-    Path(outputdir).mkdir(parents=True, exist_ok=True)
+
     i = 0
     features = ["all", "prefilter", "SATzilla", "SATfeatPy", "FMBA", "FM_Chara",
                                  "kbest-mutalinfo", "multisurf", "mRMR", "RFE", "harris-hawks",
@@ -25,9 +25,10 @@ if __name__ == '__main__':
     model = "randomForest"
     hpo_its = "150"
     home = os.getenv('HOME', "/home/ul/ul_student/ul_ppm61")
+    Path(home+"/"+outputdir).mkdir(parents=True, exist_ok=True)
     for feature in features:
         name = f"{task}#{feature}#{model}#True#{hpo_its}#{i}"
-        arguments = ["sbatch", "--partition=multiple_il", f"--output={home}/{outputdir}/{name}.out", "../slurm_scripts/run.sh",
+        arguments = ["sbatch", "-J", name, "--partition=multiple_il", f"--output={home}/{outputdir}/{name}.out", "../slurm_scripts/run.sh",
                      "--foldNo", f"{i}", "--features", feature, "--task", task, "--model", model, "--modelHPO", "--HPOits", hpo_its, pathData, outputdir ]
         print(f"Submit fold {i} with arguments:\n {arguments}")
         subprocess.run(arguments)
