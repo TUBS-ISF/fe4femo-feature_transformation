@@ -6,11 +6,13 @@ import scipy
 from distributed import worker_client
 from zoofs import GeneticOptimization
 
+from tester.test_ml import X_train
+
 
 class GeneticParallel(GeneticOptimization):
 
     @staticmethod
-    def _negatable_objective(objective_function, model, x_train_copy, y_train, x_valid_copy, y_valid, chosen_features,
+    def _negatable_objective(objective_function, model, x_train_copy, y_train, chosen_features,
                              kwargs, minimize: bool):
         X_masked = x_train_copy.iloc[:, chosen_features]
         score = objective_function(model, X_masked, y_train, X_masked, y_train, **kwargs)
@@ -22,8 +24,6 @@ class GeneticParallel(GeneticOptimization):
         future_scores = []
 
         with worker_client() as client:
-            X = client.scatter(x_train)
-            y = client.scatter(y_train)
             for individual in self.individuals:
                 chosen_features = [index for index in range(x_train.shape[1]) if individual[index] == 1]
 
@@ -32,8 +32,8 @@ class GeneticParallel(GeneticOptimization):
                 if feature_hash in self.feature_score_hash.keys():
                     score = self.feature_score_hash[feature_hash]
                 else:
-                    score = client.submit(self._negatable_objective, self.objective_function, model, X,
-                                          y, X, y, chosen_features, self.kwargs, self.minimize)
+                    score = client.submit(self._negatable_objective, self.objective_function, model, X_train,
+                                          y_train, chosen_features, self.kwargs, self.minimize, pure=False)
                 future_tuple = (feature_hash, individual, score)
                 future_scores.append(future_tuple)
             scores = client.gather(future_scores)
