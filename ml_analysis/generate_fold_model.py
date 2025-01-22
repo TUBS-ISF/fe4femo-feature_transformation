@@ -1,6 +1,7 @@
 import math
 import os
 import tempfile
+import time
 
 import cloudpickle
 import pandas as pd
@@ -158,19 +159,21 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                 best_params = study.best_params
                 frozen_best_trial = study.best_trial
 
-                #todo work with best trial
-                with joblib.parallel_backend('dask'):
-                    # feature preprocessing
-                    X_train, X_test = impute_and_scale(X_train, X_test)
+                # feature preprocessing
+                X_train, X_test = impute_and_scale(X_train, X_test)
 
-                    # feature selection + model training
-                    model_config = get_model_HPO_space(model, frozen_best_trial, is_classification) if modelHPO else None
-                    selector_config = get_selection_HPO_space(features, frozen_best_trial, is_classification, feature_groups, X_train.shape[1])
-                    model_instance_selector = get_model(model, is_classification, 1, model_config)
-                    X_train, X_test = get_feature_selection(features, is_classification, X_train, y_train, X_test,
-                                                            selector_config, model_instance_selector, feature_groups, parallelism=n_jobs)
-                    model_instance = get_model(model, is_classification, n_jobs, model_config)
-                    model_instance.fit(X_train, y_train)
+                # feature selection + model training
+                model_config = get_model_HPO_space(model, frozen_best_trial, is_classification) if modelHPO else None
+                selector_config = get_selection_HPO_space(features, frozen_best_trial, is_classification, feature_groups, X_train.shape[1])
+                model_instance_selector = get_model(model, is_classification, 1, model_config)
+                start_FS = time.time()
+                X_train, X_test = get_feature_selection(features, is_classification, X_train, y_train, X_test,
+                                                        selector_config, model_instance_selector, feature_groups, parallelism=n_jobs)
+                end_FS = time.time()
+                model_instance = get_model(model, is_classification, n_jobs, model_config)
+                start_Model =time.time()
+                model_instance.fit(X_train, y_train)
+                end_Model =time.time()
                 model_complete = model_instance
 
                 # export for later use
@@ -181,7 +184,9 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                     "label_encoder" : label_encoder,
                     "best_params": best_params,
                     "run_config": run_config,
-                    "journal_path": journal_path
+                    "journal_path": journal_path,
+                    "time_Feature" : end_FS - start_FS,
+                    "time_Model" : end_Model - start_Model,
                 }
 
                 path = run_config["path_output"] + "/"  + run_config["name"] + ".pkl"
