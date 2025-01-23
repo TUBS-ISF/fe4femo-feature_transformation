@@ -3,6 +3,34 @@ from joblib import Parallel, delayed
 from skrebate import MultiSURF
 from skrebate.scoring_utils import MultiSURF_compute_scores
 
+def find_neighbors(inst, datalen, distance_array):
+    """ Identify nearest hits and misses within radius defined by average distance and standard deviation around each target training instance.
+            This works the same regardless of endpoint type. """
+    dist_vect = []
+    for j in range(datalen):
+        if inst != j:
+            locator = [inst, j]
+            if inst < j:
+                locator.reverse()
+            dist_vect.append(distance_array[locator[0]][locator[1]])
+
+    dist_vect = np.array(dist_vect)
+    inst_avg_dist = np.average(dist_vect)
+    inst_std = np.std(dist_vect) / 2.
+    # Defining a narrower radius based on the average instance distance minus the standard deviation of instance distances.
+    near_threshold = inst_avg_dist - inst_std
+
+    NN_near = []
+    for j in range(datalen):
+        if inst != j:
+            locator = [inst, j]
+            if inst < j:
+                locator.reverse()
+            if distance_array[locator[0]][locator[1]] < near_threshold:
+                NN_near.append(j)
+
+    return np.array(NN_near)
+
 
 class MultiSURF_Parallel(MultiSURF):
 
@@ -11,7 +39,7 @@ class MultiSURF_Parallel(MultiSURF):
         nan_entries = np.isnan(self._X)
 
 
-        NNlist = Parallel(n_jobs=self.n_jobs)(delayed(self._find_neighbors)(datalen) for datalen in range(self._datalen))
+        NNlist = Parallel(n_jobs=self.n_jobs)(delayed(find_neighbors)(datalen, self._datalen, self._distance_array) for datalen in range(self._datalen))
 
         if self.verbose:
             print("Finished NN identification")
