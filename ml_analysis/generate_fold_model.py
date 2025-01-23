@@ -56,27 +56,27 @@ def impute_and_scale(X_train, X_test):
     return X_train, X_test
 
 
-def compute_fold( X_train_test, y_train, y_test, model, features, is_classification, model_config, selector_config, feature_groups, precomputed)  -> float:
+def compute_fold( X_train_test, y_train, y_test, model, features, is_classification, model_config, selector_config, feature_groups, precomputed, cores : int)  -> float:
     X_train, X_test = X_train_test
     # feature selection + model training
     model_instance_selector = get_model(model, is_classification, 1, model_config )
-    X_train, X_test = get_feature_selection(features, is_classification, X_train, y_train, X_test, selector_config, model_instance_selector, feature_groups, parallelism=7, precomputed=precomputed)
-    model_instance = get_model(model, is_classification, 8, model_config )
-    model_instance.fit(X_train.to_numpy(copy=True), y_train.to_numpy(copy=True))
-    y_pred = model_instance.predict(X_test.to_numpy(copy=True))
+    X_train, X_test = get_feature_selection(features, is_classification, X_train, y_train, X_test, selector_config, model_instance_selector, feature_groups, parallelism=cores, precomputed=precomputed)
+    model_instance = get_model(model, is_classification, cores, model_config )
+    model_instance.fit(X_train, y_train)
+    y_pred = model_instance.predict(X_test)
     if is_classification:
         return matthews_corrcoef(y_test, y_pred)
     else:
         return d2_absolute_error_score(y_test, y_pred)
 
 
-def objective(trial: optuna.Trial, folds, features, model, should_modelHPO, is_classification, feature_groups, feature_count) -> float:
+def objective(trial: optuna.Trial, folds, features, model, should_modelHPO, is_classification, feature_groups, feature_count, cores : int) -> float:
     model_config = get_model_HPO_space(model, trial, is_classification) if should_modelHPO else None
     selector_config = get_selection_HPO_space(features, trial, is_classification, feature_groups, feature_count)
     with worker_client() as client:
         futures = [
             client.submit(compute_fold,  X_train_test, y_train, y_test, model, features, is_classification,
-                          model_config, selector_config, feature_groups, future_precompute)
+                          model_config, selector_config, feature_groups, future_precompute, cores)
             for i, ( X_train_test, y_train, y_test, future_precompute) in folds.items()]
         results = client.gather(futures)
     return mean(results)
@@ -106,6 +106,8 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
     }
     scheduler_path = Path(os.path.expandvars("$HOME") + "/tmp/scheduler_files")
     scheduler_path.mkdir(parents=True, exist_ok=True)
+
+    cores = int(os.getenv("OMP_NUM_THREADS", "1"))
     with (SLURMMemRunner(scheduler_file=str(scheduler_path)+"/scheduler-{job_id}.json",
                       worker_options=worker_options, scheduler_options=scheduler_options) as runner):
         with Client(runner) as client:
@@ -137,11 +139,11 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                     y_test_inner = client.scatter(y_train.iloc[test_index])
                     # feature preprocessing
                     X_traintest_inner = client.submit(impute_and_scale, X_train_inner, X_test_inner)
-                    future_pre = client.submit(precompute_feature_selection, features, is_classification, X_traintest_inner, y_train_inner, 0.9, 8, pure=True)
+                    future_pre = client.submit(precompute_feature_selection, features, is_classification, X_traintest_inner, y_train_inner, 0.9, cores, pure=True)
                     folds[i] = X_traintest_inner, y_train_inner, y_test_inner, future_pre
 
                 feature_groups = load_feature_groups(pathData)
-                objective_function = lambda trial: objective(trial, folds, features, model, modelHPO, is_classification, feature_groups, feature_count)
+                objective_function = lambda trial: objective(trial, folds, features, model, modelHPO, is_classification, feature_groups, feature_count, cores)
 
                 journal_path = run_config["path_output"] + "/" + run_config["name"] + ".journal"
                 journal = optuna.storages.JournalStorage(optuna.storages.journal.JournalFileBackend(journal_path))
@@ -173,7 +175,7 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                 end_FS = time.time()
                 model_instance = get_model(model, is_classification, n_jobs, model_config)
                 start_Model =time.time()
-                model_instance.fit(X_train.to_numpy(copy=True), y_train.to_numpy(copy=True))
+                model_instance.fit(X_train, y_train)
                 end_Model =time.time()
                 model_complete = model_instance
 
