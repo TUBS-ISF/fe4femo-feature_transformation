@@ -194,8 +194,8 @@ def compute_score(curr_solution, X_train, y_train, X_test, y_test, is_classifica
 
     ## SVM CLASSIFIER ##
     SVM = SVC(kernel='rbf', gamma='scale', C=5000) if is_classification else SVR(kernel='rbf', gamma='scale', C=5000)
-    SVM.fit(X.to_numpy(copy=True), y.to_numpy(copy=True))
-    y_pred = SVM.predict(reduced_test_features.to_numpy(copy=True))
+    SVM.fit(np.copy(X), np.copy(y))
+    y_pred = SVM.predict(np.copy(reduced_test_features))
     if is_classification:
         return matthews_corrcoef(y_test, y_pred)
     else:
