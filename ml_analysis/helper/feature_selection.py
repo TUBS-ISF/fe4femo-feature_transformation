@@ -10,7 +10,7 @@ from functools import partial
 
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.feature_selection import SelectKBest, mutual_info_classif, mutual_info_regression, \
-    SequentialFeatureSelector, SelectFromModel, RFECV, VarianceThreshold
+    SelectFromModel, VarianceThreshold, RFE
 from sklearn.model_selection import KFold, cross_val_score
 from zoofs import HarrisHawkOptimization, GeneticOptimization
 
@@ -140,9 +140,9 @@ def get_feature_selection(features : str, isClassification : bool, X_train_orig 
         case "RFE":
             X_train = precomputed["X_train"]
             X_test = precomputed["X_test"]
-            estimator.set_params(n_jobs=per_estimator_parallel)
-            selector_args["min_features_to_select"] = min(max_features, selector_args["min_features_to_select"])  # limit to max feature count after preprocessing
-            selector = RFECV(estimator, cv=inner_cv, step=selector_args["step"], min_features_to_select=selector_args["min_features_to_select"], n_jobs=inner_cv.n_splits)
+            estimator.set_params(n_jobs=parallelism)
+            selector_args["n_features_to_select"] = min(max_features, selector_args["n_features_to_select"])  # limit to max feature count after preprocessing
+            selector = RFE(estimator, step=selector_args["step"], n_features_to_select=selector_args["n_features_to_select"])
             selector.set_output(transform="pandas")
             selector.fit(X_train.to_numpy(copy=True), y_train.to_numpy(copy=True))
             return selector.transform(X_train), selector.transform(X_test)
@@ -227,7 +227,7 @@ def get_selection_HPO_space(features : str, trial : Trial, isClassification : bo
         case "RFE":
             return {
                 "step" : trial.suggest_float("step", 0.01, 1),
-                "min_features_to_select" : min_features,
+                "n_features_to_select" : trial.suggest_int("n_features_to_select", min_features, no_features)
             }
         case "genetic":
             return {
