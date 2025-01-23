@@ -23,7 +23,7 @@ if __name__ == '__main__':
     pathData = "raphael-dunkel-master/data/"
     task = "runtime_backbone"
     model = "randomForest"
-    hpo_its = "150"
+    hpo_its = "50"
     home = os.getenv('HOME', "/home/ul/ul_student/ul_ppm61")
     Path(home+"/"+outputdir).mkdir(parents=True, exist_ok=True)
     for feature in features:
