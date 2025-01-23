@@ -2,6 +2,7 @@ import math
 import os
 import tempfile
 import time
+import warnings
 
 import cloudpickle
 import pandas as pd
@@ -198,5 +199,5 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
 
 if __name__ == '__main__':
     args = parse_input()
-
+    warnings.filterwarnings("ignore", message="'force_all_finite'")
     main(os.environ.get("HOME")+"/"+os.path.expandvars(args.pathData), os.environ.get("HOME")+"/"+os.path.expandvars(args.pathOutput), args.features, args.task, args.model, args.modelHPO, args.HPOits, args.foldNo)
