@@ -23,7 +23,8 @@ from sklearn.metrics import matthews_corrcoef, r2_score, d2_absolute_error_score
 from sklearn.model_selection import StratifiedKFold
 
 from helper.SlurmMemRunner import SLURMMemRunner
-from helper.feature_selection import get_selection_HPO_space, get_feature_selection, precompute_feature_selection
+from helper.feature_selection import get_selection_HPO_space, get_feature_selection, precompute_feature_selection, \
+    impute_and_scale, transform_dict_to_var_dict
 from helper.input_parser import parse_input
 from helper.load_dataset import generate_xy_split, get_dataset, get_flat_models, is_task_classification, \
     load_feature_groups
@@ -40,27 +41,13 @@ from helper.optuna_helper import copyStudy
 
 # als separate Main: Multi-Objective für RQ2b
 
-def impute_and_scale(X_train, X_test):
-    imputer = SimpleImputer(keep_empty_features=False, missing_values=pd.NA)
-    scaler = RobustScaler()
 
-    imputer.set_output(transform="pandas")
-    scaler.set_output(transform="pandas")
-
-    X_train = imputer.fit_transform(X_train)
-    X_train = scaler.fit_transform(X_train)
-
-    X_test = imputer.transform(X_test)
-    X_test = scaler.transform(X_test)
-
-    return X_train, X_test
-
-
-def compute_fold( X_train_test, y_train, y_test, model, features, is_classification, model_config, selector_config, feature_groups, precomputed, cores : int)  -> float:
-    X_train, X_test = X_train_test
+def compute_fold(model, features, is_classification, model_config, selector_config, feature_groups, precomputed, cores : int)  -> float:
+    y_train = precomputed["y_train"].get().result()
+    y_test = precomputed["y_test"].get().result()
     # feature selection + model training
     model_instance_selector = get_model(model, is_classification, 1, model_config )
-    X_train, X_test = get_feature_selection(features, is_classification, X_train, y_train, X_test, selector_config, model_instance_selector, feature_groups, parallelism=cores, precomputed=precomputed)
+    X_train, X_test = get_feature_selection(precomputed, features, is_classification, selector_config, model_instance_selector, feature_groups, parallelism=cores)
     model_instance = get_model(model, is_classification, cores, model_config )
     model_instance.fit(X_train, y_train)
     y_pred = model_instance.predict(X_test)
@@ -75,9 +62,9 @@ def objective(trial: optuna.Trial, folds, features, model, should_modelHPO, is_c
     selector_config = get_selection_HPO_space(features, trial, is_classification, feature_groups, feature_count)
     with worker_client() as client:
         futures = [
-            client.submit(compute_fold,  X_train_test, y_train, y_test, model, features, is_classification,
+            client.submit(compute_fold, model, features, is_classification,
                           model_config, selector_config, feature_groups, future_precompute, cores)
-            for i, ( X_train_test, y_train, y_test, future_precompute) in folds.items()]
+            for i, future_precompute in folds.items()]
         results = client.gather(futures)
     return mean(results)
 
@@ -127,20 +114,23 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                 feature_count = X_train.shape[1]
 
                 kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
-                splits = kf.split(X_train, get_flat_models(X_train))
+                model_flatness = get_flat_models(X_train)
+                flatness_future = client.scatter(model_flatness)
+
+                splits = kf.split(X_train, model_flatness)
 
                 # dask export for better cluster behaviour
 
                 folds = {}
                 for i, (train_index, test_index) in enumerate(splits):
-                    X_train_inner = client.scatter(X_train.iloc[train_index])
-                    X_test_inner = client.scatter(X_train.iloc[test_index])
-                    y_train_inner = client.scatter(y_train.iloc[train_index])
-                    y_test_inner = client.scatter(y_train.iloc[test_index])
+                    X_train_inner = X_train.iloc[train_index]
+                    X_test_inner = X_train.iloc[test_index]
+                    y_train_inner = y_train.iloc[train_index]
+                    y_test_inner = y_train.iloc[test_index]
                     # feature preprocessing
-                    X_traintest_inner = client.submit(impute_and_scale, X_train_inner, X_test_inner)
-                    future_pre = client.submit(precompute_feature_selection, features, is_classification, X_traintest_inner, y_train_inner, 0.9, cores, pure=True)
-                    folds[i] = X_traintest_inner, y_train_inner, y_test_inner, future_pre
+                    future_pre = client.submit(precompute_feature_selection,features, is_classification, X_train_inner, X_test_inner, y_train_inner, y_test_inner, flatness_future, 0.9, cores, pure=True)
+                    future_pre = client.submit(transform_dict_to_var_dict, future_pre)
+                    folds[i] = future_pre
 
                 feature_groups = load_feature_groups(pathData)
                 objective_function = lambda trial: objective(trial, folds, features, model, modelHPO, is_classification, feature_groups, feature_count, cores)
@@ -163,17 +153,17 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                 frozen_best_trial = study.best_trial
 
                 # feature preprocessing
-                X_train, X_test = impute_and_scale(X_train, X_test)
+
 
                 # feature selection + model training
                 model_config = get_model_HPO_space(model, frozen_best_trial, is_classification) if modelHPO else None
                 selector_config = get_selection_HPO_space(features, frozen_best_trial, is_classification, feature_groups, X_train.shape[1])
                 model_instance_selector = get_model(model, is_classification, 1, model_config)
                 start_FS = time.time()
-                X_train, X_test = get_feature_selection(features, is_classification, X_train, y_train, X_test,
-                                                        selector_config, model_instance_selector, feature_groups, parallelism=n_jobs)
+                precomputed = precompute_feature_selection(features, is_classification, X_train, X_test, y_train, y_test, model_flatness, parallelism=cores)
+                X_train, X_test = get_feature_selection(precomputed, features, is_classification, selector_config, model_instance_selector, feature_groups, parallelism=cores)
                 end_FS = time.time()
-                model_instance = get_model(model, is_classification, n_jobs, model_config)
+                model_instance = get_model(model, is_classification, cores, model_config)
                 start_Model =time.time()
                 model_instance.fit(X_train, y_train)
                 end_Model =time.time()

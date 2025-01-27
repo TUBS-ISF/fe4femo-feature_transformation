@@ -4,14 +4,19 @@ from typing import Any
 
 import joblib
 import pandas as pd
+from distributed import worker_client, Variable
 from mrmr import mrmr_classif, mrmr_regression
 from optuna import Trial
 from functools import partial
 
+from sklearn.base import is_classifier
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.feature_selection import SelectKBest, mutual_info_classif, mutual_info_regression, \
     SelectFromModel, VarianceThreshold, RFE
-from sklearn.model_selection import KFold, cross_val_score
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import matthews_corrcoef, d2_absolute_error_score
+from sklearn.model_selection import KFold, cross_val_score, train_test_split
+from sklearn.preprocessing import RobustScaler
 from zoofs import HarrisHawkOptimization, GeneticOptimization
 
 from external.HFMOEA.main import reduceFeaturesMaxAcc, compute_sol
@@ -23,11 +28,25 @@ from external.skfeature.sparse_learning import feature_ranking
 from external.svd_entropy import keep_high_contrib_features
 from helper.load_dataset import filter_SATzilla, filter_SATfeatPy, filter_FMBA, filter_FMChara
 
+def transform_dict_to_var_dict(dictionary : dict) -> dict:
+    ret_dict = {}
+    with worker_client() as client:
+        for k,v in dictionary.items():
+            var = Variable()
+            client.scatter(v)
+            var.set(v)
+            ret_dict[k] = var
+    return ret_dict
 
-def objective_function_zoo(model, X, y, no_use_X, no_use_y, inner_cv, n_jobs):
-    y = y.iloc[:, 0]
-    scores = cross_val_score(model, X, y, cv=inner_cv, n_jobs=n_jobs)  # change cv?
-    return mean(scores)
+
+
+def objective_function_zoo(model, X_train, y_train, X_test, y_test):
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    if is_classifier(model):
+        return matthews_corrcoef(y_test, y_pred)
+    else:
+        return d2_absolute_error_score(y_test, y_pred)
 
 
 def prefilter_features(X_train_in : pd.DataFrame, X_test_in : pd.DataFrame, y_train : pd.Series, threshold : float):
@@ -50,18 +69,52 @@ def prefilter_features(X_train_in : pd.DataFrame, X_test_in : pd.DataFrame, y_tr
     to_keep = set(X_train.columns) - set(col_corr)
     return X_train[list(to_keep)], X_test[list(to_keep)]
 
-def precompute_feature_selection(features: str, isClassification : bool, X_train_test_orig : (pd.DataFrame, pd.DataFrame), y_train : pd.Series, threshold : float = .9, parallelism : int = 1, ):
-    X_train_orig, X_test_orig = X_train_test_orig
+def impute_and_scale(X_train, X_test):
+    imputer = SimpleImputer(keep_empty_features=False, missing_values=pd.NA)
+    scaler = RobustScaler()
+
+    imputer.set_output(transform="pandas")
+    scaler.set_output(transform="pandas")
+
+    X_train = imputer.fit_transform(X_train)
+    X_train = scaler.fit_transform(X_train)
+
+    X_test = imputer.transform(X_test)
+    X_test = scaler.transform(X_test)
+
+    return X_train, X_test
+
+def create_sub_tt_split(X_train, y_train, model_flatness):
+    y_flatness = model_flatness.loc[model_flatness.index & y_train.index]
+    X_train_i, X_test_i, y_train_i, y_test_i = train_test_split(X_train, y_flatness, test_size=0.3, random_state=42, stratify=True)
+    return X_train_i, X_test_i, y_train.loc[y_train_i.index], y_train.loc[y_test_i.index]
+
+
+def precompute_feature_selection(features: str, isClassification : bool, X_train_orig : pd.DataFrame, X_test_orig : pd.DataFrame, y_train : pd.Series, y_test : pd.Series, model_flatness : pd.Series, threshold : float = .9, parallelism : int = 1, ):
+    X_train_imputed, X_test_imputed = impute_and_scale(X_train_orig, X_test_orig)
     if features == "all": # do not prefilter for all
         return {
-            "X_train": X_train_orig,
-            "X_test": X_test_orig,
+            "X_train": X_train_imputed,
+            "X_test": X_test_imputed,
+            "y_train": y_train,
+            "y_test" : y_test,
         }
-    X_train, X_test = prefilter_features(X_train_orig, X_test_orig, y_train, threshold)  # todo leaking?
+    X_train, X_test = prefilter_features(X_train_imputed, X_test_imputed, y_train, threshold)  # todo leaking?
     ret_dict = {
         "X_train": X_train,
         "X_test": X_test,
+        "y_train": y_train,
+        "y_test" : y_test,
     }
+
+    if features in ["harris-hawks", "genetic", "HFMOEA"]:
+        X_train_i, X_test_i, y_train_i, y_test_i = create_sub_tt_split(X_train_orig, y_train, model_flatness)
+        X_train_i, X_test_i = prefilter_features(*impute_and_scale(X_train_i, X_test_i), y_train_i, threshold)
+        ret_dict["X_train_i"] = X_train_i
+        ret_dict["X_test_i"] = X_test_i
+        ret_dict["y_train_i"] = y_train_i
+        ret_dict["y_test_i"] = y_test_i
+
     match features:
         case "SATzilla":
             ret_dict["X_train"] = filter_SATzilla(X_train)
@@ -88,9 +141,7 @@ def precompute_feature_selection(features: str, isClassification : bool, X_train
             pass
         case "RFE":
             pass
-        case "harris-hawks":
-            pass
-        case "genetic":
+        case "harris-hawks" | "genetic":
             pass
         case "HFMOEA":
             ret_dict["sol"] = compute_sol(X_train.to_numpy(), y_train.to_numpy(), isClassification, parallelism)
@@ -109,37 +160,29 @@ def precompute_feature_selection(features: str, isClassification : bool, X_train
     return ret_dict
 
 
-def get_feature_selection(features : str, isClassification : bool, X_train_orig : pd.DataFrame, y_train : pd.Series, X_test_orig : pd.DataFrame, selector_args, estimator, group_dict : dict[str, list[str]], parallelism : int = 1, threshold : float = .9, precomputed = None):
-    inner_cv = KFold(n_splits=3, shuffle=True, random_state=42)
-    per_estimator_parallel = parallelism // inner_cv.n_splits
-    if precomputed is None:
-        precomputed = precompute_feature_selection(features=features, isClassification=isClassification, X_train_test_orig=(X_train_orig, X_test_orig), y_train=y_train, threshold=threshold, parallelism=parallelism)
-    max_features = precomputed["X_train"].shape[1]
+def get_feature_selection(precomputed:dict, features : str, isClassification : bool, selector_args, estimator, group_dict : dict[str, list[str]], parallelism : int = 1):
+    y_train = precomputed["y_train"].get().result()
+    X_train = precomputed["X_train"].get().result()
+    X_test = precomputed["X_test"].get().result()
+    max_features = X_train.shape[1]
     match features:
         case "all" | "SATzilla" | "SATfeatPy" | "FMBA" | "FM_Chara" | "prefilter":
-            return precomputed["X_train"], precomputed["X_test"]
+            return X_train, X_test
         case "kbest-mutalinfo":
-            X_train = precomputed["X_train"]
-            X_test = precomputed["X_test"]
             score_func = partial(mutual_info_classif, random_state=42, n_jobs=parallelism, n_neighbors=selector_args["n_neighbors"] ) if isClassification else partial(mutual_info_regression, random_state=42, n_jobs=parallelism, n_neighbors=selector_args["n_neighbors"])
             selector = SelectKBest(score_func, k=min(max_features, selector_args["k"]))# limit to max feature count after preprocessing
             selector.set_output(transform="pandas")
             selector.fit(X_train, y_train)
             return selector.transform(X_train), selector.transform(X_test)
         case "multisurf":
-            X_train = precomputed["X_train"]
-            X_test = precomputed["X_test"]
-            row_index_to_select = precomputed["top_features"][:min(max_features, selector_args["n_features_to_select"])]# limit to max feature count after preprocessing
+            top_features =  precomputed["top_features"].get().result()
+            row_index_to_select = top_features[:min(max_features, selector_args["n_features_to_select"])]# limit to max feature count after preprocessing
             return X_train.iloc[:, row_index_to_select], X_test.iloc[:, row_index_to_select]
         case "mRMR":
-            X_train = precomputed["X_train"]
-            X_test = precomputed["X_test"]
             selector_args["K"] = min(max_features, selector_args["K"]) # limit to max feature count after preprocessing
             selected_feature_names = mrmr_classif(X_train, y_train, **selector_args, n_jobs=parallelism, show_progress=False) if isClassification else mrmr_regression(X_train, y_train, **selector_args, n_jobs=parallelism, show_progress=False)
             return X_train[selected_feature_names], X_test[selected_feature_names]
         case "RFE":
-            X_train = precomputed["X_train"]
-            X_test = precomputed["X_test"]
             estimator.set_params(n_jobs=parallelism)
             selector_args["n_features_to_select"] = min(max_features, selector_args["n_features_to_select"])  # limit to max feature count after preprocessing
             selector = RFE(estimator, step=selector_args["step"], n_features_to_select=selector_args["n_features_to_select"])
@@ -147,32 +190,22 @@ def get_feature_selection(features : str, isClassification : bool, X_train_orig 
             selector.fit(X_train, y_train)
             return selector.transform(X_train), selector.transform(X_test)
         case "harris-hawks":
-            X_train = precomputed["X_train"]
-            X_test = precomputed["X_test"]
-            estimator.set_params(n_jobs=per_estimator_parallel)
-            X_copy = pd.DataFrame(X_train)
-            y_copy = pd.DataFrame(y_train)
-            selector = HarrisHawkParallel(partial(objective_function_zoo, inner_cv=inner_cv, n_jobs=inner_cv.n_splits), **selector_args, minimize=False)
-            selected_feature_names = selector.fit(estimator, X_copy, y_copy, X_copy, y_copy, verbose=False)
-            return X_train[selected_feature_names], X_test[selected_feature_names]
+            estimator.set_params(n_jobs=parallelism)
+            selector = HarrisHawkParallel(objective_function_zoo, **selector_args, minimize=False)
+            selected_feature_names = set(selector.fit(estimator, precomputed["X_train_i"], precomputed["y_train_i"], precomputed["X_test_i"], precomputed["y_test_i"], verbose=False))
+            return X_train[X_train.index & selected_feature_names], X_test[X_test.index & selected_feature_names]
         case "genetic":
-            X_train = precomputed["X_train"]
-            X_test = precomputed["X_test"]
-            estimator.set_params(n_jobs=per_estimator_parallel)
-            X_copy = pd.DataFrame(X_train)
-            y_copy = pd.DataFrame(y_train)
-            selector = GeneticParallel(partial(objective_function_zoo, inner_cv=inner_cv, n_jobs=inner_cv.n_splits), **selector_args, minimize=False)
-            selected_feature_names = selector.fit(estimator, X_copy, y_copy, X_copy, y_copy, verbose=False)
-            return X_train[selected_feature_names], X_test[selected_feature_names]
+            estimator.set_params(n_jobs=parallelism)
+            selector = GeneticParallel(objective_function_zoo, **selector_args, minimize=False)
+            selected_feature_names = set(selector.fit(estimator, precomputed["X_train_i"], precomputed["y_train_i"], precomputed["X_test_i"], precomputed["y_test_i"], verbose=False))
+            return X_train[X_train.index & selected_feature_names], X_test[X_test.index & selected_feature_names]
         case "HFMOEA":
-            X_train_np = precomputed["X_train"].to_numpy()
+            X_train_np = X_train.to_numpy()
             y_train_np = y_train.to_numpy()
             selector_args["topk"] = min(max_features, selector_args["topk"])  # limit to max feature count after preprocessing
-            feature_mask = reduceFeaturesMaxAcc(X_train_np, y_train_np, **selector_args, n_jobs=parallelism, is_classification=isClassification, sol=precomputed["sol"])
-            return  precomputed["X_train"].loc[:, feature_mask], precomputed["X_test"].loc[:, feature_mask]
+            feature_mask = reduceFeaturesMaxAcc(X_train_np, y_train_np, **selector_args, n_jobs=parallelism, is_classification=isClassification, sol=precomputed["sol"].get().result())
+            return  X_train.loc[:, feature_mask], X_test.loc[:, feature_mask]
         case "embedded-tree":
-            X_train = precomputed["X_train"]
-            X_test = precomputed["X_test"]
             forest = RandomForestClassifier(n_estimators=selector_args["e_n_estimators"], max_depth=selector_args["e_max_depth"], n_jobs=parallelism) if isClassification else RandomForestRegressor(n_estimators=selector_args["e_n_estimators"], max_depth=selector_args["e_max_depth"], n_jobs=parallelism)
             forest.fit(X_train, y_train)
             selector_args["e_max_features"] = min(max_features, selector_args["e_max_features"])  # limit to max feature count after preprocessing
@@ -180,13 +213,9 @@ def get_feature_selection(features : str, isClassification : bool, X_train_orig 
             model.set_output(transform="pandas")
             return model.transform(X_train), model.transform(X_test)
         case "SVD-entropy":
-            X_train = precomputed["X_train"]
-            X_test = precomputed["X_test"]
-            boolean_mask = precomputed["mask"]
+            boolean_mask = precomputed["mask"].get().result()
             return X_train.loc[:, boolean_mask], X_test.loc[:, boolean_mask]
         case "NDFS":
-            X_train = precomputed["X_train"]
-            X_test = precomputed["X_test"]
             np_view = X_test.to_numpy()
             W = ndfs(np_view, n_clusters=selector_args["n_clusters"], alpha=selector_args["alpha"], beta=selector_args["beta"])
             ranking = feature_ranking(W)
@@ -194,8 +223,6 @@ def get_feature_selection(features : str, isClassification : bool, X_train_orig 
             sliced = ranking[:selector_args["n_features_to_select"]]
             return X_train.iloc[:, sliced], X_test.iloc[:, sliced]
         case "optuna-combined":
-            X_train = precomputed["X_train"]
-            X_test = precomputed["X_test"]
             retained_features = set(X_train.columns)
             selected_feature_names_list = [ retained_features & set(v) for k, v in group_dict.items() if selector_args[k]]
             selected_feature_names = list(itertools.chain.from_iterable(selected_feature_names_list))

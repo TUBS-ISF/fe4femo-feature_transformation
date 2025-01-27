@@ -202,8 +202,12 @@ def compute_score(curr_solution, X_train, y_train, X_test, y_test, is_classifica
         return d2_absolute_error_score(y_test, y_pred)
 
 # First function to optimize
-def function1(x, X_train, y_train, X_test, y_test, is_classification):
+def function1(x, var_x_train, var_y_train, var_x_test, var_y_test, is_classification):
     with worker_client() as client:
+        X_train = var_x_train.get()
+        y_train = var_y_train.get()
+        X_test = var_x_test.get()
+        y_test = var_y_test.get()
         accuracies_future = [ client.submit(compute_score, curr_solution, X_train, y_train, X_test, y_test, is_classification, pure=False) for curr_solution in x ]
         accuracies2 = client.gather(accuracies_future)
     return accuracies2
