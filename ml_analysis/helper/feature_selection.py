@@ -153,7 +153,7 @@ def precompute_feature_selection(features: str, isClassification : bool, X_train
         case "SVD-entropy":
             with joblib.parallel_config(backend="dask"):
                 mask = keep_high_contrib_features(X_train, parallelism)
-            ret_dict["mask"] = mask
+            ret_dict["mask"] = pd.Series(mask)
         case "NDFS":
             pass
         case "optuna-combined":
@@ -223,7 +223,7 @@ def get_feature_selection(precomputed:dict, features : str, isClassification : b
             model.set_output(transform="pandas")
             return model.transform(X_train), model.transform(X_test)
         case "SVD-entropy":
-            boolean_mask = precomputed["mask"].get().result()
+            boolean_mask = precomputed["mask"].get().result().to_list()
             return X_train.loc[:, boolean_mask], X_test.loc[:, boolean_mask]
         case "NDFS":
             np_view = X_test.to_numpy()
