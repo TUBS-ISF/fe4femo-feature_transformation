@@ -142,7 +142,9 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                 sampler = TPESampler(seed=42, multivariate=True, group=True, constant_liar=True, categorical_distance_func=categorical_distance_function())
                 study = optuna.create_study(storage=storage, direction="maximize", sampler=sampler)
 
-                n_jobs = math.ceil((int(os.getenv("SLURM_NTASKS", 7)) - 2) / 9) #2 less than tasks for scheduler and main-node
+                if int(os.getenv("SLURM_NTASKS", 1)) < 27:
+                    raise ValueError("Not enough worker, needs more than 32")
+                n_jobs = 25 #2 less than tasks for scheduler and main-node
                 n_trials = math.ceil(hpo_its / n_jobs)
                 futures = [
                     client.submit(study.optimize, objective_function, n_trials, pure=False) for _ in range(n_jobs)
