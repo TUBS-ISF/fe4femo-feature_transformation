@@ -1,5 +1,6 @@
 from operator import itemgetter
 
+import dask.distributed
 from distributed import Variable
 from joblib import Parallel, delayed
 
@@ -23,13 +24,13 @@ def compute_sol(data : np.ndarray, target : np.ndarray, is_classification : bool
         target = client.scatter(target)
         sol_future = [ client.submit(fun, data, target, is_classification) for fun in functions]
         sol = client.gather(sol_future)
-    return [x for x in sol if x is not None]
+    return pd.Series([x for x in sol if x is not None])
 
 def compute(X_train_var, X_test_var, y_train_var, y_test_var, is_classification : bool, topk=10, pop_size=100, max_gen=100, mutation_probability=0.06, n_jobs=1, sol = None):
     if sol is None:
         compute_sol(X_train_var.get(), y_train_var.get(), is_classification, n_jobs=n_jobs) # todo fix
-
-    X_train = X_train_var.get().result()
+    sol = sol.to_list()
+    X_train = X_train_var.get().result().to_numpy()
 
     if pop_size < 10:
         pop_size = 10
@@ -97,5 +98,6 @@ def compute(X_train_var, X_test_var, y_train_var, y_test_var, is_classification 
 def reduceFeaturesMaxAcc(X_train_var, X_test_var, y_train_var, y_test_var, is_classification : bool, topk=10, pop_size=100, max_gen=100, mutation_probability=0.06, n_jobs=1, sol=None):
     pareto_front = compute(X_train_var, X_test_var, y_train_var, y_test_var, is_classification, topk, pop_size, max_gen, mutation_probability, n_jobs, sol)
     acc, size, config = max(pareto_front, key=itemgetter(0))
-    return [ i == 1 for i in config]
+    masked_x = X_train_var.get().result().loc[:, [ i == 1 for i in config]]
+    return masked_x.columns.tolist()
 

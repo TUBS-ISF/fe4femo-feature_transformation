@@ -2,6 +2,7 @@ import itertools
 from statistics import mean
 from typing import Any
 
+import dask.distributed
 import joblib
 import pandas as pd
 from distributed import worker_client, Variable
@@ -33,8 +34,8 @@ def transform_dict_to_var_dict(dictionary : dict) -> dict:
     with worker_client() as client:
         for k,v in dictionary.items():
             var = Variable()
-            client.scatter(v)
-            var.set(v)
+            future = client.scatter(v)
+            var.set(future)
             ret_dict[k] = var
     return ret_dict
 
@@ -85,9 +86,9 @@ def impute_and_scale(X_train, X_test):
     return X_train, X_test
 
 def create_sub_tt_split(X_train, y_train, model_flatness):
-    y_flatness = model_flatness.loc[model_flatness.index & y_train.index]
-    X_train_i, X_test_i, y_train_i, y_test_i = train_test_split(X_train, y_flatness, test_size=0.3, random_state=42, stratify=True)
-    return X_train_i, X_test_i, y_train.loc[y_train_i.index], y_train.loc[y_test_i.index]
+    y_flatness = model_flatness.loc[model_flatness.index.isin(y_train.index)]
+    X_train_i, X_test_i, y_train_i, y_test_i = train_test_split(X_train, y_train, test_size=0.3, random_state=42, stratify=y_flatness)
+    return X_train_i, X_test_i, y_train_i, y_test_i
 
 
 def precompute_feature_selection(features: str, isClassification : bool, X_train_orig : pd.DataFrame, X_test_orig : pd.DataFrame, y_train : pd.Series, y_test : pd.Series, model_flatness : pd.Series, threshold : float = .9, parallelism : int = 1, ):
@@ -144,7 +145,8 @@ def precompute_feature_selection(features: str, isClassification : bool, X_train
         case "harris-hawks" | "genetic":
             pass
         case "HFMOEA":
-            ret_dict["sol"] = compute_sol(X_train.to_numpy(), y_train.to_numpy(), isClassification, parallelism)
+            sol = compute_sol(X_train.to_numpy(), y_train.to_numpy(), isClassification, parallelism)
+            ret_dict["sol"] = sol
         case "embedded-tree":
             pass
         case "SVD-entropy":
@@ -200,11 +202,10 @@ def get_feature_selection(precomputed:dict, features : str, isClassification : b
             selected_feature_names = set(selector.fit(estimator, precomputed["X_train_i"], precomputed["y_train_i"], precomputed["X_test_i"], precomputed["y_test_i"], verbose=False))
             return X_train[X_train.index & selected_feature_names], X_test[X_test.index & selected_feature_names]
         case "HFMOEA":
-            X_train_np = X_train.to_numpy()
-            y_train_np = y_train.to_numpy()
             selector_args["topk"] = min(max_features, selector_args["topk"])  # limit to max feature count after preprocessing
-            feature_mask = reduceFeaturesMaxAcc(X_train_np, y_train_np, **selector_args, n_jobs=parallelism, is_classification=isClassification, sol=precomputed["sol"].get().result())
-            return  X_train.loc[:, feature_mask], X_test.loc[:, feature_mask]
+            feature_mask = reduceFeaturesMaxAcc(precomputed["X_train_i"], precomputed["X_test_i"], precomputed["y_train_i"], precomputed["y_test_i"], **selector_args, n_jobs=parallelism, is_classification=isClassification, sol=precomputed["sol"].get().result())
+            intersection = list(set(feature_mask) & set(X_train.columns.tolist()))
+            return  X_train[ intersection], X_test[intersection]
         case "embedded-tree":
             forest = RandomForestClassifier(n_estimators=selector_args["e_n_estimators"], max_depth=selector_args["e_max_depth"], n_jobs=parallelism) if isClassification else RandomForestRegressor(n_estimators=selector_args["e_n_estimators"], max_depth=selector_args["e_max_depth"], n_jobs=parallelism)
             forest.fit(X_train, y_train)

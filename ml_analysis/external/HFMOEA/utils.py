@@ -1,3 +1,4 @@
+import dask
 import numpy as np
 import math
 import sklearn.svm
@@ -15,8 +16,8 @@ warnings.filterwarnings("ignore")
 
 
 def reduce_features(solution, features):
-    selected_elements_indices = np.where(solution == 1)[0]
-    reduced_features = features[:, selected_elements_indices]
+    selected_elements_indices = np.where(solution == 1)[0].tolist()
+    reduced_features = features.iloc[:, selected_elements_indices]
     return reduced_features
 
 
