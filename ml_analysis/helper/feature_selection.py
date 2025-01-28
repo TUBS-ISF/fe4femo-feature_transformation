@@ -195,12 +195,14 @@ def get_feature_selection(precomputed:dict, features : str, isClassification : b
             estimator.set_params(n_jobs=parallelism)
             selector = HarrisHawkParallel(objective_function_zoo, **selector_args, minimize=False)
             selected_feature_names = set(selector.fit(estimator, precomputed["X_train_i"], precomputed["y_train_i"], precomputed["X_test_i"], precomputed["y_test_i"], verbose=False))
-            return X_train[X_train.index & selected_feature_names], X_test[X_test.index & selected_feature_names]
+            intersection = list(set(selected_feature_names) & set(X_train.columns.tolist()))
+            return X_train[intersection], X_test[intersection]
         case "genetic":
             estimator.set_params(n_jobs=parallelism)
             selector = GeneticParallel(objective_function_zoo, **selector_args, minimize=False)
             selected_feature_names = set(selector.fit(estimator, precomputed["X_train_i"], precomputed["y_train_i"], precomputed["X_test_i"], precomputed["y_test_i"], verbose=False))
-            return X_train[X_train.index & selected_feature_names], X_test[X_test.index & selected_feature_names]
+            intersection = list(set(selected_feature_names) & set(X_train.columns.tolist()))
+            return X_train[intersection], X_test[intersection]
         case "HFMOEA":
             selector_args["topk"] = min(max_features, selector_args["topk"])  # limit to max feature count after preprocessing
             feature_mask = reduceFeaturesMaxAcc(precomputed["X_train_i"], precomputed["X_test_i"], precomputed["y_train_i"], precomputed["y_test_i"], **selector_args, n_jobs=parallelism, is_classification=isClassification, sol=precomputed["sol"].get().result())
