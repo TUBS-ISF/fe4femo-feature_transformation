@@ -242,7 +242,7 @@ def get_feature_selection(precomputed:dict, features : str, isClassification : b
 
 
 def get_selection_HPO_space(features : str, trial : Trial, isClassification : bool, group_dict : dict[str, list[str]], no_features: int) -> dict[str, Any]:
-    max_features = math.ceil(no_features / 2.0)
+    max_features = math.ceil(no_features / 3.0)
     min_features = min(5, max_features)
     match features:
         case "all" | "SATzilla" | "SATfeatPy" | "FMBA" | "FM_Chara" | "prefilter":
