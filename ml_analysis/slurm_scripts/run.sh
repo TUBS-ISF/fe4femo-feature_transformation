@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --time=6:30:0
 #SBATCH --job-name=eval_model
-#SBATCH --ntasks=128
-#SBATCH --cpus-per-task=4
+#SBATCH --ntasks=256
+#SBATCH --cpus-per-task=2
 #SBATCH --mem-per-cpu=1950
 #SBATCH --nodes=2-70
 #SBATCH --use-min-nodes
