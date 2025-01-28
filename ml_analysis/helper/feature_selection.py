@@ -264,14 +264,14 @@ def get_selection_HPO_space(features : str, trial : Trial, isClassification : bo
                 "selective_pressure" : trial.suggest_int("selective_pressure", 1, 5),
                 "elitism" : trial.suggest_int("elitism", 1, 5),
                 "mutation_rate" : trial.suggest_float("mutation_rate", 0.01, 0.3),
-                "population_size" : trial.suggest_int("population_size", 10, 80, 2), # only allow even values
-                "n_iteration" : 50 #todo n_iterations?
+                "population_size" : trial.suggest_int("population_size", 10, 50, 2), # only allow even values
+                "n_iteration" : 20 #todo n_iterations?
             }
         case "harris-hawks":
             return {
-                "population_size": trial.suggest_int("population_size", 10, 80, 2), # only allow even values
+                "population_size": trial.suggest_int("population_size", 10, 50, 2), # only allow even values
                 "beta" : trial.suggest_float("beta", 0.001, 1.999),
-                "n_iteration": 50  # todo n_iterations?
+                "n_iteration": 20  # todo n_iterations?
             }
         case "HFMOEA":
             return {
