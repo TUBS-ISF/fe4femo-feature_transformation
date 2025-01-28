@@ -161,6 +161,12 @@ def precompute_feature_selection(features: str, isClassification : bool, X_train
             raise ValueError("Invalid Feature Subset")
     return ret_dict
 
+def set_njobs_if_possible(estimator, n_jobs:int):
+    try:
+        estimator.set_params(n_jobs=n_jobs)
+    except ValueError: #catch estimators without n_jobs_arg
+        pass
+    return estimator
 
 def get_feature_selection(precomputed:dict, features : str, isClassification : bool, selector_args, estimator, group_dict : dict[str, list[str]], parallelism : int = 1):
     y_train = precomputed["y_train"].get().result()
@@ -185,20 +191,20 @@ def get_feature_selection(precomputed:dict, features : str, isClassification : b
             selected_feature_names = mrmr_classif(X_train, y_train, **selector_args, n_jobs=parallelism, show_progress=False) if isClassification else mrmr_regression(X_train, y_train, **selector_args, n_jobs=parallelism, show_progress=False)
             return X_train[selected_feature_names], X_test[selected_feature_names]
         case "RFE":
-            estimator.set_params(n_jobs=parallelism)
+            set_njobs_if_possible(estimator, parallelism)
             selector_args["n_features_to_select"] = min(max_features, selector_args["n_features_to_select"])  # limit to max feature count after preprocessing
             selector = RFE(estimator, step=selector_args["step"], n_features_to_select=selector_args["n_features_to_select"])
             selector.set_output(transform="pandas")
             selector.fit(X_train, y_train)
             return selector.transform(X_train), selector.transform(X_test)
         case "harris-hawks":
-            estimator.set_params(n_jobs=parallelism)
+            set_njobs_if_possible(estimator, parallelism)
             selector = HarrisHawkParallel(objective_function_zoo, **selector_args, minimize=False)
             selected_feature_names = set(selector.fit(estimator, precomputed["X_train_i"], precomputed["y_train_i"], precomputed["X_test_i"], precomputed["y_test_i"], verbose=False))
             intersection = list(set(selected_feature_names) & set(X_train.columns.tolist()))
             return X_train[intersection], X_test[intersection]
         case "genetic":
-            estimator.set_params(n_jobs=parallelism)
+            set_njobs_if_possible(estimator, parallelism)
             selector = GeneticParallel(objective_function_zoo, **selector_args, minimize=False)
             selected_feature_names = set(selector.fit(estimator, precomputed["X_train_i"], precomputed["y_train_i"], precomputed["X_test_i"], precomputed["y_test_i"], verbose=False))
             intersection = list(set(selected_feature_names) & set(X_train.columns.tolist()))
