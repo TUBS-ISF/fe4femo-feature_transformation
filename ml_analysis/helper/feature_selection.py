@@ -1,4 +1,5 @@
 import itertools
+import math
 from statistics import mean
 from typing import Any
 
@@ -241,29 +242,30 @@ def get_feature_selection(precomputed:dict, features : str, isClassification : b
 
 
 def get_selection_HPO_space(features : str, trial : Trial, isClassification : bool, group_dict : dict[str, list[str]], no_features: int) -> dict[str, Any]:
-    min_features = min(5, no_features)
+    max_features = math.ceil(no_features / 2.0)
+    min_features = min(5, max_features)
     match features:
         case "all" | "SATzilla" | "SATfeatPy" | "FMBA" | "FM_Chara" | "prefilter":
             return {}
         case "kbest-mutalinfo":
             return {
-                "k" : trial.suggest_int("k", min_features, no_features),
+                "k" : trial.suggest_int("k", min_features, max_features),
                 "n_neighbors" : trial.suggest_int("n_neighbors", 2, 10)
             }
         case "multisurf":
             return {
-                "n_features_to_select" : trial.suggest_int("n_features_to_select", min_features, no_features)
+                "n_features_to_select" : trial.suggest_int("n_features_to_select", min_features, max_features)
             }
         case "mRMR":
             return {
-                "K" : trial.suggest_int("K", min_features, no_features),
+                "K" : trial.suggest_int("K", min_features, max_features),
                 "relevance" : trial.suggest_categorical("relevance", ["f", "rf"]),
                 "denominator" : trial.suggest_categorical("denominator", ["max", "mean"]),
             }
         case "RFE":
             return {
                 "step" : trial.suggest_float("step", 0.01, 1),
-                "n_features_to_select" : trial.suggest_int("n_features_to_select", min_features, no_features)
+                "n_features_to_select" : trial.suggest_int("n_features_to_select", min_features, max_features)
             }
         case "genetic":
             return {
@@ -281,7 +283,7 @@ def get_selection_HPO_space(features : str, trial : Trial, isClassification : bo
             }
         case "HFMOEA":
             return {
-                "topk": trial.suggest_int("topk", min_features -1, no_features-1),
+                "topk": trial.suggest_int("topk", min_features - 1, max_features - 1),
                 "pop_size" : trial.suggest_int("pop_size", 30, 120),
                 "max_gen" : 100,
                 "mutation_probability" : trial.suggest_float("mutation_probability", 0.01, 0.3)
@@ -290,7 +292,7 @@ def get_selection_HPO_space(features : str, trial : Trial, isClassification : bo
             return {
                 "e_n_estimators": trial.suggest_int("e_n_estimators", 10, 1000),
                 "e_max_depth": trial.suggest_categorical("e_max_depth", [10, 50, 100, 500]),
-                "e_max_features" : trial.suggest_int("e_max_features", min_features, no_features),
+                "e_max_features" : trial.suggest_int("e_max_features", min_features, max_features),
             }
         case "SVD-entropy":
             return {}
@@ -299,7 +301,7 @@ def get_selection_HPO_space(features : str, trial : Trial, isClassification : bo
                 "alpha" : trial.suggest_float("alpha", 1e-2, 10, log=True),
                 "beta" : trial.suggest_float("beta", 1e-2, 10, log=True),
                 "n_clusters" : trial.suggest_int("n_clusters", 4, 100),
-                "n_features_to_select": trial.suggest_int("n_features_to_select", min_features, no_features),
+                "n_features_to_select": trial.suggest_int("n_features_to_select", min_features, max_features),
             }
         case "optuna-combined":
             return {

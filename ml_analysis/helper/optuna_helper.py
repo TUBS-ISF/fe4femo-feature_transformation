@@ -1,5 +1,28 @@
+from typing import Callable
+
 import optuna
 from optuna import create_study
+
+def distance_e_max_depth(a,b):
+    a = int(a)
+    b = int(b)
+    return abs(a-b)
+
+def distance_max_depth(a,b):
+    none_value = 10000000
+    if a is None:
+        a = none_value
+    if b is None:
+        b = none_value
+    a = int(a)
+    b = int(b)
+    return abs(a-b)
+
+def categorical_distance_function() -> dict:
+    return {
+        "e_max_depth" : distance_e_max_depth,
+        "max_depth" : distance_max_depth,
+    }
 
 
 def copyStudy(study : optuna.study.Study) -> optuna.study.Study:

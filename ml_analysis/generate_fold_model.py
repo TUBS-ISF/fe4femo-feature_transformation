@@ -6,6 +6,7 @@ import warnings
 
 import cloudpickle
 import pandas as pd
+from optuna.samplers import TPESampler
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import RobustScaler, LabelEncoder
 
@@ -29,7 +30,7 @@ from helper.input_parser import parse_input
 from helper.load_dataset import generate_xy_split, get_dataset, get_flat_models, is_task_classification, \
     load_feature_groups
 from helper.model_training import get_model_HPO_space, get_model
-from helper.optuna_helper import copyStudy
+from helper.optuna_helper import copyStudy, categorical_distance_function
 
 
 # 1. Train/Test Split
@@ -138,7 +139,8 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                 journal_path = run_config["path_output"] + "/" + run_config["name"] + ".journal"
                 journal = optuna.storages.JournalStorage(optuna.storages.journal.JournalFileBackend(journal_path))
                 storage = optuna.integration.dask.DaskStorage(journal)
-                study = optuna.create_study(storage=storage, direction="maximize")
+                sampler = TPESampler(seed=42, multivariate=True, group=True, constant_liar=True, categorical_distance_func=categorical_distance_function())
+                study = optuna.create_study(storage=storage, direction="maximize", sampler=sampler)
 
                 n_jobs = math.ceil((int(os.getenv("SLURM_NTASKS", 7)) - 2) / 9) #2 less than tasks for scheduler and main-node
                 n_trials = math.ceil(hpo_its / n_jobs)
