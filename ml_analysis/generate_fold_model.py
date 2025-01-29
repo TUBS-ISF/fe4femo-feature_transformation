@@ -139,7 +139,7 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                 journal_path = run_config["path_output"] + "/" + run_config["name"] + ".journal"
                 journal = optuna.storages.JournalStorage(optuna.storages.journal.JournalFileBackend(journal_path))
                 storage = optuna.integration.dask.DaskStorage(journal)
-                sampler = TPESampler(seed=42, multivariate=True, group=True, constant_liar=True, categorical_distance_func=categorical_distance_function())
+                sampler = TPESampler(seed=None, multivariate=True, group=True, constant_liar=True, categorical_distance_func=categorical_distance_function())
                 study = optuna.create_study(storage=storage, direction="maximize", sampler=sampler)
 
                 if int(os.getenv("SLURM_NTASKS", 1)) < 27:
