@@ -17,9 +17,7 @@ if __name__ == '__main__':
     outputdir = "fe4femo/ml_analysis/out/selector_test/"
 
     i = 0
-    features = ["all", "prefilter", "SATzilla", "SATfeatPy", "FMBA", "FM_Chara",
-                                 "kbest-mutalinfo", "multisurf", "mRMR", "RFE", "harris-hawks",
-                                 "genetic", "HFMOEA", "embedded-tree", "SVD-entropy", "NDFS", "optuna-combined"]
+    features = ["prefilter", "harris-hawks", "genetic","all", "SATzilla", "SATfeatPy", "FMBA", "FM_Chara", "kbest-mutalinfo", "multisurf", "mRMR", "RFE", "HFMOEA", "embedded-tree", "SVD-entropy", "NDFS", "optuna-combined"]
     pathData = "raphael-dunkel-master/data/"
     task = "runtime_backbone"
     model = "randomForest"
@@ -28,7 +26,10 @@ if __name__ == '__main__':
     Path(home+"/"+outputdir).mkdir(parents=True, exist_ok=True)
     for feature in features:
         name = f"{task}#{feature}#{model}#True#{hpo_its}#{i}"
-        arguments = ["sbatch", "-J", name, "--partition=multiple_il", f"--output={home}/{outputdir}/{name}.out", "../slurm_scripts/run.sh",
+        task_no = 256
+        if feature in ["genetic", "harris-hawks"]:
+            task_no = 384
+        arguments = ["sbatch", "-J", name, "--partition=multiple_il", "-n", f"{task_no}", f"--output={home}/{outputdir}/{name}.out", "../slurm_scripts/run.sh",
                      "--foldNo", f"{i}", "--features", feature, "--task", task, "--model", model, "--modelHPO", "--HPOits", hpo_its, pathData, outputdir ]
         print(f"Submit fold {i} with arguments:\n {arguments}")
         subprocess.run(arguments)
