@@ -1,11 +1,10 @@
 name: ml_analysis
 channels:
-  - https://software.repos.intel.com/python/conda
   - defaults
   - conda-forge
 dependencies:
   - _libgcc_mutex=0.1=conda_forge
-  - _openmp_mutex=4.5=2_kmp_llvm
+  - _openmp_mutex=4.5=2_gnu
   - _py-xgboost-mutex=2.0=cpu_0
   - alembic=1.14.1=pyhd8ed1ab_0
   - atk-1.0=2.38.0=h04ea711_2
@@ -28,8 +27,7 @@ dependencies:
   - azure-storage-blobs-cpp=12.13.0=h3cf044e_1
   - azure-storage-common-cpp=12.8.0=h736e048_1
   - azure-storage-files-datalake-cpp=12.12.0=ha633028_1
-  - blas=2.126=mkl
-  - blas-devel=3.9.0=26_linux64_mkl
+  - blas=1.0=mkl
   - bokeh=3.6.2=pyhd8ed1ab_1
   - bottleneck=1.4.2=py312hc0a28a1_0
   - brotli-python=1.1.0=py312h2ec8cdc_2
@@ -82,8 +80,7 @@ dependencies:
   - icu=75.1=he02047a_0
   - importlib-metadata=8.6.1=pyha770c72_0
   - importlib_resources=6.5.2=pyhd8ed1ab_0
-  - intel-cmplr-lib-ur=2025.0.4=intel_1519
-  - intel-openmp=2025.0.4=intel_1519
+  - intel-openmp=2022.0.1=h06a4308_3633
   - jinja2=3.1.5=pyhd8ed1ab_0
   - joblib=1.4.2=pyhd8ed1ab_1
   - keyutils=1.6.1=h166bdaf_0
@@ -96,12 +93,12 @@ dependencies:
   - libarrow-acero=19.0.0=hcb10f89_3_cpu
   - libarrow-dataset=19.0.0=hcb10f89_3_cpu
   - libarrow-substrait=19.0.0=h08228c5_3_cpu
-  - libblas=3.9.0=26_linux64_mkl
+  - libblas=3.9.0=16_linux64_mkl
   - libbrotlicommon=1.1.0=hb9d3cd8_2
   - libbrotlidec=1.1.0=hb9d3cd8_2
   - libbrotlienc=1.1.0=hb9d3cd8_2
   - libcap=2.71=h39aace5_0
-  - libcblas=3.9.0=26_linux64_mkl
+  - libcblas=3.9.0=16_linux64_mkl
   - libcrc32c=1.1.2=h9c3ff4c_0
   - libcurl=8.11.1=h332b0f4_0
   - libdeflate=1.23=h4ddbbb0_0
@@ -128,8 +125,7 @@ dependencies:
   - libgrpc=1.67.1=h25350d4_1
   - libiconv=1.17=hd590300_2
   - libjpeg-turbo=3.0.3=h5eee18b_0
-  - liblapack=3.9.0=26_linux64_mkl
-  - liblapacke=3.9.0=26_linux64_mkl
+  - liblapack=3.9.0=16_linux64_mkl
   - libllvm14=14.0.6=hcd5def8_4
   - liblzma=5.6.3=hb9d3cd8_1
   - liblzma-devel=5.6.3=hb9d3cd8_1
@@ -158,16 +154,13 @@ dependencies:
   - libxgboost=2.1.3=cpu_h3a1dfae_0
   - libxml2=2.13.5=h8d12d68_1
   - libzlib=1.3.1=hb9d3cd8_2
-  - llvm-openmp=19.1.7=h024ca30_0
   - llvmlite=0.43.0=py312h374181b_1
   - locket=1.0.0=pyhd8ed1ab_0
   - lz4=4.3.3=py312hf0f0c11_2
   - lz4-c=1.10.0=h5888daf_1
   - mako=1.3.8=pyhd8ed1ab_0
   - markupsafe=3.0.2=py312h178313f_1
-  - mkl=2024.2.2=intel_15
-  - mkl-devel=2024.2.2=intel_15
-  - mkl-include=2024.2.2=intel_15
+  - mkl=2022.1.0=hc2b9512_224
   - msgpack-python=1.1.0=py312h68727a3_0
   - ncurses=6.5=h2d0b736_2
   - ninja=1.12.1=h297d8ca_0
@@ -217,9 +210,7 @@ dependencies:
   - sortedcontainers=2.4.0=pyhd8ed1ab_0
   - sqlalchemy=2.0.37=py312h66e93f0_0
   - sqlite=3.48.0=h9eae976_0
-  - tbb=2021.13.1=intel_12
   - tblib=3.0.0=pyhd8ed1ab_1
-  - tcm=1.2.0=intel_589
   - threadpoolctl=3.5.0=pyhc1e730c_0
   - tk=8.6.13=noxft_h4845f30_101
   - toolz=1.0.0=pyhd8ed1ab_1
@@ -229,7 +220,6 @@ dependencies:
   - typing_extensions=4.12.2=pyha770c72_1
   - tzdata=2025a=h78e105d_0
   - ucx=1.18.0=h53fb5aa_0
-  - umf=0.9.1=intel_6
   - urllib3=2.3.0=pyhd8ed1ab_0
   - wheel=0.45.1=pyhd8ed1ab_1
   - xorg-libice=1.1.2=hb9d3cd8_0
