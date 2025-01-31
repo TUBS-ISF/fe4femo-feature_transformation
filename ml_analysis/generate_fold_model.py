@@ -19,7 +19,7 @@ import optuna
 from dask.distributed import Client
 from dask_jobqueue.slurm import SLURMRunner
 import dask
-from distributed import worker_client, performance_report
+from distributed import worker_client, performance_report, get_task_stream
 from sklearn.metrics import matthews_corrcoef, r2_score, d2_absolute_error_score
 from sklearn.model_selection import StratifiedKFold
 
@@ -42,29 +42,38 @@ from helper.optuna_helper import copyStudy, categorical_distance_function
 
 # als separate Main: Multi-Objective für RQ2b
 
-
-def compute_fold(model, features, is_classification, model_config, selector_config, feature_groups, precomputed, cores : int)  -> float:
-    y_train = precomputed["y_train"].get().result()
-    y_test = precomputed["y_test"].get().result()
-    # feature selection + model training
-    model_instance_selector = get_model(model, is_classification, 1, model_config )
-    X_train, X_test = get_feature_selection(precomputed, features, is_classification, selector_config, model_instance_selector, feature_groups, parallelism=cores)
-    model_instance = get_model(model, is_classification, cores, model_config )
-    model_instance.fit(X_train, y_train)
+def eval_model_performance(model_instance, X_train_test, y_test, is_classification):
+    X_train, X_test = X_train_test
     y_pred = model_instance.predict(X_test)
     if is_classification:
         return matthews_corrcoef(y_test, y_pred)
     else:
         return d2_absolute_error_score(y_test, y_pred)
 
+def train_model(model, is_classification, cores, model_config, X_train_test, y_train):
+    X_train, X_test = X_train_test
+    model_instance = get_model(model, is_classification, cores, model_config )
+    model_instance.fit(X_train, y_train)
+    return model_instance
+
+def do_feature_selection(model, is_classification, model_config, precomputed, features, selector_config, feature_groups, cores):
+    model_instance_selector = get_model(model, is_classification, 1, model_config )
+    return get_feature_selection(precomputed, features, is_classification, selector_config, model_instance_selector, feature_groups, parallelism=cores)
+
+def compute_fold(client, model, features, is_classification, model_config, selector_config, feature_groups, precomputed, cores : int)  -> float:
+    y_train = precomputed["y_train"].get()
+    y_test = precomputed["y_test"].get()
+    # feature selection + model training
+    X_train_test = client.submit(do_feature_selection, model, is_classification, model_config, precomputed, features, selector_config, feature_groups, cores,pure=False)
+    model_instance = client.submit(train_model, model, is_classification, cores, model_config, X_train_test, y_train, pure=False)
+    return client.submit(eval_model_performance, model_instance, X_train_test, y_test, is_classification, pure=False)
 
 def objective(trial: optuna.Trial, folds, features, model, should_modelHPO, is_classification, feature_groups, feature_count, cores : int) -> float:
     model_config = get_model_HPO_space(model, trial, is_classification) if should_modelHPO else None
     selector_config = get_selection_HPO_space(features, trial, is_classification, feature_groups, feature_count)
     with worker_client() as client:
         futures = [
-            client.submit(compute_fold, model, features, is_classification,
-                          model_config, selector_config, feature_groups, future_precompute, cores)
+            compute_fold(client, model, features, is_classification, model_config, selector_config, feature_groups, future_precompute, cores)
             for i, future_precompute in folds.items()]
         results = client.gather(futures)
     return mean(results)
@@ -99,7 +108,10 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
     with (SLURMMemRunner(scheduler_file=str(scheduler_path)+"/scheduler-{job_id}.json",
                       worker_options=worker_options, scheduler_options=scheduler_options) as runner):
         with Client(runner) as client:
-            with performance_report(filename=run_config["path_output"] + "/" + run_config["name"] + ".html"):
+            with (
+                performance_report(filename=run_config["path_output"] + "/" + run_config["name"] + ".html"),
+                get_task_stream() as task_stream
+            ):
                 print(f"Dask dashboard is available at {client.dashboard_link}")
                 client.wait_for_workers(runner.n_workers)
 
@@ -187,12 +199,11 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                     "time_Feature" : end_FS - start_FS,
                     "time_Model" : end_Model - start_Model,
                 }
-
-                path = run_config["path_output"] + "/"  + run_config["name"] + ".pkl"
-                with open(path, "wb") as f:
-                    cloudpickle.dump(output, f)
-                print(f"Exported model at {path}")
-            client.shutdown()
+            output["task_stream"] = task_stream.data
+            path = run_config["path_output"] + "/" + run_config["name"] + ".pkl"
+            with open(path, "wb") as f:
+                cloudpickle.dump(output, f)
+            print(f"Exported model at {path}")
 
 
 if __name__ == '__main__':
