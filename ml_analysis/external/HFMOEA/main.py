@@ -26,7 +26,9 @@ def compute_sol(data : np.ndarray, target : np.ndarray, is_classification : bool
         sol = client.gather(sol_future)
     return pd.Series([x for x in sol if x is not None])
 
-def compute(X_train_var, X_test_var, y_train_var, y_test_var, is_classification : bool, topk=10, pop_size=100, max_gen=100, mutation_probability=0.06, n_jobs=1, sol = None):
+def compute(X_train_var, X_test_var, y_train_var, y_test_var, is_classification : bool, topk=10, pop_size=100, max_gen=100, mutation_probability=0.06, n_jobs=1, sol = None, seed=42424242424242):
+    rnd = np.random.default_rng(seed=seed)
+
     if sol is None:
         compute_sol(X_train_var.get(), y_train_var.get(), is_classification, n_jobs=n_jobs) # todo fix
     sol = sol.to_list()
@@ -42,7 +44,7 @@ def compute(X_train_var, X_test_var, y_train_var, y_test_var, is_classification 
         initial_chromosome[i, np.where(sol[i].ranks <= topk)[0]] = 1
 
     rand_size = pop_size - init_size
-    rand_sol = np.random.randint(low=0, high=2, size=(rand_size, X_train.shape[1]))
+    rand_sol = rnd.integers(low=0, high=2, size=(rand_size, X_train.shape[1]))
     initial_chromosome[init_size:, :] = rand_sol
 
     # pop_shape = (pop_size,num_features)
@@ -55,8 +57,8 @@ def compute(X_train_var, X_test_var, y_train_var, y_test_var, is_classification 
 
         # Generating offsprings
         solution2 = crossover(np.array(solution), offspring_size=(pop_size, num_features))
-        solution2 = mutation(solution2, num_mutations=num_mutations)
-        solution2 = check_sol(solution2)
+        solution2 = mutation(rnd, solution2, num_mutations=num_mutations)
+        solution2 = check_sol(rnd, solution2)
         function1_values_new = function1(solution2, X_train_var, y_train_var, X_test_var, y_test_var, is_classification)
         function2_values_new = [function2(solution2[i]) for i in range(0, pop_size)]
         non_dominated_sorted_solution2 = fast_non_dominated_sort(function1_values_new[:], function2_values_new[:])

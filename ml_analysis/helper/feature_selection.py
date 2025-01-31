@@ -216,7 +216,7 @@ def get_feature_selection(precomputed:dict, features : str, isClassification : b
             intersection = list(set(feature_mask) & set(X_train.columns.tolist()))
             return  X_train[ intersection], X_test[intersection]
         case "embedded-tree":
-            forest = RandomForestClassifier(n_estimators=selector_args["e_n_estimators"], max_depth=selector_args["e_max_depth"], n_jobs=parallelism) if isClassification else RandomForestRegressor(n_estimators=selector_args["e_n_estimators"], max_depth=selector_args["e_max_depth"], n_jobs=parallelism)
+            forest = RandomForestClassifier(n_estimators=selector_args["e_n_estimators"], max_depth=selector_args["e_max_depth"], n_jobs=parallelism, random_state=42) if isClassification else RandomForestRegressor(n_estimators=selector_args["e_n_estimators"], max_depth=selector_args["e_max_depth"], n_jobs=parallelism, random_state=42)
             forest.fit(X_train, y_train)
             selector_args["e_max_features"] = min(max_features, selector_args["e_max_features"])  # limit to max feature count after preprocessing
             model = SelectFromModel(forest, max_features=selector_args["e_max_features"], prefit=True)

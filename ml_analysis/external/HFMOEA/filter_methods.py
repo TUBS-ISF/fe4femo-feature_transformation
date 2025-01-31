@@ -89,7 +89,7 @@ def feature_selection_sim(in_data, target, is_classification, measure='luca', p=
     d = pd.DataFrame(in_data)
     t = pd.DataFrame(target)
     if not is_classification:
-        discretizer = KBinsDiscretizer(100, encode='ordinal')
+        discretizer = KBinsDiscretizer(100, encode='ordinal', random_state=42)
         discretizer.set_output(transform="pandas")
         t = discretizer.fit_transform(t)
 
@@ -345,14 +345,12 @@ def PCC(data, target, is_classification):
     PCC_mat = np.zeros((num_features, num_features))
     PCC_values_feat = np.zeros(num_features)
     PCC_values_class = np.zeros(num_features)
-    PCC_scores = np.zeros(num_features)
     result = Result()
     result.features = feature_values
     weight_feat = 0.3  # weightage provided to feature-feature correlation
     weight_class = 0.7  # weightage provided to feature-class correlation
 
     # generate the correlation matrix
-    mean_values = np.mean(feature_values, axis=0)
     for ind_1 in range(num_features):
         for ind_2 in range(num_features):
             PCC_mat[ind_1, ind_2] = PCC_mat[ind_2, ind_1] = compute_PCC(feature_values[:, ind_1],

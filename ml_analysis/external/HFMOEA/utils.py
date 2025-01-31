@@ -62,8 +62,8 @@ def crossover(parents, offspring_size):
     return offspring
 
 
-def mutation(offspring_crossover, num_mutations=2):
-    mutation_idx = np.random.randint(low=0, high=offspring_crossover.shape[1], size=num_mutations)
+def mutation(rnd, offspring_crossover, num_mutations=2):
+    mutation_idx = rnd.integers(low=0, high=offspring_crossover.shape[1], size=num_mutations)
     # Mutation changes a single gene in each offspring randomly.
     for idx in range(offspring_crossover.shape[0]):
         # The random value to be added to the gene.
@@ -194,7 +194,7 @@ def compute_score(curr_solution, X_train, y_train, X_test, y_test, is_classifica
     y = y_train
 
     ## SVM CLASSIFIER ##
-    SVM = SVC(kernel='rbf', gamma='scale', C=5000) if is_classification else SVR(kernel='rbf', gamma='scale', C=5000)
+    SVM = SVC(kernel='rbf', gamma='scale', C=5000, random_state=42) if is_classification else SVR(kernel='rbf', gamma='scale', C=5000)
     SVM.fit(X, y)
     y_pred = SVM.predict(reduced_test_features)
     if is_classification:
@@ -219,10 +219,10 @@ def function2(x):
     return -(np.where(x == 1)[0].shape[0] / x.shape[0])
 
 
-def check_sol(sol):
+def check_sol(rnd, sol):
     for i, s in enumerate(sol):
         if False not in (s == np.zeros(shape=(s.shape))):
-            sol[i, :] = np.random.randint(low=0, high=2, size=sol[i].shape)
+            sol[i, :] = rnd.integers(low=0, high=2, size=sol[i].shape)
     return sol
 
 def is_pareto_efficient(costs, return_mask = True):

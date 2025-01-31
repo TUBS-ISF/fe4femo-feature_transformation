@@ -10,6 +10,24 @@ from zoofs import GeneticOptimization
 
 class GeneticParallel(GeneticOptimization):
 
+    def __init__(
+            self,
+            objective_function,
+            n_iteration: int = 1000,
+            timeout: int = None,
+            population_size=20,
+            selective_pressure=2,
+            elitism=2,
+            mutation_rate=0.05,
+            minimize=True,
+            logger=None,
+            seed=424242424242424424,
+            **kwargs,
+    ):
+        super().__init__(objective_function, n_iteration, timeout, population_size, selective_pressure, elitism,
+                         mutation_rate, minimize, logger, kwargs)
+        self.rnd = np.random.default_rng(seed=seed)
+
     @staticmethod
     def _negatable_objective(objective_function, model, x_train_copy, y_train, X_test, y_test, chosen_features, kwargs, minimize: bool):
         X_train_masked = x_train_copy.iloc[:, chosen_features]
@@ -54,6 +72,63 @@ class GeneticParallel(GeneticOptimization):
         ranks = scipy.stats.rankdata(return_scores, method='average')
         self.fitness_ranks = self.selective_pressure * ranks
 
+    def initialize_population_rand(self, x):
+        self.individuals = self.rnd.integers(0, 2, size=(self.population_size, x.shape[1]))
+
+    def _select_individuals_rand(self, model, x_train, y_train, x_valid, y_valid):
+        self._evaluate_fitness(model, x_train, y_train, x_valid, y_valid)
+
+        sorted_individuals_fitness = sorted(
+            zip(self.individuals, self.fitness_ranks), key=lambda x: x[1], reverse=True
+        )
+        elite_individuals = np.array(
+            [individual for individual, fitness in sorted_individuals_fitness[: self.elitism]]
+        )
+
+        non_elite_individuals = np.array(
+            [individual[0] for individual in sorted_individuals_fitness[self.elitism:]]
+        )
+
+        non_elite_individuals_fitness = [
+            individual[1] for individual in sorted_individuals_fitness[self.elitism:]
+        ]
+        selection_probability = non_elite_individuals_fitness / np.sum(
+            non_elite_individuals_fitness
+        )
+
+        selected_indices = self.rnd.choice(
+            range(len(non_elite_individuals)), self.population_size // 2, p=selection_probability
+        )
+        selected_individuals = non_elite_individuals[selected_indices, :]
+        self.fit_individuals = np.vstack((elite_individuals, selected_individuals))
+
+    def _mutate_rand(self, array):
+        mutated_array = np.copy(array)
+        for idx, gene in enumerate(array):
+            if self.rnd.random() < self.mutation_rate:
+                array[idx] = 1 if gene == 0 else 0
+
+        return mutated_array
+
+    def _produce_next_generation_rand(self):
+        new_population = np.empty(
+            shape=(self.population_size, self.individuals.shape[1]), dtype=np.int32
+        )
+        for i in range(0, self.population_size, 2):
+            parents = self.fit_individuals[
+                self.rnd.choice(self.fit_individuals.shape[0], 2, replace=False), :
+            ]
+            crossover_index = self.rnd.integers(0, len(self.individuals[0]))
+            new_population[i] = np.hstack(
+                (parents[0][:crossover_index], parents[1][crossover_index:])
+            )
+            new_population[i + 1] = np.hstack(
+                (parents[1][:crossover_index], parents[0][crossover_index:])
+            )
+
+            new_population[i] = self._mutate_rand(new_population[i])
+            new_population[i + 1] = self._mutate_rand(new_population[i + 1])
+        self.individuals = new_population
 
     def fit(self, model, X_train_var, y_train_var, X_valid_var, y_valid_var, verbose=True):
         """
@@ -86,7 +161,7 @@ class GeneticParallel(GeneticOptimization):
         self.best_score = np.inf
         self.best_dim = np.ones(X_train.shape[1])
 
-        self.initialize_population(X_train)
+        self.initialize_population_rand(X_train)
         self.best_score = -1 * float(np.inf)
         self.best_scores = []
 
@@ -99,8 +174,8 @@ class GeneticParallel(GeneticOptimization):
             if (self.timeout is not None) & (time.time() > timeout_upper_limit):
                 warnings.warn("Timeout occured")
                 break
-            self._select_individuals(model, X_train_var, y_train_var, X_valid_var, y_valid_var)
-            self._produce_next_generation()
+            self._select_individuals_rand(model, X_train_var, y_train_var, X_valid_var, y_valid_var)
+            self._produce_next_generation_rand()
             self.best_scores.append(self.best_score)
 
             self._iteration_objective_score_monitor(i)
