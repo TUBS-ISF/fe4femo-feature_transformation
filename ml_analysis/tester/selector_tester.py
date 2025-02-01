@@ -24,10 +24,13 @@ if __name__ == '__main__':
     hpo_its = "50"
     home = os.getenv('HOME', "/home/ul/ul_student/ul_ppm61")
     Path(home+"/"+outputdir).mkdir(parents=True, exist_ok=True)
+    time="1:0:0"
+    task_no = 256
     for feature in features:
         name = f"{task}#{feature}#{model}#True#{hpo_its}#{i}"
-        task_no = 256
-        arguments = ["sbatch", "-J", name, "--partition=multiple_il", "-n", f"{task_no}", f"--output={home}/{outputdir}/{name}.out", "../slurm_scripts/run.sh",
+        if feature == "genetic":
+            time="3:0:0"
+        arguments = ["sbatch", "-J", name, "--partition=multiple_il", "-n", f"{task_no}", f"--time={time}", f"--output={home}/{outputdir}/{name}.out", "../slurm_scripts/run.sh",
                      "--foldNo", f"{i}", "--features", feature, "--task", task, "--model", model, "--HPOits", hpo_its ]
         if feature not in ["genetic"]:
             arguments.extend(["--modelHPO", "--selectorHPO"])
