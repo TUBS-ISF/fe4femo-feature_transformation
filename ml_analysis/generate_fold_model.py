@@ -43,7 +43,7 @@ from helper.optuna_helper import copyStudy, categorical_distance_function
 # als separate Main: Multi-Objective für RQ2b
 
 def eval_model_performance(model_instance, X_train_test, precomputed, is_classification):
-    y_test = precomputed["y_test"].get().result
+    y_test = precomputed["y_test"].get().result()
     X_train, X_test = X_train_test
     y_pred = model_instance.predict(X_test)
     if is_classification:
