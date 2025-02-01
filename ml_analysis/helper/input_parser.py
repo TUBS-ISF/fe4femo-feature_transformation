@@ -17,7 +17,7 @@ def parse_input() -> argparse.Namespace:
                         choices=["randomForest", "gradboostForest", "SVM", "kNN", "adaboost", "MLP"],
                         default="randomForest")
     parser.add_argument("--modelHPO", help="Optimize ML-Model using HPO (Optuna)", default=False, action="store_true")
-    parser.add_argument("--selectorHPO", help="Optimize Selector using HPO (Optuna)", default=True, action="store_true")
+    parser.add_argument("--selectorHPO", help="Optimize Selector using HPO (Optuna)", default=False, action="store_true")
     parser.add_argument("--HPOits", help="Number of HPO iterations (if modelHPO true, used for both at the same time)",
                         default=100, type=int)
     parser.add_argument("--foldNo", help="Fold to compute (starting from 0)", type=int, default=0)

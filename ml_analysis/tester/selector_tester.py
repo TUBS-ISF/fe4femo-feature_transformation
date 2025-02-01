@@ -27,9 +27,10 @@ if __name__ == '__main__':
     time="1:0:0"
     task_no = 256
     for feature in features:
-        name = f"{task}#{feature}#{model}#True#{hpo_its}#{i}"
+        name = f"{task}#{feature}#{model}#True#True#{hpo_its}#{i}"
         if feature == "genetic":
             time="3:0:0"
+            name = f"{task}#{feature}#{model}#False#False#{hpo_its}#{i}"
         arguments = ["sbatch", "-J", name, "--partition=multiple_il", "-n", f"{task_no}", f"--time={time}", f"--output={home}/{outputdir}/{name}.out", "../slurm_scripts/run.sh",
                      "--foldNo", f"{i}", "--features", feature, "--task", task, "--model", model, "--HPOits", hpo_its ]
         if feature not in ["genetic"]:
