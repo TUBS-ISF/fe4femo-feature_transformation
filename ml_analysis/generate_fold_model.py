@@ -78,16 +78,17 @@ def objective(trial: optuna.Trial, folds, features, model, should_modelHPO, is_c
         results = client.gather(futures)
     return mean(results)
 
-def main(pathData: str, pathOutput: str, features: str, task: str, model: str, modelHPO: bool, hpo_its: int, foldNo : int):
+def main(pathData: str, pathOutput: str, features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, foldNo : int):
     Path(pathOutput).mkdir(parents=True, exist_ok=True)
     run_config = {
-        "name": f"{task}#{features}#{model}#{modelHPO}#{hpo_its}#{foldNo}",
+        "name": f"{task}#{features}#{model}#{modelHPO}#{selectorHPO}#{hpo_its}#{foldNo}",
         "path_data": pathData,
         "path_output": pathOutput,
         "features": features,
         "task": task,
         "model": model,
         "modelHPO": modelHPO,
+        "selectorHPO" : selectorHPO,
         "hpo_its": hpo_its,
         "foldNo": foldNo,
     }
@@ -146,34 +147,38 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                     folds[i] = future_pre
 
                 feature_groups = load_feature_groups(pathData)
-                objective_function = lambda trial: objective(trial, folds, features, model, modelHPO, is_classification, feature_groups, feature_count, cores)
 
-                journal_path = run_config["path_output"] + "/" + run_config["name"] + ".journal"
-                journal = optuna.storages.JournalStorage(optuna.storages.journal.JournalFileBackend(journal_path))
-                storage = optuna.integration.dask.DaskStorage(journal)
-                sampler = TPESampler(seed=None, multivariate=True, group=True, constant_liar=True, categorical_distance_func=categorical_distance_function())
-                study = optuna.create_study(storage=storage, direction="maximize", sampler=sampler)
+                if selectorHPO:
+                    objective_function = lambda trial: objective(trial, folds, features, model, modelHPO, is_classification, feature_groups, feature_count, cores)
 
-                if int(os.getenv("SLURM_NTASKS", 1)) < 27:
-                    raise ValueError("Not enough worker, needs more than 32")
-                n_jobs = 25 #2 less than tasks for scheduler and main-node
-                n_trials = math.ceil(hpo_its / n_jobs)
-                futures = [
-                    client.submit(study.optimize, objective_function, n_trials, pure=False) for _ in range(n_jobs)
-                ]
+                    journal_path = run_config["path_output"] + "/" + run_config["name"] + ".journal"
+                    journal = optuna.storages.JournalStorage(optuna.storages.journal.JournalFileBackend(journal_path))
+                    storage = optuna.integration.dask.DaskStorage(journal)
+                    sampler = TPESampler(seed=None, multivariate=True, group=True, constant_liar=True, categorical_distance_func=categorical_distance_function())
+                    study = optuna.create_study(storage=storage, direction="maximize", sampler=sampler)
 
-                dask.distributed.wait(futures)
+                    if int(os.getenv("SLURM_NTASKS", 1)) < 27:
+                        raise ValueError("Not enough worker, needs more than 32")
+                    n_jobs = 25 #2 less than tasks for scheduler and main-node
+                    n_trials = math.ceil(hpo_its / n_jobs)
+                    futures = [
+                        client.submit(study.optimize, objective_function, n_trials, pure=False) for _ in range(n_jobs)
+                    ]
 
-                # train complete model with HPO values
-                best_params = study.best_params
-                frozen_best_trial = study.best_trial
+                    dask.distributed.wait(futures)
 
-                # feature preprocessing
+                    # train complete model with HPO values
+                    best_params = study.best_params
+                    frozen_best_trial = study.best_trial
 
 
-                # feature selection + model training
-                model_config = get_model_HPO_space(model, frozen_best_trial, is_classification) if modelHPO else None
-                selector_config = get_selection_HPO_space(features, frozen_best_trial, is_classification, feature_groups, X_train.shape[1])
+                    # feature selection + model training
+                    model_config = get_model_HPO_space(model, frozen_best_trial, is_classification) if modelHPO else None
+                    selector_config = get_selection_HPO_space(features, frozen_best_trial, is_classification, feature_groups, X_train.shape[1])
+                else:
+                    model_config = None
+                    selector_config = None
+
                 model_instance_selector = get_model(model, is_classification, 1, model_config)
                 start_FS = time.time()
                 precomputed = precompute_feature_selection(features, is_classification, X_train, X_test, y_train, y_test, model_flatness, parallelism=cores)
@@ -209,4 +214,4 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
 if __name__ == '__main__':
     args = parse_input()
     warnings.filterwarnings("ignore", message="'force_all_finite'")
-    main(os.environ.get("HOME")+"/"+os.path.expandvars(args.pathData), os.environ.get("HOME")+"/"+os.path.expandvars(args.pathOutput), args.features, args.task, args.model, args.modelHPO, args.HPOits, args.foldNo)
+    main(os.environ.get("HOME")+"/"+os.path.expandvars(args.pathData), os.environ.get("HOME")+"/"+os.path.expandvars(args.pathOutput), args.features, args.task, args.model, args.modelHPO, args.selectorHPO, args.HPOits, args.foldNo)

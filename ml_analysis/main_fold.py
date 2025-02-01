@@ -22,7 +22,7 @@ if __name__ == '__main__':
     outputdir = os.environ.get("HOME") + "/" + args.pathOutput
     Path(outputdir).mkdir(parents=True, exist_ok=True)
     for i in range(10):
-        name = f"{args.task}#{args.features}#{args.model}#{args.modelHPO}#{args.HPOits}#{i}"
+        name = f"{args.task}#{args.features}#{args.model}#{args.modelHPO}#{args.selectorHPO}#{args.HPOits}#{i}"
         arguments = ["sbatch", "-J", name,  "--partition=multiple_il", f"--output={outputdir}/{name}.out", "slurm_scripts/run.sh",
                      "--foldNo", f"{i}"] #TODO different time for different combinations
 

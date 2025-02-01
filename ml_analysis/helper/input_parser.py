@@ -17,6 +17,7 @@ def parse_input() -> argparse.Namespace:
                         choices=["randomForest", "gradboostForest", "SVM", "kNN", "adaboost", "MLP"],
                         default="randomForest")
     parser.add_argument("--modelHPO", help="Optimize ML-Model using HPO (Optuna)", default=False, action="store_true")
+    parser.add_argument("--selectorHPO", help="Optimize Selector using HPO (Optuna)", default=True, action="store_true")
     parser.add_argument("--HPOits", help="Number of HPO iterations (if modelHPO true, used for both at the same time)",
                         default=100, type=int)
     parser.add_argument("--foldNo", help="Fold to compute (starting from 0)", type=int, default=0)
@@ -25,4 +26,9 @@ def parse_input() -> argparse.Namespace:
         raise ValueError("RFE can only be used with gradboostForest, randomForest or adaboost")
     if result.features == "harris-hawks":
         raise NotImplementedError() # deactivated
+    unsupported_non_HPO = ["harris-hawks", "genetic"]
+    if result.features not in unsupported_non_HPO and not result.selectorHPO:
+        raise ValueError(f"No HPO currently only supported for {unsupported_non_HPO}")
+    if not result.selectorHPO and result.modelHPO:
+        raise ValueError(f"Model HPO requires selector HPO")
     return result

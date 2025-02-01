@@ -15,7 +15,7 @@ class GeneticParallel(GeneticOptimization):
             objective_function,
             n_iteration: int = 1000,
             timeout: int = None,
-            population_size=20,
+            population_size=250,
             selective_pressure=2,
             elitism=2,
             mutation_rate=0.05,
