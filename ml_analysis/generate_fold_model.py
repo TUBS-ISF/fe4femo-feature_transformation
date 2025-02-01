@@ -42,7 +42,8 @@ from helper.optuna_helper import copyStudy, categorical_distance_function
 
 # als separate Main: Multi-Objective für RQ2b
 
-def eval_model_performance(model_instance, X_train_test, y_test, is_classification):
+def eval_model_performance(model_instance, X_train_test, precomputed, is_classification):
+    y_test = precomputed["y_test"].get().result
     X_train, X_test = X_train_test
     y_pred = model_instance.predict(X_test)
     if is_classification:
@@ -50,7 +51,8 @@ def eval_model_performance(model_instance, X_train_test, y_test, is_classificati
     else:
         return d2_absolute_error_score(y_test, y_pred)
 
-def train_model(model, is_classification, cores, model_config, X_train_test, y_train):
+def train_model(model, is_classification, cores, model_config, X_train_test, precomputed):
+    y_train = precomputed["y_train"].get().result()
     X_train, X_test = X_train_test
     model_instance = get_model(model, is_classification, cores, model_config )
     model_instance.fit(X_train, y_train)
@@ -61,12 +63,10 @@ def do_feature_selection(model, is_classification, model_config, precomputed, fe
     return get_feature_selection(precomputed, features, is_classification, selector_config, model_instance_selector, feature_groups, parallelism=cores)
 
 def compute_fold(client, model, features, is_classification, model_config, selector_config, feature_groups, precomputed, cores : int)  -> float:
-    y_train = precomputed["y_train"].get()
-    y_test = precomputed["y_test"].get()
     # feature selection + model training
     X_train_test = client.submit(do_feature_selection, model, is_classification, model_config, precomputed, features, selector_config, feature_groups, cores,pure=False)
-    model_instance = client.submit(train_model, model, is_classification, cores, model_config, X_train_test, y_train, pure=False)
-    return client.submit(eval_model_performance, model_instance, X_train_test, y_test, is_classification, pure=False)
+    model_instance = client.submit(train_model, model, is_classification, cores, model_config, X_train_test, precomputed, pure=False)
+    return client.submit(eval_model_performance, model_instance, X_train_test, precomputed, is_classification, pure=False)
 
 def objective(trial: optuna.Trial, folds, features, model, should_modelHPO, is_classification, feature_groups, feature_count, cores : int) -> float:
     model_config = get_model_HPO_space(model, trial, is_classification) if should_modelHPO else None
