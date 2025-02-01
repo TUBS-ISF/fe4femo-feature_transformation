@@ -199,6 +199,9 @@ def get_feature_selection(precomputed:dict, features : str, isClassification : b
             selector.fit(X_train, y_train)
             return selector.transform(X_train), selector.transform(X_test)
         case "harris-hawks":
+            #deactivated
+            raise NotImplementedError() # if reactivating --> implement seed for pseudo-rng, remove from HPO
+
             set_njobs_if_possible(estimator, parallelism)
             selector = HarrisHawkParallel(objective_function_zoo, **selector_args, minimize=False)
             selected_feature_names = set(selector.fit(estimator, precomputed["X_train_i"], precomputed["y_train_i"], precomputed["X_test_i"], precomputed["y_test_i"], verbose=False))

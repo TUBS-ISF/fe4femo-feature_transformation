@@ -23,4 +23,6 @@ def parse_input() -> argparse.Namespace:
     result = parser.parse_args()
     if result.features == "RFE" and not (result.model == "gradboostForest" or result.model == "randomForest" or result.model == "adaboost"):
         raise ValueError("RFE can only be used with gradboostForest, randomForest or adaboost")
+    if result.features == "harris-hawks":
+        raise NotImplementedError() # deactivated
     return result
