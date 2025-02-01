@@ -176,8 +176,8 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                     model_config = get_model_HPO_space(model, frozen_best_trial, is_classification) if modelHPO else None
                     selector_config = get_selection_HPO_space(features, frozen_best_trial, is_classification, feature_groups, X_train.shape[1])
                 else:
-                    model_config = None
-                    selector_config = None
+                    model_config = {}
+                    selector_config = {}
 
                 model_instance_selector = get_model(model, is_classification, 1, model_config)
                 start_FS = time.time()
