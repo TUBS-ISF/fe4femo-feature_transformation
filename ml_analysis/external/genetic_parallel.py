@@ -45,9 +45,10 @@ class GeneticParallel(GeneticOptimization):
             x_valid = x_valid_var.get()
             y_train = y_train_var.get()
             y_valid = y_valid_var.get()
+            x_train_local = x_train.result()
 
             for individual in self.individuals:
-                chosen_features = [index for index in range(x_train.result().shape[1]) if individual[index] == 1]
+                chosen_features = [index for index in range(x_train_local.shape[1]) if individual[index] == 1]
 
                 feature_hash = "_*_".join(sorted(self.feature_list[chosen_features]))
 
@@ -56,20 +57,21 @@ class GeneticParallel(GeneticOptimization):
                 else:
                     score = client.submit(self._negatable_objective, self.objective_function, model, x_train,
                                               y_train, x_valid, y_valid, chosen_features, self.kwargs, self.minimize, pure=False)
-                future_tuple = (feature_hash, individual, score)
-                future_scores.append(future_tuple)
+                future_scores.append(score)
             scores = client.gather(future_scores)
 
-        return_scores = []
-        for feature_hash, individual, score in scores:
+        for i, score in enumerate(scores):
+            individual = self.individuals[i]
+            chosen_features = [index for index in range(x_train_local.shape[1]) if individual[index] == 1]
+            feature_hash = "_*_".join(sorted(self.feature_list[chosen_features]))
+
             self.feature_score_hash[feature_hash] = score
             if score > self.best_score:
                 self.best_score = score
                 self.best_dim = individual
-            return_scores.append(score)
-        self.fitness_scores = return_scores
+        self.fitness_scores = scores
 
-        ranks = scipy.stats.rankdata(return_scores, method='average')
+        ranks = scipy.stats.rankdata(scores, method='average')
         self.fitness_ranks = self.selective_pressure * ranks
 
     def initialize_population_rand(self, x):
@@ -89,9 +91,9 @@ class GeneticParallel(GeneticOptimization):
             [individual[0] for individual in sorted_individuals_fitness[self.elitism:]]
         )
 
-        non_elite_individuals_fitness = [
-            individual[1] for individual in sorted_individuals_fitness[self.elitism:]
-        ]
+        non_elite_individuals_fitness = np.array(
+            [individual[1] for individual in sorted_individuals_fitness[self.elitism:]]
+        )
         selection_probability = non_elite_individuals_fitness / np.sum(
             non_elite_individuals_fitness
         )
