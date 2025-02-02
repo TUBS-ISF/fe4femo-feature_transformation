@@ -1,5 +1,6 @@
 import time
 import warnings
+from statistics import mean
 
 import numpy as np
 import scipy
@@ -29,40 +30,43 @@ class GeneticParallel(GeneticOptimization):
         self.rnd = np.random.default_rng(seed=seed)
 
     @staticmethod
-    def _negatable_objective(objective_function, model, x_train_copy, y_train, X_test, y_test, chosen_features, kwargs, minimize: bool):
-        X_train_masked = x_train_copy.iloc[:, chosen_features]
+    def _negatable_objective(objective_function, model, X_train, y_train, fold, chosen_features, kwargs, minimize: bool):
+        X_train = X_train.iloc[fold.train_index]
+        X_test = X_train.iloc[fold.test_index]
+        y_train = y_train.iloc[fold.train_index]
+        y_test = y_train.iloc[fold.test_index]
+
+        X_train_masked = X_train.iloc[:, chosen_features]
         X_test_masked = X_test.iloc[:, chosen_features]
         score = objective_function(model, X_train_masked, y_train, X_test_masked, y_test, **kwargs)
         if minimize:
             score = -score
         return score
 
-    def _evaluate_fitness(self, model, x_train_var, y_train_var, x_valid_var, y_valid_var, particle_swarm_flag=0, dragon_fly_flag=0):
+    def _evaluate_fitness(self, model, x_train_var, y_train_var, fold_vars, feature_no, particle_swarm_flag=0, dragon_fly_flag=0):
         future_scores = []
 
         with worker_client() as client:
             x_train = x_train_var.get()
-            x_valid = x_valid_var.get()
             y_train = y_train_var.get()
-            y_valid = y_valid_var.get()
-            x_train_local = x_train.result()
 
             for individual in self.individuals:
-                chosen_features = [index for index in range(x_train_local.shape[1]) if individual[index] == 1]
+                chosen_features = [index for index in range(feature_no) if individual[index] == 1]
 
                 feature_hash = "_*_".join(sorted(self.feature_list[chosen_features]))
 
                 if feature_hash in self.feature_score_hash.keys():
                     score = self.feature_score_hash[feature_hash]
                 else:
-                    score = client.submit(self._negatable_objective, self.objective_function, model, x_train,
-                                              y_train, x_valid, y_valid, chosen_features, self.kwargs, self.minimize, pure=False)
+                    partial_score_futures = [client.submit(self._negatable_objective, self.objective_function, model, x_train,
+                                              y_train, fold_var.get(), chosen_features, self.kwargs, self.minimize, pure=False) for fold_var in fold_vars]
+                    score = client.submit(mean, partial_score_futures)
                 future_scores.append(score)
             scores = client.gather(future_scores)
 
         for i, score in enumerate(scores):
             individual = self.individuals[i]
-            chosen_features = [index for index in range(x_train_local.shape[1]) if individual[index] == 1]
+            chosen_features = [index for index in range(feature_no) if individual[index] == 1]
             feature_hash = "_*_".join(sorted(self.feature_list[chosen_features]))
 
             self.feature_score_hash[feature_hash] = score
@@ -77,8 +81,8 @@ class GeneticParallel(GeneticOptimization):
     def initialize_population_rand(self, x):
         self.individuals = self.rnd.integers(0, 2, size=(self.population_size, x.shape[1]))
 
-    def _select_individuals_rand(self, model, x_train, y_train, x_valid, y_valid):
-        self._evaluate_fitness(model, x_train, y_train, x_valid, y_valid)
+    def _select_individuals_rand(self, model, x_train, y_train, fold_vars, feature_no):
+        self._evaluate_fitness(model, x_train, y_train, fold_vars, feature_no)
 
         sorted_individuals_fitness = sorted(
             zip(self.individuals, self.fitness_ranks), key=lambda x: x[1], reverse=True
@@ -132,7 +136,7 @@ class GeneticParallel(GeneticOptimization):
             new_population[i + 1] = self._mutate_rand(new_population[i + 1])
         self.individuals = new_population
 
-    def fit(self, model, X_train_var, y_train_var, X_valid_var, y_valid_var, verbose=True):
+    def fit_cv(self, model, X_train_var, y_train_var, fold_vars, verbose=True):
         """
         Parameters
         ----------
@@ -176,7 +180,7 @@ class GeneticParallel(GeneticOptimization):
             if (self.timeout is not None) & (time.time() > timeout_upper_limit):
                 warnings.warn("Timeout occured")
                 break
-            self._select_individuals_rand(model, X_train_var, y_train_var, X_valid_var, y_valid_var)
+            self._select_individuals_rand(model, X_train_var, y_train_var, fold_vars, X_train.shape[1])
             self._produce_next_generation_rand()
             self.best_scores.append(self.best_score)
 

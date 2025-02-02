@@ -26,7 +26,7 @@ def compute_sol(data : np.ndarray, target : np.ndarray, is_classification : bool
         sol = client.gather(sol_future)
     return pd.Series([x for x in sol if x is not None])
 
-def compute(X_train_var, X_test_var, y_train_var, y_test_var, is_classification : bool, topk=10, pop_size=100, max_gen=100, mutation_probability=0.06, n_jobs=1, sol = None, seed=42424242424242):
+def compute(X_train_var, y_train_var, fold_vars : list, is_classification : bool, topk=10, pop_size=100, max_gen=100, mutation_probability=0.06, n_jobs=1, sol = None, seed=42424242424242):
     rnd = np.random.default_rng(seed=seed)
 
     if sol is None:
@@ -59,7 +59,7 @@ def compute(X_train_var, X_test_var, y_train_var, y_test_var, is_classification 
         solution2 = crossover(np.array(solution), offspring_size=(pop_size, num_features))
         solution2 = mutation(rnd, solution2, num_mutations=num_mutations)
         solution2 = check_sol(rnd, solution2)
-        function1_values_new = function1(solution2, X_train_var, y_train_var, X_test_var, y_test_var, is_classification)
+        function1_values_new = function1(solution2, X_train_var, y_train_var, fold_vars, is_classification)
         function2_values_new = [function2(solution2[i]) for i in range(0, pop_size)]
         non_dominated_sorted_solution2 = fast_non_dominated_sort(function1_values_new[:], function2_values_new[:])
         crowding_distance_values2 = []
@@ -84,7 +84,7 @@ def compute(X_train_var, X_test_var, y_train_var, y_test_var, is_classification 
         solution = [solution2[i] for i in new_solution]
         gen_no = gen_no + 1
 
-    function1_values = function1(np.array(solution), X_train_var, y_train_var, X_test_var, y_test_var, is_classification)
+    function1_values = function1(np.array(solution), X_train_var, y_train_var, fold_vars, is_classification)
     function2_values = [function2(solution[i]) for i in range(0, pop_size)]
     # Lets plot the final front now
 
@@ -97,8 +97,8 @@ def compute(X_train_var, X_test_var, y_train_var, y_test_var, is_classification 
     pareto_front = [ (-1 * df[index][0], df[index][1], solution[index]) for index, isOptimal in enumerate(pareto_index) if isOptimal]
     return pareto_front
 
-def reduceFeaturesMaxAcc(X_train_var, X_test_var, y_train_var, y_test_var, is_classification : bool, topk=10, pop_size=100, max_gen=100, mutation_probability=0.06, n_jobs=1, sol=None):
-    pareto_front = compute(X_train_var, X_test_var, y_train_var, y_test_var, is_classification, topk, pop_size, max_gen, mutation_probability, n_jobs, sol)
+def reduceFeaturesMaxAcc(X_train_var, y_train_var, fold_vars : list, is_classification : bool, topk=10, pop_size=100, max_gen=100, mutation_probability=0.06, n_jobs=1, sol=None):
+    pareto_front = compute(X_train_var, y_train_var, fold_vars, is_classification, topk, pop_size, max_gen, mutation_probability, n_jobs, sol)
     acc, size, config = max(pareto_front, key=itemgetter(0))
     masked_x = X_train_var.get().result().loc[:, [ i == 1 for i in config]]
     return masked_x.columns.tolist()

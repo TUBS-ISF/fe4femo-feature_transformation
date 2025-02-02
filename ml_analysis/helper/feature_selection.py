@@ -1,10 +1,12 @@
 import itertools
 import math
+from dataclasses import dataclass
 from statistics import mean
 from typing import Any
 
 import dask.distributed
 import joblib
+import numpy as np
 import pandas as pd
 from distributed import worker_client, Variable
 from mrmr import mrmr_classif, mrmr_regression
@@ -17,7 +19,7 @@ from sklearn.feature_selection import SelectKBest, mutual_info_classif, mutual_i
     SelectFromModel, VarianceThreshold, RFE
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import matthews_corrcoef, d2_absolute_error_score
-from sklearn.model_selection import KFold, cross_val_score, train_test_split
+from sklearn.model_selection import KFold, cross_val_score, train_test_split, StratifiedKFold
 from sklearn.preprocessing import RobustScaler
 from zoofs import HarrisHawkOptimization, GeneticOptimization
 
@@ -86,11 +88,11 @@ def impute_and_scale(X_train, X_test):
 
     return X_train, X_test
 
-def create_sub_tt_split(X_train, y_train, model_flatness):
-    y_flatness = model_flatness.loc[model_flatness.index.isin(y_train.index)]
-    X_train_i, X_test_i, y_train_i, y_test_i = train_test_split(X_train, y_train, test_size=0.3, random_state=42, stratify=y_flatness)
-    return X_train_i, X_test_i, y_train_i, y_test_i
-
+@dataclass(frozen=True, eq=True)
+class FoldSplit:
+    fold_no: int
+    train_index: np.ndarray
+    test_index: np.ndarray
 
 def precompute_feature_selection(features: str, isClassification : bool, X_train_orig : pd.DataFrame, X_test_orig : pd.DataFrame, y_train : pd.Series, y_test : pd.Series, model_flatness : pd.Series, threshold : float = .9, parallelism : int = 1, ):
     X_train_imputed, X_test_imputed = impute_and_scale(X_train_orig, X_test_orig)
@@ -110,12 +112,10 @@ def precompute_feature_selection(features: str, isClassification : bool, X_train
     }
 
     if features in ["harris-hawks", "genetic", "HFMOEA"]:
-        X_train_i, X_test_i, y_train_i, y_test_i = create_sub_tt_split(X_train_orig, y_train, model_flatness)
-        X_train_i, X_test_i = prefilter_features(*impute_and_scale(X_train_i, X_test_i), y_train_i, threshold)
-        ret_dict["X_train_i"] = X_train_i
-        ret_dict["X_test_i"] = X_test_i
-        ret_dict["y_train_i"] = y_train_i
-        ret_dict["y_test_i"] = y_test_i
+        cv = StratifiedKFold(n_splits=5, shuffle=False, random_state=42)
+        ret_dict["fold_no"] = cv.n_splits
+        for i, (train_index, test_index) in enumerate(cv.split(X_train, model_flatness.loc[model_flatness.index.isin(y_train.index)])):
+            ret_dict[f"index_{i}"] = FoldSplit(fold_no=i, train_index=train_index, test_index=test_index)
 
     match features:
         case "SATzilla":
@@ -169,6 +169,13 @@ def set_njobs_if_possible(estimator, n_jobs:int):
         pass
     return estimator
 
+def extract_fold_list(precomputed : dict) -> list[Variable]:
+    if "fold_no" in precomputed.keys():
+        fold_no = precomputed["fold_no"]
+        return [precomputed[f"index_{i}"] for i in range(fold_no)]
+    else:
+        raise Exception("No folds in precomputed!")
+
 def get_feature_selection(precomputed:dict, features : str, isClassification : bool, selector_args, estimator, group_dict : dict[str, list[str]], parallelism : int = 1):
     y_train = precomputed["y_train"].get().result()
     X_train = precomputed["X_train"].get().result()
@@ -200,7 +207,7 @@ def get_feature_selection(precomputed:dict, features : str, isClassification : b
             return selector.transform(X_train), selector.transform(X_test)
         case "harris-hawks":
             #deactivated
-            raise NotImplementedError() # if reactivating --> implement seed for pseudo-rng, remove from HPO
+            raise NotImplementedError() # if reactivating --> implement seed for pseudo-rng, remove from HPO, change to accept folds like genetic
 
             set_njobs_if_possible(estimator, parallelism)
             selector = HarrisHawkParallel(objective_function_zoo, **selector_args, minimize=False)
@@ -210,14 +217,14 @@ def get_feature_selection(precomputed:dict, features : str, isClassification : b
         case "genetic":
             set_njobs_if_possible(estimator, parallelism)
             selector = GeneticParallel(objective_function_zoo, **selector_args, minimize=False)
-            selected_feature_names = set(selector.fit(estimator, precomputed["X_train_i"], precomputed["y_train_i"], precomputed["X_test_i"], precomputed["y_test_i"], verbose=False))
-            intersection = list(set(selected_feature_names) & set(X_train.columns.tolist()))
-            return X_train[intersection], X_test[intersection]
+            fold_vars = extract_fold_list(precomputed)
+            selected_feature_names = set(selector.fit_cv(estimator, precomputed["X_train"], precomputed["y_train"], fold_vars, verbose=False))
+            return X_train[selected_feature_names], X_test[selected_feature_names]
         case "HFMOEA":
             selector_args["topk"] = min(max_features, selector_args["topk"])  # limit to max feature count after preprocessing
-            feature_mask = reduceFeaturesMaxAcc(precomputed["X_train_i"], precomputed["X_test_i"], precomputed["y_train_i"], precomputed["y_test_i"], **selector_args, n_jobs=parallelism, is_classification=isClassification, sol=precomputed["sol"].get().result())
-            intersection = list(set(feature_mask) & set(X_train.columns.tolist()))
-            return  X_train[ intersection], X_test[intersection]
+            fold_vars = extract_fold_list(precomputed)
+            feature_mask = reduceFeaturesMaxAcc(precomputed["X_train"], precomputed["y_train"], fold_vars, **selector_args, n_jobs=parallelism, is_classification=isClassification, sol=precomputed["sol"].get().result())
+            return  X_train[ feature_mask], X_test[feature_mask]
         case "embedded-tree":
             forest = RandomForestClassifier(n_estimators=selector_args["e_n_estimators"], max_depth=selector_args["e_max_depth"], n_jobs=parallelism, random_state=42) if isClassification else RandomForestRegressor(n_estimators=selector_args["e_n_estimators"], max_depth=selector_args["e_max_depth"], n_jobs=parallelism, random_state=42)
             forest.fit(X_train, y_train)

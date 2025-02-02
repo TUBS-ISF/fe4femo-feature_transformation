@@ -1,3 +1,5 @@
+from statistics import mean
+
 import dask
 import numpy as np
 import math
@@ -11,6 +13,8 @@ import matplotlib.pyplot as plt
 import warnings
 
 from sklearn.svm import SVC, SVR
+
+from helper.feature_selection import FoldSplit
 
 warnings.filterwarnings("ignore")
 
@@ -187,7 +191,11 @@ def crowding_distance(values1, values2, front):
         distance[k] = distance[k] + (values1[sorted2[k + 1]] - values2[sorted2[k - 1]]) / kk
     return distance
 
-def compute_score(curr_solution, X_train, y_train, X_test, y_test, is_classification):
+def compute_score(curr_solution, X_train, y_train, fold : FoldSplit, is_classification):
+    X_train = X_train.iloc[fold.train_index]
+    X_test = X_train.iloc[fold.test_index]
+    y_train= y_train.iloc[fold.train_index]
+    y_test = y_train.iloc[fold.test_index]
     reduced_train_features = reduce_features(curr_solution, X_train)
     reduced_test_features = reduce_features(curr_solution, X_test)
     X = reduced_train_features
@@ -203,13 +211,15 @@ def compute_score(curr_solution, X_train, y_train, X_test, y_test, is_classifica
         return d2_absolute_error_score(y_test, y_pred)
 
 # First function to optimize
-def function1(x, var_x_train, var_y_train, var_x_test, var_y_test, is_classification):
+def function1(x, var_x_train, var_y_train, fold_vars, is_classification):
     with worker_client() as client:
         X_train = var_x_train.get()
         y_train = var_y_train.get()
-        X_test = var_x_test.get()
-        y_test = var_y_test.get()
-        accuracies_future = [ client.submit(compute_score, curr_solution, X_train, y_train, X_test, y_test, is_classification, pure=False) for curr_solution in x ]
+
+        accuracies_future = []
+        for curr_solution in x:
+            fold_accs = [client.submit(compute_score, curr_solution, X_train, y_train, fold_var.get(), is_classification, pure=False) for fold_var in fold_vars]
+            accuracies_future.append(client.submit(mean, fold_accs))
         accuracies2 = client.gather(accuracies_future)
     return accuracies2
 
