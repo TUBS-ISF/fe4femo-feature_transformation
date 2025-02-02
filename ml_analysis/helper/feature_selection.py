@@ -167,7 +167,7 @@ def set_njobs_if_possible(estimator, n_jobs:int):
 
 def extract_fold_list(precomputed : dict) -> list[Variable]:
     if "fold_no" in precomputed.keys():
-        fold_no = precomputed["fold_no"]
+        fold_no = precomputed["fold_no"].get().result()
         return [precomputed[f"index_{i}"] for i in range(fold_no)]
     else:
         raise Exception("No folds in precomputed!")
