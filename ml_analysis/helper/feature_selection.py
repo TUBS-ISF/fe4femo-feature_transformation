@@ -108,7 +108,7 @@ def precompute_feature_selection(features: str, isClassification : bool, X_train
     }
 
     if features in ["harris-hawks", "genetic", "HFMOEA"]:
-        cv = StratifiedKFold(n_splits=5, shuffle=False, random_state=42)
+        cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
         ret_dict["fold_no"] = cv.n_splits
         for i, (train_index, test_index) in enumerate(cv.split(X_train, model_flatness.loc[model_flatness.index.isin(y_train.index)])):
             ret_dict[f"index_{i}"] = FoldSplit(fold_no=i, train_index=train_index, test_index=test_index)
