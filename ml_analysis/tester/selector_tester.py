@@ -24,9 +24,9 @@ if __name__ == '__main__':
     hpo_its = "50"
     home = os.getenv('HOME', "/home/ul/ul_student/ul_ppm61")
     Path(home+"/"+outputdir).mkdir(parents=True, exist_ok=True)
-    time="1:0:0"
-    task_no = 256
     for feature in features:
+        time = "1:0:0"
+        task_no = 256
         name = f"{task}#{feature}#{model}#True#True#{hpo_its}#{i}"
         if feature == "genetic":
             time="3:0:0"
