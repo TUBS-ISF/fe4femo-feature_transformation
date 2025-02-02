@@ -14,7 +14,7 @@ import warnings
 
 from sklearn.svm import SVC, SVR
 
-from helper.feature_selection import FoldSplit
+from helper.data_classes import FoldSplit
 
 warnings.filterwarnings("ignore")
 

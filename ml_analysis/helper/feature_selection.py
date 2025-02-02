@@ -30,6 +30,7 @@ from external.multisurf_parallel import MultiSURF_Parallel
 from external.skfeature.NDFS import ndfs
 from external.skfeature.sparse_learning import feature_ranking
 from external.svd_entropy import keep_high_contrib_features
+from helper.data_classes import FoldSplit
 from helper.load_dataset import filter_SATzilla, filter_SATfeatPy, filter_FMBA, filter_FMChara
 
 def transform_dict_to_var_dict(dictionary : dict) -> dict:
@@ -88,11 +89,6 @@ def impute_and_scale(X_train, X_test):
 
     return X_train, X_test
 
-@dataclass(frozen=True, eq=True)
-class FoldSplit:
-    fold_no: int
-    train_index: np.ndarray
-    test_index: np.ndarray
 
 def precompute_feature_selection(features: str, isClassification : bool, X_train_orig : pd.DataFrame, X_test_orig : pd.DataFrame, y_train : pd.Series, y_test : pd.Series, model_flatness : pd.Series, threshold : float = .9, parallelism : int = 1, ):
     X_train_imputed, X_test_imputed = impute_and_scale(X_train_orig, X_test_orig)
