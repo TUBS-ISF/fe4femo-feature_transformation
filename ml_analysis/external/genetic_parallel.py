@@ -26,7 +26,7 @@ class GeneticParallel(GeneticOptimization):
             **kwargs,
     ):
         super().__init__(objective_function, n_iteration, timeout, population_size, selective_pressure, elitism,
-                         mutation_rate, minimize, logger, kwargs)
+                         mutation_rate, minimize, logger, **kwargs)
         self.rnd = np.random.default_rng(seed=seed)
 
     @staticmethod
