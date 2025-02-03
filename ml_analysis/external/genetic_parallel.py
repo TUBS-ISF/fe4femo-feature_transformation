@@ -5,8 +5,28 @@ from statistics import mean
 import numpy as np
 import scipy
 from distributed import worker_client
+from joblib import Parallel, delayed
 from zoofs import GeneticOptimization
 
+
+def _negatable_objective(objective_function, model, X_train_orig, y_train_orig, fold, chosen_features, kwargs,
+                         minimize: bool):
+    X_train = X_train_orig.iloc[fold.train_index]
+    X_test = X_train_orig.iloc[fold.test_index]
+    y_train = y_train_orig.iloc[fold.train_index]
+    y_test = y_train_orig.iloc[fold.test_index]
+
+    X_train_masked = X_train.iloc[:, chosen_features]
+    X_test_masked = X_test.iloc[:, chosen_features]
+    score = objective_function(model, X_train_masked, y_train, X_test_masked, y_test, **kwargs)
+    if minimize:
+        score = -score
+    return score
+
+def compute_cv(objective_function, model, X_train_orig, y_train_orig, folds, chosen_features, kwargs,
+                         minimize: bool, n_jobs=1):
+    scores = Parallel(n_jobs=n_jobs)(delayed(_negatable_objective)(objective_function, model, X_train_orig, y_train_orig, fold, chosen_features, kwargs, minimize) for fold in folds)
+    return mean(scores)
 
 
 class GeneticParallel(GeneticOptimization):
@@ -23,25 +43,13 @@ class GeneticParallel(GeneticOptimization):
             minimize=True,
             logger=None,
             seed=424242424242424424,
+            parallelism=1,
             **kwargs,
     ):
         super().__init__(objective_function, n_iteration, timeout, population_size, selective_pressure, elitism,
                          mutation_rate, minimize, logger, **kwargs)
         self.rnd = np.random.default_rng(seed=seed)
-
-    @staticmethod
-    def _negatable_objective(objective_function, model, X_train_orig, y_train_orig, fold, chosen_features, kwargs, minimize: bool):
-        X_train = X_train_orig.iloc[fold.train_index]
-        X_test = X_train_orig.iloc[fold.test_index]
-        y_train = y_train_orig.iloc[fold.train_index]
-        y_test = y_train_orig.iloc[fold.test_index]
-
-        X_train_masked = X_train.iloc[:, chosen_features]
-        X_test_masked = X_test.iloc[:, chosen_features]
-        score = objective_function(model, X_train_masked, y_train, X_test_masked, y_test, **kwargs)
-        if minimize:
-            score = -score
-        return score
+        self.parallelism = parallelism
 
     def _evaluate_fitness(self, model, x_train_var, y_train_var, fold_vars, feature_no, particle_swarm_flag=0, dragon_fly_flag=0):
         future_scores = []
@@ -49,6 +57,8 @@ class GeneticParallel(GeneticOptimization):
         with worker_client() as client:
             x_train = x_train_var.get()
             y_train = y_train_var.get()
+
+            folds = [x.get() for x in fold_vars]
 
             for individual in self.individuals:
                 chosen_features = [index for index in range(feature_no) if individual[index] == 1]
@@ -58,9 +68,8 @@ class GeneticParallel(GeneticOptimization):
                 if feature_hash in self.feature_score_hash.keys():
                     score = self.feature_score_hash[feature_hash]
                 else:
-                    partial_score_futures = [client.submit(self._negatable_objective, self.objective_function, model, x_train,
-                                              y_train, fold_var.get(), chosen_features, self.kwargs, self.minimize, pure=False) for fold_var in fold_vars]
-                    score = client.submit(mean, partial_score_futures)
+                    score = client.submit(compute_cv, self.objective_function, model, x_train,
+                                              y_train, folds, chosen_features, self.kwargs, self.minimize, pure=False)
                 future_scores.append(score)
             scores = client.gather(future_scores, direct=True)
 

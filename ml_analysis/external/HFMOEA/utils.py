@@ -5,6 +5,7 @@ import numpy as np
 import math
 import sklearn.svm
 from distributed import worker_client
+from joblib import Parallel, delayed
 from sklearn.metrics import classification_report, balanced_accuracy_score, confusion_matrix, accuracy_score, \
     matthews_corrcoef, d2_absolute_error_score
 from sklearn.preprocessing import label_binarize
@@ -210,16 +211,21 @@ def compute_score(curr_solution, X_train_orig, y_train_orig, fold : FoldSplit, i
     else:
         return d2_absolute_error_score(y_test, y_pred)
 
+def compute_cv(curr_solution, X_train_orig, y_train_orig, is_classification, folds, n_jobs =1):
+    scores = Parallel(n_jobs=n_jobs)(delayed(compute_score)(curr_solution, X_train_orig, y_train_orig, fold, is_classification) for fold in folds)
+    return mean(scores)
+
 # First function to optimize
-def function1(x, var_x_train, var_y_train, fold_vars, is_classification):
+def function1(x, var_x_train, var_y_train, fold_vars, is_classification, n_jobs = 1):
     with worker_client() as client:
         X_train = var_x_train.get()
         y_train = var_y_train.get()
 
+        folds = [x.get() for x in fold_vars]
+
         accuracies_future = []
         for curr_solution in x:
-            fold_accs = [client.submit(compute_score, curr_solution, X_train, y_train, fold_var.get(), is_classification, pure=False) for fold_var in fold_vars]
-            accuracies_future.append(client.submit(mean, fold_accs))
+            accuracies_future.append(client.submit(compute_cv, curr_solution, X_train, y_train, is_classification, folds, n_jobs, pure=False))
         accuracies2 = client.gather(accuracies_future, direct=True)
     return accuracies2
 

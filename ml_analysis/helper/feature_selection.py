@@ -205,14 +205,12 @@ def get_feature_selection(precomputed:dict, features : str, isClassification : b
             #deactivated
             raise NotImplementedError() # if reactivating --> implement seed for pseudo-rng, remove from HPO, change to accept folds like genetic
 
-            set_njobs_if_possible(estimator, parallelism)
             selector = HarrisHawkParallel(objective_function_zoo, **selector_args, minimize=False)
             selected_feature_names = set(selector.fit(estimator, precomputed["X_train_i"], precomputed["y_train_i"], precomputed["X_test_i"], precomputed["y_test_i"], verbose=False))
             intersection = list(set(selected_feature_names) & set(X_train.columns.tolist()))
             return X_train[intersection], X_test[intersection]
         case "genetic":
-            set_njobs_if_possible(estimator, parallelism)
-            selector = GeneticParallel(objective_function_zoo, **selector_args, minimize=False)
+            selector = GeneticParallel(objective_function_zoo, **selector_args, parallelism=parallelism, minimize=False)
             fold_vars = extract_fold_list(precomputed)
             selected_feature_names = selector.fit_cv(estimator, precomputed["X_train"], precomputed["y_train"], fold_vars, verbose=False)
             return X_train[selected_feature_names], X_test[selected_feature_names]
