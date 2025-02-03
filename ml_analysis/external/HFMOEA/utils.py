@@ -223,9 +223,7 @@ def function1(x, var_x_train, var_y_train, fold_vars, is_classification, n_jobs 
 
         folds = [x.get() for x in fold_vars]
 
-        accuracies_future = []
-        for curr_solution in x:
-            accuracies_future.append(client.submit(compute_cv, curr_solution, X_train, y_train, is_classification, folds, n_jobs, pure=False))
+        accuracies_future = client.map(compute_cv, x, folds=folds, X_train_orig=X_train, y_train_orig=y_train, is_classification=is_classification, n_jobs=n_jobs, pure=False)
         accuracies2 = client.gather(accuracies_future, direct=True)
     return accuracies2
 
