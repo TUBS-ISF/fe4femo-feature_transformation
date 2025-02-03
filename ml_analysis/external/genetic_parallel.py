@@ -30,11 +30,11 @@ class GeneticParallel(GeneticOptimization):
         self.rnd = np.random.default_rng(seed=seed)
 
     @staticmethod
-    def _negatable_objective(objective_function, model, X_train, y_train, fold, chosen_features, kwargs, minimize: bool):
-        X_train = X_train.iloc[fold.train_index]
-        X_test = X_train.iloc[fold.test_index]
-        y_train = y_train.iloc[fold.train_index]
-        y_test = y_train.iloc[fold.test_index]
+    def _negatable_objective(objective_function, model, X_train_orig, y_train_orig, fold, chosen_features, kwargs, minimize: bool):
+        X_train = X_train_orig.iloc[fold.train_index]
+        X_test = X_train_orig.iloc[fold.test_index]
+        y_train = y_train_orig.iloc[fold.train_index]
+        y_test = y_train_orig.iloc[fold.test_index]
 
         X_train_masked = X_train.iloc[:, chosen_features]
         X_test_masked = X_test.iloc[:, chosen_features]
