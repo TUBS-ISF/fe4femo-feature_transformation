@@ -220,7 +220,7 @@ def function1(x, var_x_train, var_y_train, fold_vars, is_classification):
         for curr_solution in x:
             fold_accs = [client.submit(compute_score, curr_solution, X_train, y_train, fold_var.get(), is_classification, pure=False) for fold_var in fold_vars]
             accuracies_future.append(client.submit(mean, fold_accs))
-        accuracies2 = client.gather(accuracies_future)
+        accuracies2 = client.gather(accuracies_future, direct=True)
     return accuracies2
 
 

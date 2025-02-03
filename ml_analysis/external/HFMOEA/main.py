@@ -20,10 +20,10 @@ from matplotlib.ticker import MaxNLocator
 def compute_sol(data : np.ndarray, target : np.ndarray, is_classification : bool, n_jobs : int = 1):
     functions = [MI, SCC, Relief, PCC, chi_square, info_gain, MAD, Dispersion_ratio, feature_selection_sim, Fisher_score]
     with worker_client() as client:
-        data = client.scatter(data)
-        target = client.scatter(target)
+        data = client.scatter(data, direct=True)
+        target = client.scatter(target, direct=True)
         sol_future = [ client.submit(fun, data, target, is_classification) for fun in functions]
-        sol = client.gather(sol_future)
+        sol = client.gather(sol_future, direct=True)
     return pd.Series([x for x in sol if x is not None])
 
 def compute(X_train_var, y_train_var, fold_vars : list, is_classification : bool, topk=10, pop_size=100, max_gen=100, mutation_probability=0.06, n_jobs=1, sol = None, seed=42424242424242):

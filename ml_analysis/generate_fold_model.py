@@ -75,7 +75,7 @@ def objective(trial: optuna.Trial, folds, features, model, should_modelHPO, is_c
         futures = [
             compute_fold(client, model, features, is_classification, model_config, selector_config, feature_groups, future_precompute, cores)
             for i, future_precompute in folds.items()]
-        results = client.gather(futures)
+        results = client.gather(futures, direct=True)
     return mean(results)
 
 def main(pathData: str, pathOutput: str, features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, foldNo : int):
@@ -108,7 +108,7 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
     cores = int(os.getenv("OMP_NUM_THREADS", "1"))
     with (SLURMMemRunner(scheduler_file=str(scheduler_path)+"/scheduler-{job_id}.json",
                       worker_options=worker_options, scheduler_options=scheduler_options) as runner):
-        with Client(runner) as client:
+        with Client(runner, direct_to_workers=True) as client:
             with (
                 performance_report(filename=run_config["path_output"] + "/" + run_config["name"] + ".html"),
                 get_task_stream() as task_stream
@@ -129,7 +129,7 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
 
                 kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
                 model_flatness = get_flat_models(X_train)
-                flatness_future = client.scatter(model_flatness)
+                flatness_future = client.scatter(model_flatness, direct=True)
 
                 splits = kf.split(X_train, model_flatness)
 

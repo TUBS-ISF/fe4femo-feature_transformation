@@ -62,7 +62,7 @@ class GeneticParallel(GeneticOptimization):
                                               y_train, fold_var.get(), chosen_features, self.kwargs, self.minimize, pure=False) for fold_var in fold_vars]
                     score = client.submit(mean, partial_score_futures)
                 future_scores.append(score)
-            scores = client.gather(future_scores)
+            scores = client.gather(future_scores, direct=True)
 
         for i, score in enumerate(scores):
             individual = self.individuals[i]

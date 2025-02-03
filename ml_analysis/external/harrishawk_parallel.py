@@ -46,7 +46,7 @@ class HarrisHawkParallel(HarrisHawkOptimization):
                                               y_train, x_valid, y_valid, chosen_features, self.kwargs, self.minimize)
                 future_tuple = (feature_hash, individual, score)
                 future_scores.append(future_tuple)
-            scores = client.gather(future_scores)
+            scores = client.gather(future_scores, direct=True)
 
         return_scores = []
         for feature_hash, individual, score in scores:

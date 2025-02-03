@@ -38,7 +38,7 @@ def transform_dict_to_var_dict(dictionary : dict) -> dict:
     with worker_client() as client:
         for k,v in dictionary.items():
             var = Variable()
-            future = client.scatter(v)
+            future = client.scatter(v, direct=True)
             var.set(future)
             ret_dict[k] = var
     return ret_dict
@@ -214,7 +214,7 @@ def get_feature_selection(precomputed:dict, features : str, isClassification : b
             set_njobs_if_possible(estimator, parallelism)
             selector = GeneticParallel(objective_function_zoo, **selector_args, minimize=False)
             fold_vars = extract_fold_list(precomputed)
-            selected_feature_names = set(selector.fit_cv(estimator, precomputed["X_train"], precomputed["y_train"], fold_vars, verbose=False))
+            selected_feature_names = selector.fit_cv(estimator, precomputed["X_train"], precomputed["y_train"], fold_vars, verbose=False)
             return X_train[selected_feature_names], X_test[selected_feature_names]
         case "HFMOEA":
             selector_args["topk"] = min(max_features, selector_args["topk"])  # limit to max feature count after preprocessing

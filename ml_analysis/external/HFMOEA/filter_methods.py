@@ -224,11 +224,11 @@ def MI(data, target, is_classification):
     weight_class = 0.7  # weightage provided to feature-class correlation
 
     with worker_client() as client:
-        fv = client.scatter(feature_values)
+        fv = client.scatter(feature_values, direct=True)
         MI_future = [client.submit(compute_MI_mod, fv, ind, is_classification) for ind in range(num_features)]
         MI_val_future = client.submit(compute_MI, fv, target, is_classification)
-        MI_sol = client.gather(MI_future)
-        MI_values_class = client.gather(MI_val_future)
+        MI_sol = client.gather(MI_future, direct=True)
+        MI_values_class = client.gather(MI_val_future, direct=True)
     MI_values_feat = np.array(MI_sol)
 
     # produce scores and ranks from the information matrix
