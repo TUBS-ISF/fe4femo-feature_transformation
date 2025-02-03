@@ -58,13 +58,13 @@ def train_model(model, is_classification, cores, model_config, X_train_test, pre
     model_instance.fit(X_train, y_train)
     return model_instance
 
-def do_feature_selection(model, is_classification, model_config, precomputed, features, selector_config, feature_groups, cores):
+def do_feature_selection(model, is_classification, model_config, precomputed, features, selector_config, feature_groups, cores, verbose = False):
     model_instance_selector = get_model(model, is_classification, 1, model_config )
-    return get_feature_selection(precomputed, features, is_classification, selector_config, model_instance_selector, feature_groups, parallelism=cores)
+    return get_feature_selection(precomputed, features, is_classification, selector_config, model_instance_selector, feature_groups, parallelism=cores, verbose=verbose)
 
-def compute_fold(client, model, features, is_classification, model_config, selector_config, feature_groups, precomputed, cores : int)  -> float:
+def compute_fold(client, model, features, is_classification, model_config, selector_config, feature_groups, precomputed, cores : int, verbose = False)  -> float:
     # feature selection + model training
-    X_train_test = client.submit(do_feature_selection, model, is_classification, model_config, precomputed, features, selector_config, feature_groups, cores,pure=False)
+    X_train_test = client.submit(do_feature_selection, model, is_classification, model_config, precomputed, features, selector_config, feature_groups, cores, verbose,pure=False)
     model_instance = client.submit(train_model, model, is_classification, cores, model_config, X_train_test, precomputed, pure=False)
     return client.submit(eval_model_performance, model_instance, X_train_test, precomputed, is_classification, pure=False)
 
@@ -148,6 +148,7 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
 
                 feature_groups = load_feature_groups(pathData)
 
+                verbose = False
                 if selectorHPO:
                     objective_function = lambda trial: objective(trial, folds, features, model, modelHPO, is_classification, feature_groups, feature_count, cores)
 
@@ -178,12 +179,13 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                 else:
                     model_config = {}
                     selector_config = {}
+                    verbose=True
 
                 model_instance_selector = get_model(model, is_classification, 1, model_config)
                 start_FS = time.time()
                 precomputed = precompute_feature_selection(features, is_classification, X_train, X_test, y_train, y_test, model_flatness, parallelism=cores)
                 precomputed = client.submit(transform_dict_to_var_dict, precomputed)
-                fs_future = client.submit(get_feature_selection, precomputed.result(), features, is_classification, selector_config, model_instance_selector, feature_groups, parallelism=cores, pure=False)
+                fs_future = client.submit(get_feature_selection, precomputed.result(), features, is_classification, selector_config, model_instance_selector, feature_groups, parallelism=cores, verbose=verbose, pure=False)
                 X_train, X_test = fs_future.result()
                 end_FS = time.time()
                 model_instance = get_model(model, is_classification, cores, model_config)

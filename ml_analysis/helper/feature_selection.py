@@ -172,7 +172,7 @@ def extract_fold_list(precomputed : dict) -> list[Variable]:
     else:
         raise Exception("No folds in precomputed!")
 
-def get_feature_selection(precomputed:dict, features : str, isClassification : bool, selector_args, estimator, group_dict : dict[str, list[str]], parallelism : int = 1):
+def get_feature_selection(precomputed:dict, features : str, isClassification : bool, selector_args, estimator, group_dict : dict[str, list[str]], parallelism : int = 1, verbose = False):
     y_train = precomputed["y_train"].get().result()
     X_train = precomputed["X_train"].get().result()
     X_test = precomputed["X_test"].get().result()
@@ -212,7 +212,7 @@ def get_feature_selection(precomputed:dict, features : str, isClassification : b
         case "genetic":
             selector = GeneticParallel(objective_function_zoo, **selector_args, parallelism=parallelism, minimize=False)
             fold_vars = extract_fold_list(precomputed)
-            selected_feature_names = selector.fit_cv(estimator, precomputed["X_train"], precomputed["y_train"], fold_vars, verbose=False)
+            selected_feature_names = selector.fit_cv(estimator, precomputed["X_train"], precomputed["y_train"], fold_vars, verbose=verbose)
             return X_train[selected_feature_names], X_test[selected_feature_names]
         case "HFMOEA":
             selector_args["topk"] = min(max_features, selector_args["topk"])  # limit to max feature count after preprocessing
