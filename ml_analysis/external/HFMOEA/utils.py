@@ -191,11 +191,11 @@ def crowding_distance(values1, values2, front):
         distance[k] = distance[k] + (values1[sorted2[k + 1]] - values2[sorted2[k - 1]]) / kk
     return distance
 
-def compute_score(curr_solution, X_train, y_train, fold : FoldSplit, is_classification):
-    X_train = X_train.iloc[fold.train_index]
-    X_test = X_train.iloc[fold.test_index]
-    y_train= y_train.iloc[fold.train_index]
-    y_test = y_train.iloc[fold.test_index]
+def compute_score(curr_solution, X_train_orig, y_train_orig, fold : FoldSplit, is_classification):
+    X_train = X_train_orig.iloc[fold.train_index]#todo out-of-bounds error
+    X_test = X_train_orig.iloc[fold.test_index]
+    y_train= y_train_orig.iloc[fold.train_index]
+    y_test = y_train_orig.iloc[fold.test_index]
     reduced_train_features = reduce_features(curr_solution, X_train)
     reduced_test_features = reduce_features(curr_solution, X_test)
     X = reduced_train_features
