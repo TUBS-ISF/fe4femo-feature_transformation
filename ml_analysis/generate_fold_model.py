@@ -185,8 +185,8 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
 
                 model_instance_selector = get_model(model, is_classification, 1, model_config)
                 start_FS = time.time()
-                precomputed = precompute_feature_selection(features, is_classification, X_train, X_test, y_train, y_test, model_flatness, parallelism=cores)
-                precomputed = client.submit(transform_dict_to_var_dict, precomputed)
+                precomputed = client.submit(precompute_feature_selection, features, is_classification, X_train, X_test, y_train, y_test, model_flatness, parallelism=cores, pure=False)
+                precomputed = client.submit(transform_dict_to_var_dict, precomputed, pure=False)
                 fs_future = client.submit(get_feature_selection, precomputed.result(), features, is_classification, selector_config, model_instance_selector, feature_groups, parallelism=cores, verbose=verbose, pure=False)
                 X_train, X_test = fs_future.result()
                 end_FS = time.time()
