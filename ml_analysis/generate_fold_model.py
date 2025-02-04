@@ -148,8 +148,8 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
 
                 feature_groups = load_feature_groups(pathData)
 
-                best_params = None
-                journal_path = None
+                best_params = {}
+                journal_path = "no journal"
                 verbose = False
                 if selectorHPO:
                     objective_function = lambda trial: objective(trial, folds, features, model, modelHPO, is_classification, feature_groups, feature_count, cores)
