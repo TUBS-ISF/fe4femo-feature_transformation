@@ -60,7 +60,7 @@ def train_model(model, is_classification, cores, model_config, X_train_test, pre
 
 def do_feature_selection(model, is_classification, model_config, precomputed, features, selector_config, feature_groups, cores, verbose = False):
     model_instance_selector = get_model(model, is_classification, 1, model_config )
-    return get_feature_selection(precomputed, features, is_classification, selector_config, model_instance_selector, feature_groups, parallelism=cores, verbose=verbose)
+    return get_feature_selection(precomputed, features, is_classification, selector_config, model_instance_selector, feature_groups, parallelism=cores, verbose=verbose, dask_parallel=False)
 
 def compute_fold(client, model, features, is_classification, model_config, selector_config, feature_groups, precomputed, cores : int, verbose = False)  -> float:
     # feature selection + model training
@@ -187,7 +187,7 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                 start_FS = time.time()
                 precomputed = client.submit(precompute_feature_selection, features, is_classification, X_train, X_test, y_train, y_test, model_flatness, parallelism=cores, pure=False)
                 precomputed = client.submit(transform_dict_to_var_dict, precomputed, pure=False)
-                fs_future = client.submit(get_feature_selection, precomputed.result(), features, is_classification, selector_config, model_instance_selector, feature_groups, parallelism=cores, verbose=verbose, pure=False)
+                fs_future = client.submit(get_feature_selection, precomputed.result(), features, is_classification, selector_config, model_instance_selector, feature_groups, parallelism=cores, verbose=verbose, dask_parallel=True, pure=False)
                 X_train, X_test = fs_future.result()
                 end_FS = time.time()
                 model_instance = get_model(model, is_classification, cores, model_config)

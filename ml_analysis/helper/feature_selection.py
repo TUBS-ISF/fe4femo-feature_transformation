@@ -172,7 +172,7 @@ def extract_fold_list(precomputed : dict) -> list[Variable]:
     else:
         raise Exception("No folds in precomputed!")
 
-def get_feature_selection(precomputed:dict, features : str, isClassification : bool, selector_args, estimator, group_dict : dict[str, list[str]], parallelism : int = 1, verbose = False):
+def get_feature_selection(precomputed:dict, features : str, isClassification : bool, selector_args, estimator, group_dict : dict[str, list[str]], parallelism : int = 1, verbose = False, dask_parallel : bool = False):
     y_train = precomputed["y_train"].get().result()
     X_train = precomputed["X_train"].get().result()
     X_test = precomputed["X_test"].get().result()
@@ -217,7 +217,7 @@ def get_feature_selection(precomputed:dict, features : str, isClassification : b
         case "HFMOEA":
             selector_args["topk"] = min(max_features, selector_args["topk"])  # limit to max feature count after preprocessing
             fold_vars = extract_fold_list(precomputed)
-            feature_mask = reduceFeaturesMaxAcc(precomputed["X_train"], precomputed["y_train"], fold_vars, **selector_args, n_jobs=parallelism, is_classification=isClassification, sol=precomputed["sol"].get().result())
+            feature_mask = reduceFeaturesMaxAcc(precomputed["X_train"], precomputed["y_train"], fold_vars, **selector_args, n_jobs=parallelism, is_classification=isClassification, sol=precomputed["sol"].get().result(), dask_parallel=dask_parallel)
             return  X_train[ feature_mask], X_test[feature_mask]
         case "embedded-tree":
             forest = RandomForestClassifier(n_estimators=selector_args["e_n_estimators"], max_depth=selector_args["e_max_depth"], n_jobs=parallelism, random_state=42) if isClassification else RandomForestRegressor(n_estimators=selector_args["e_n_estimators"], max_depth=selector_args["e_max_depth"], n_jobs=parallelism, random_state=42)

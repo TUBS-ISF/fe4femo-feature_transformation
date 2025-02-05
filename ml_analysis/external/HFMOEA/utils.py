@@ -5,7 +5,7 @@ import numpy as np
 import math
 import sklearn.svm
 from distributed import worker_client
-from joblib import Parallel, delayed
+from joblib import Parallel, delayed, parallel_config
 from sklearn.metrics import classification_report, balanced_accuracy_score, confusion_matrix, accuracy_score, \
     matthews_corrcoef, d2_absolute_error_score
 from sklearn.preprocessing import label_binarize
@@ -212,19 +212,28 @@ def compute_score(curr_solution, X_train_orig, y_train_orig, fold : FoldSplit, i
         return d2_absolute_error_score(y_test, y_pred)
 
 def compute_cv(curr_solution, X_train_orig, y_train_orig, is_classification, folds, n_jobs =1):
-    scores = Parallel(n_jobs=n_jobs)(delayed(compute_score)(curr_solution, X_train_orig, y_train_orig, fold, is_classification) for fold in folds)
+    if n_jobs == 1:
+        scores = [compute_score(curr_solution, X_train_orig, y_train_orig, fold, is_classification) for fold in folds]
+    else:
+        scores = Parallel(n_jobs=n_jobs)(delayed(compute_score)(curr_solution, X_train_orig, y_train_orig, fold, is_classification) for fold in folds)
     return mean(scores)
 
 # First function to optimize
-def function1(x, var_x_train, var_y_train, fold_vars, is_classification, n_jobs = 1):
-    with worker_client() as client:
-        X_train = var_x_train.get()
-        y_train = var_y_train.get()
+def function1(x, var_x_train, var_y_train, fold_vars, is_classification, n_jobs = 1, dask_parallel: bool = False):
+    if dask_parallel:
+        with worker_client() as client:
+            X_train = var_x_train.get()
+            y_train = var_y_train.get()
 
-        folds = [x.get() for x in fold_vars]
+            folds = [x.get() for x in fold_vars]
 
-        accuracies_future = client.map(compute_cv, x, folds=folds, X_train_orig=X_train, y_train_orig=y_train, is_classification=is_classification, n_jobs=n_jobs, pure=False)
-        accuracies2 = client.gather(accuracies_future, direct=True)
+            accuracies_future = client.map(compute_cv, x, folds=folds, X_train_orig=X_train, y_train_orig=y_train, is_classification=is_classification, n_jobs=n_jobs, pure=False)
+            accuracies2 = client.gather(accuracies_future, direct=True)
+    else:
+        folds = [x.get().result() for x in fold_vars]
+        X_train = var_x_train.get().result()
+        y_train = var_y_train.get().result()
+        accuracies2 = Parallel(n_jobs=n_jobs)(delayed(compute_cv)(curr_solution, X_train, y_train, is_classification, folds, 1) for curr_solution in x)
     return accuracies2
 
 
