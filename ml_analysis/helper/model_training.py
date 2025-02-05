@@ -11,6 +11,8 @@ from sklearn.svm import SVC, SVR
 def get_model(model : str, isClassification : bool, parallelism : int = 1, model_args=None):
     if model_args is None:
         model_args = {}
+    if "hidden_layer_sizes" in model_args:
+        model_args["hidden_layer_sizes"] = [int(x) for x in model_args["hidden_layer_sizes"].split("#")]
     model_args["n_jobs"] = parallelism
     model_args["random_state"] = 42
     match model:
@@ -72,7 +74,7 @@ def get_model_HPO_space(model : str, trial : Trial, isClassification : bool) -> 
             }
         case "MLP":
             return {
-                "hidden_layer_sizes" : trial.suggest_categorical("hidden_layer_sizes", [[100], [100, 50, 10, 50], [20, 20, 20], [50, 10, 50]]),
+                "hidden_layer_sizes" : trial.suggest_categorical("hidden_layer_sizes", ["100", "100#50#10#50", "100#50#10", "20#20#20", "50#10#50", "100#25#11#7#5#3"]),
                 "activation" : trial.suggest_categorical("activation", ["relu", "tanh", "logistic", "identity"]),
                 "alpha" : trial.suggest_float("alpha", .0001, .05),
             }
