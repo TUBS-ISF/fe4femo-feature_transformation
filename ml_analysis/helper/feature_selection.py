@@ -76,7 +76,7 @@ def prefilter_features(X_train_in : pd.DataFrame, X_test_in : pd.DataFrame, y_tr
 
 def impute_and_scale(X_train, X_test):
     imputer = SimpleImputer(keep_empty_features=False, missing_values=pd.NA)
-    scaler = RobustScaler()
+    scaler = RobustScaler(with_centering=True, with_scaling=True, unit_variance=True)
 
     imputer.set_output(transform="pandas")
     scaler.set_output(transform="pandas")

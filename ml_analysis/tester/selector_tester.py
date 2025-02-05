@@ -37,4 +37,5 @@ if __name__ == '__main__':
             arguments.extend(["--modelHPO", "--selectorHPO"])
         arguments.extend([pathData, outputdir])
         print(f"Submit fold {i} with arguments:\n {arguments}")
-        subprocess.run(arguments)
+        print(" ".join(arguments))
+        #subprocess.run(arguments)
