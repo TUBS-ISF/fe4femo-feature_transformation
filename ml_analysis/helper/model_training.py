@@ -54,7 +54,10 @@ def get_model_HPO_space(model : str, trial : Trial, isClassification : bool) -> 
         case "SVM":
              params = {
                 "kernel" : trial.suggest_categorical("kernel", ["linear", "rbf", "sigmoid", "poly"]),
-                "C" : trial.suggest_float("C", .1, 100),
+                "C" : trial.suggest_float("C", 10e-5, 10e5, log=True),
+                "gamma" : trial.suggest_float("gamma", 10e-5, 10e5, log=True),
+                "cache_size" : 750, # use mem better
+                "max_iter": 10000 #set limit to limit max runtime
              }
              if params["kernel"] == "poly":
                  params["degree"] = trial.suggest_int("degree", 1, 5)
