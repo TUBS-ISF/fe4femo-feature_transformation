@@ -78,10 +78,13 @@ def objective(trial: optuna.Trial, folds, features, model, should_modelHPO, is_c
         results = client.gather(futures, direct=True)
     return mean(results)
 
+def create_run_name(features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, foldNo : int) -> str:
+    return f"{task}#{features}#{model}#{modelHPO}#{selectorHPO}#{hpo_its}#{foldNo}"
+
 def main(pathData: str, pathOutput: str, features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, foldNo : int):
     Path(pathOutput).mkdir(parents=True, exist_ok=True)
     run_config = {
-        "name": f"{task}#{features}#{model}#{modelHPO}#{selectorHPO}#{hpo_its}#{foldNo}",
+        "name": create_run_name(features, task, model, modelHPO, selectorHPO, hpo_its, foldNo),
         "path_data": pathData,
         "path_output": pathOutput,
         "features": features,
