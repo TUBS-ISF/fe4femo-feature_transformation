@@ -203,7 +203,7 @@ def compute_score(curr_solution, X_train_orig, y_train_orig, fold : FoldSplit, i
     y = y_train
 
     ## SVM CLASSIFIER ##
-    SVM = SVC(kernel='rbf', gamma='scale', C=5000, random_state=42) if is_classification else SVR(kernel='rbf', gamma='scale', C=5000)
+    SVM = SVC(kernel='rbf', gamma='scale', C=5000, random_state=42, cache_size=750, max_iter=10000) if is_classification else SVR(kernel='rbf', gamma='scale', C=5000, cache_size=750, max_iter=10000)
     SVM.fit(X, y)
     y_pred = SVM.predict(reduced_test_features)
     if is_classification:
