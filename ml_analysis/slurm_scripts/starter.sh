@@ -8,7 +8,7 @@ data_path="raphael-dunkel-master/data/"
 mkdir -p $HOME/$output_path
 
 partition="${1:-multiple_il}"
-maxIt=$(wc -l < $inputpath)
+maxIt=$(wc -l < "$config")
 maxConcurrent=50
 
 tmpQUEUE=$(squeue | grep -c '^')
