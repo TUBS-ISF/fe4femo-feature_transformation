@@ -1,10 +1,11 @@
 #!/bin/bash
 
 config=$HOME/fe4femo/ml_analysis/slurm_scripts/config.txt
-output_path="fe4femo/ml_analysis/out/"
+output_path="fe4femo/ml_analysis/out/main"
 script_path="$HOME/fe4femo/ml_analysis/slurm_scripts/run.sh"
 data_path="raphael-dunkel-master/data/"
 
+mkdir -p $HOME/$output_path
 
 partition="${1:-multiple_il}"
 maxIt=$(wc -l < $inputpath)
