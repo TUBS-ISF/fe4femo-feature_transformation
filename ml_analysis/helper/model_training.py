@@ -77,9 +77,11 @@ def get_model_HPO_space(model : str, trial : Trial, isClassification : bool) -> 
             }
         case "MLP":
             return {
-                "hidden_layer_sizes" : trial.suggest_categorical("hidden_layer_sizes", ["100", "100#50#10#50", "100#50#10", "20#20#20", "50#10#50", "100#25#11#7#5#3"]),
+                "hidden_layer_sizes" : trial.suggest_categorical("hidden_layer_sizes", ["100", "100#50#10#50", "100#50#10", "20#20#20", "50#10#50", "100#25#11#7#5#3", "200#100#50#20#11#8#5#3#5", "200#100#50#20", "200#100#10#100"]),
                 "activation" : trial.suggest_categorical("activation", ["relu", "tanh", "logistic", "identity"]),
-                "alpha" : trial.suggest_float("alpha", .0001, .05),
+                "alpha" : trial.suggest_float("alpha", 10e-7, 10e2, log=True),
+                "solver" : "lbfgs",
+                "max_fun" : 12000
             }
         case _:
             raise ValueError("Unknown model")
