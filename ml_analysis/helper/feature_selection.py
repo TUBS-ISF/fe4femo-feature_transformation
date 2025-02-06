@@ -20,7 +20,7 @@ from sklearn.feature_selection import SelectKBest, mutual_info_classif, mutual_i
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import matthews_corrcoef, d2_absolute_error_score
 from sklearn.model_selection import KFold, cross_val_score, train_test_split, StratifiedKFold
-from sklearn.preprocessing import RobustScaler
+from sklearn.preprocessing import RobustScaler, StandardScaler
 from zoofs import HarrisHawkOptimization, GeneticOptimization
 
 from external.HFMOEA.main import reduceFeaturesMaxAcc, compute_sol
@@ -76,7 +76,7 @@ def prefilter_features(X_train_in : pd.DataFrame, X_test_in : pd.DataFrame, y_tr
 
 def impute_and_scale(X_train, X_test):
     imputer = SimpleImputer(keep_empty_features=False, missing_values=pd.NA)
-    scaler = RobustScaler(with_centering=True, with_scaling=True, unit_variance=True)
+    scaler = StandardScaler()
 
     imputer.set_output(transform="pandas")
     scaler.set_output(transform="pandas")
