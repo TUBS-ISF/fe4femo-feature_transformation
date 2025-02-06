@@ -132,8 +132,10 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                 is_classification = is_task_classification(task)
                 label_encoder = None
                 if is_classification:
+                    y_index = y.index
                     label_encoder = LabelEncoder()
                     y = label_encoder.fit_transform(y)
+                    y = pd.Series(y, index=y_index)
                 y = pd.to_numeric(y, downcast='float')
                 X_train, X_test, y_train, y_test = generate_xy_split(X, y, pathData+"/folds.txt", foldNo)
 
