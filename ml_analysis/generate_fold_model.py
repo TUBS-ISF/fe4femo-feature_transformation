@@ -81,6 +81,15 @@ def objective(trial: optuna.Trial, folds, features, model, should_modelHPO, is_c
 def create_run_name(features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, foldNo : int) -> str:
     return f"{task}#{features}#{model}#{modelHPO}#{selectorHPO}#{hpo_its}#{foldNo}"
 
+def optimize_optuna(study: optuna.study.Study, objective_function, lock : dask.distributed.Lock, counter : dask.distributed.Variable):
+    while True:
+        with lock:
+            counter_value = counter.get()
+            if counter_value <= 0:
+                break
+            counter.set(counter_value - 1)
+        study.optimize(objective_function, n_trials=1)
+
 def main(pathData: str, pathOutput: str, features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, foldNo : int):
     Path(pathOutput).mkdir(parents=True, exist_ok=True)
     run_config = {
@@ -167,8 +176,13 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                         raise ValueError("Not enough worker, needs more than 32")
                     n_jobs = 25 #2 less than tasks for scheduler and main-node
                     n_trials = math.ceil(hpo_its / n_jobs)
+
+                    lock = dask.distributed.Lock("LOCK_COUNTER_VAR")
+                    counter = dask.distributed.Variable()
+                    counter.set(n_trials)
+
                     futures = [
-                        client.submit(study.optimize, objective_function, n_trials, pure=False) for _ in range(n_jobs)
+                        client.submit(optimize_optuna, study, objective_function, lock, counter, pure=False) for _ in range(n_jobs)
                     ]
 
                     dask.distributed.wait(futures)
