@@ -9,12 +9,13 @@ mkdir -p $HOME/$output_path
 
 partition="${1:-multiple_il}"
 maxIt=$(wc -l < "$config")
+((maxIt=maxIt-2))
 maxConcurrent=50
 
 tmpQUEUE=$(squeue | grep -c '^')
 waitIt=$((maxConcurrent + 1 - tmpQUEUE))
 
-while [[ maxIt -ge 1 ]] ; do
+while [[ maxIt -ge 0 ]] ; do
     while [[ $waitIt -le "-20" ]]
     do
         sleep 30
