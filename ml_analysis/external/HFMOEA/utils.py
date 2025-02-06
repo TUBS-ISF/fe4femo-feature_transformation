@@ -193,7 +193,7 @@ def crowding_distance(values1, values2, front):
     return distance
 
 def compute_score(curr_solution, X_train_orig, y_train_orig, fold : FoldSplit, is_classification):
-    X_train = X_train_orig.iloc[fold.train_index]#todo out-of-bounds error
+    X_train = X_train_orig.iloc[fold.train_index]
     X_test = X_train_orig.iloc[fold.test_index]
     y_train= y_train_orig.iloc[fold.train_index]
     y_test = y_train_orig.iloc[fold.test_index]
@@ -218,8 +218,25 @@ def compute_cv(curr_solution, X_train_orig, y_train_orig, is_classification, fol
         scores = Parallel(n_jobs=n_jobs)(delayed(compute_score)(curr_solution, X_train_orig, y_train_orig, fold, is_classification) for fold in folds)
     return mean(scores)
 
+def generate_hash_string(solution):
+    return str(solution)
+
 # First function to optimize
-def function1(x, var_x_train, var_y_train, fold_vars, is_classification, n_jobs = 1, dask_parallel: bool = False):
+def function1(x, var_x_train, var_y_train, fold_vars, is_classification, n_jobs = 1, dask_parallel: bool = False, cache_dict : dict[str, float] =None):
+    if cache_dict is None:
+        cache_dict = {}
+
+    to_compute_index = []
+    already_done = []
+    for i, curr_solution in enumerate(x):
+        feature_hash = generate_hash_string(curr_solution)
+        if feature_hash in cache_dict.keys():
+            feature_val = cache_dict[feature_hash]
+            already_done.append((i, feature_val))
+        else:
+            to_compute_index.append((i, curr_solution))
+    to_compute = [i[1] for i in to_compute_index]
+
     if dask_parallel:
         with worker_client() as client:
             X_train = var_x_train.get()
@@ -227,13 +244,24 @@ def function1(x, var_x_train, var_y_train, fold_vars, is_classification, n_jobs 
 
             folds = [x.get() for x in fold_vars]
 
-            accuracies_future = client.map(compute_cv, x, folds=folds, X_train_orig=X_train, y_train_orig=y_train, is_classification=is_classification, n_jobs=n_jobs, pure=False)
-            accuracies2 = client.gather(accuracies_future, direct=True)
+            accuracies_future = client.map(compute_cv, to_compute, folds=folds, X_train_orig=X_train, y_train_orig=y_train, is_classification=is_classification, n_jobs=n_jobs, pure=False)
+            accuracies = client.gather(accuracies_future, direct=True)
+
     else:
         folds = [x.get().result() for x in fold_vars]
         X_train = var_x_train.get().result()
         y_train = var_y_train.get().result()
-        accuracies2 = Parallel(n_jobs=n_jobs)(delayed(compute_cv)(curr_solution, X_train, y_train, is_classification, folds, 1) for curr_solution in x)
+        accuracies = Parallel(n_jobs=n_jobs)(delayed(compute_cv)(curr_solution, X_train, y_train, is_classification, folds, 1) for curr_solution in to_compute)
+
+    accuracies2 = [None] * len(x)
+    for i, acc in enumerate(accuracies):
+        index = to_compute_index[i][0]
+        curr_solution = to_compute_index[i][1]
+        accuracies2[index] = acc
+        cache_dict[generate_hash_string(curr_solution)] = acc
+    for index, acc in already_done:
+        accuracies2[index] = acc
+
     return accuracies2
 
 

@@ -52,6 +52,8 @@ def compute(X_train_var, y_train_var, fold_vars : list, is_classification : bool
     num_mutations = (int)(pop_size * num_features * mutation_probability)
     solution = initial_chromosome
     gen_no = 1
+
+    fun1_dict = {}
     while (gen_no <= max_gen):
         #print("Generation number: ", gen_no)
 
@@ -59,7 +61,7 @@ def compute(X_train_var, y_train_var, fold_vars : list, is_classification : bool
         solution2 = crossover(np.array(solution), offspring_size=(pop_size, num_features))
         solution2 = mutation(rnd, solution2, num_mutations=num_mutations)
         solution2 = check_sol(rnd, solution2)
-        function1_values_new = function1(solution2, X_train_var, y_train_var, fold_vars, is_classification, n_jobs, dask_parallel)
+        function1_values_new = function1(solution2, X_train_var, y_train_var, fold_vars, is_classification, n_jobs, dask_parallel, fun1_dict)
         function2_values_new = [function2(solution2[i]) for i in range(0, pop_size)]
         non_dominated_sorted_solution2 = fast_non_dominated_sort(function1_values_new[:], function2_values_new[:])
         crowding_distance_values2 = []
@@ -84,7 +86,7 @@ def compute(X_train_var, y_train_var, fold_vars : list, is_classification : bool
         solution = [solution2[i] for i in new_solution]
         gen_no = gen_no + 1
 
-    function1_values = function1(np.array(solution), X_train_var, y_train_var, fold_vars, is_classification, n_jobs, dask_parallel)
+    function1_values = function1(np.array(solution), X_train_var, y_train_var, fold_vars, is_classification, n_jobs, dask_parallel, fun1_dict)
     function2_values = [function2(solution[i]) for i in range(0, pop_size)]
     # Lets plot the final front now
 
