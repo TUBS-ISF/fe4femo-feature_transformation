@@ -12,6 +12,7 @@ def get_model(model : str, isClassification : bool, parallelism : int = 1, model
     if model_args is None:
         model_args = {}
     if "hidden_layer_sizes" in model_args:
+        model_args = model_args.copy()
         model_args["hidden_layer_sizes"] = [int(x) for x in model_args["hidden_layer_sizes"].split("#")]
     model_args["n_jobs"] = parallelism
     model_args["random_state"] = 42
