@@ -18,7 +18,7 @@ waitIt=$((maxConcurrent + 1 - tmpQUEUE))
 while [[ maxIt -ge 0 ]] ; do
     while [[ $waitIt -le "-20" ]]
     do
-        sleep 30
+        sleep 120
         queue=$(squeue | grep -c '^')
         free=$((maxConcurrent + 1 - queue))
         echo "$free free spaces in queue"
