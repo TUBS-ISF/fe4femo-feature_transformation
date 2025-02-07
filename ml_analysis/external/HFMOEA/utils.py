@@ -192,7 +192,7 @@ def crowding_distance(values1, values2, front):
         distance[k] = distance[k] + (values1[sorted2[k + 1]] - values2[sorted2[k - 1]]) / kk
     return distance
 
-def compute_score(curr_solution, X_train_orig, y_train_orig, fold : FoldSplit, is_classification):
+def compute_score(curr_solution, estimator, X_train_orig, y_train_orig, fold : FoldSplit, is_classification):
     X_train = X_train_orig.iloc[fold.train_index]
     X_test = X_train_orig.iloc[fold.test_index]
     y_train= y_train_orig.iloc[fold.train_index]
@@ -203,26 +203,25 @@ def compute_score(curr_solution, X_train_orig, y_train_orig, fold : FoldSplit, i
     y = y_train
 
     ## SVM CLASSIFIER ##
-    SVM = SVC(kernel='rbf', gamma='scale', C=5000, random_state=42, cache_size=750, max_iter=10000) if is_classification else SVR(kernel='rbf', gamma='scale', C=5000, cache_size=750, max_iter=10000)
-    SVM.fit(X, y)
-    y_pred = SVM.predict(reduced_test_features)
+    estimator.fit(X, y)
+    y_pred = estimator.predict(reduced_test_features)
     if is_classification:
         return matthews_corrcoef(y_test, y_pred)
     else:
         return d2_absolute_error_score(y_test, y_pred)
 
-def compute_cv(curr_solution, X_train_orig, y_train_orig, is_classification, folds, n_jobs =1):
+def compute_cv(curr_solution, estimator, X_train_orig, y_train_orig, is_classification, folds, n_jobs =1):
     if n_jobs == 1:
-        scores = [compute_score(curr_solution, X_train_orig, y_train_orig, fold, is_classification) for fold in folds]
+        scores = [compute_score(curr_solution, estimator, X_train_orig, y_train_orig, fold, is_classification) for fold in folds]
     else:
-        scores = Parallel(n_jobs=n_jobs)(delayed(compute_score)(curr_solution, X_train_orig, y_train_orig, fold, is_classification) for fold in folds)
+        scores = Parallel(n_jobs=n_jobs)(delayed(compute_score)(curr_solution, estimator, X_train_orig, y_train_orig, fold, is_classification) for fold in folds)
     return mean(scores)
 
 def generate_hash_string(solution):
     return str(solution)
 
 # First function to optimize
-def function1(x, var_x_train, var_y_train, fold_vars, is_classification, n_jobs = 1, dask_parallel: bool = False, cache_dict : dict[str, float] =None):
+def function1(x, estimator, var_x_train, var_y_train, fold_vars, is_classification, n_jobs = 1, dask_parallel: bool = False, cache_dict : dict[str, float] =None):
     if cache_dict is None:
         cache_dict = {}
 
@@ -244,14 +243,14 @@ def function1(x, var_x_train, var_y_train, fold_vars, is_classification, n_jobs 
 
             folds = [x.get() for x in fold_vars]
 
-            accuracies_future = client.map(compute_cv, to_compute, folds=folds, X_train_orig=X_train, y_train_orig=y_train, is_classification=is_classification, n_jobs=n_jobs, batch_size=min(50, len(to_compute)//2), pure=False)
+            accuracies_future = client.map(compute_cv, to_compute, estimator=estimator, folds=folds, X_train_orig=X_train, y_train_orig=y_train, is_classification=is_classification, n_jobs=n_jobs, batch_size=min(50, len(to_compute)//2), pure=False)
             accuracies = client.gather(accuracies_future, direct=True)
 
     else:
         folds = [x.get().result() for x in fold_vars]
         X_train = var_x_train.get().result()
         y_train = var_y_train.get().result()
-        accuracies = Parallel(n_jobs=n_jobs)(delayed(compute_cv)(curr_solution, X_train, y_train, is_classification, folds, 1) for curr_solution in to_compute)
+        accuracies = Parallel(n_jobs=n_jobs)(delayed(compute_cv)(curr_solution, estimator, X_train, y_train, is_classification, folds, 1) for curr_solution in to_compute)
 
     accuracies2 = [None] * len(x)
     for i, acc in enumerate(accuracies):
