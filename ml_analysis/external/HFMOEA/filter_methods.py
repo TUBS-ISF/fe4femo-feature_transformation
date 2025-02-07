@@ -225,7 +225,7 @@ def MI(data, target, is_classification):
 
     with worker_client() as client:
         fv = client.scatter(feature_values, direct=True)
-        MI_future = [client.submit(compute_MI_mod, fv, ind, is_classification) for ind in range(num_features)]
+        MI_future = [client.submit(compute_MI_mod, fv, ind, False) for ind in range(num_features)]
         MI_val_future = client.submit(compute_MI, fv, target, is_classification)
         MI_sol = client.gather(MI_future, direct=True)
         MI_values_class = client.gather(MI_val_future, direct=True)
