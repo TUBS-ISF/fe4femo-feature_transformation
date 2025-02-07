@@ -56,7 +56,7 @@ def compute(X_train_var, y_train_var, fold_vars : list, estimator, is_classifica
     fun1_dict = {}
     while (gen_no <= max_gen):
         if verbose:
-            print("Generation number: ", gen_no)
+            dask.distributed.print("Generation number: "+ str(gen_no))
 
         # Generating offsprings
         solution2 = crossover(np.array(solution), offspring_size=(pop_size, num_features))
