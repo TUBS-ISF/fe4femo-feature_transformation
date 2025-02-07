@@ -244,7 +244,7 @@ def function1(x, var_x_train, var_y_train, fold_vars, is_classification, n_jobs 
 
             folds = [x.get() for x in fold_vars]
 
-            accuracies_future = client.map(compute_cv, to_compute, folds=folds, X_train_orig=X_train, y_train_orig=y_train, is_classification=is_classification, n_jobs=n_jobs, pure=False)
+            accuracies_future = client.map(compute_cv, to_compute, folds=folds, X_train_orig=X_train, y_train_orig=y_train, is_classification=is_classification, n_jobs=n_jobs, batch_size=min(50, len(to_compute)//2), pure=False)
             accuracies = client.gather(accuracies_future, direct=True)
 
     else:

@@ -215,9 +215,10 @@ def get_feature_selection(precomputed:dict, features : str, isClassification : b
             selected_feature_names = selector.fit_cv(estimator, precomputed["X_train"], precomputed["y_train"], fold_vars, verbose=verbose)
             return X_train[selected_feature_names], X_test[selected_feature_names]
         case "HFMOEA":
-            selector_args["topk"] = min(max_features, selector_args["topk"])  # limit to max feature count after preprocessing
+            if "topk" in selector_args.keys():
+                selector_args["topk"] = min(max_features, selector_args["topk"])  # limit to max feature count after preprocessing
             fold_vars = extract_fold_list(precomputed)
-            feature_mask = reduceFeaturesMaxAcc(precomputed["X_train"], precomputed["y_train"], fold_vars, **selector_args, n_jobs=parallelism, is_classification=isClassification, sol=precomputed["sol"].get().result(), dask_parallel=dask_parallel)
+            feature_mask = reduceFeaturesMaxAcc(precomputed["X_train"], precomputed["y_train"], fold_vars, **selector_args, n_jobs=parallelism, is_classification=isClassification, sol=precomputed["sol"].get().result(), dask_parallel=dask_parallel, verbose=verbose)
             return  X_train[ feature_mask], X_test[feature_mask]
         case "embedded-tree":
             forest = RandomForestClassifier(n_estimators=selector_args["e_n_estimators"], max_depth=selector_args["e_max_depth"], n_jobs=parallelism, random_state=42) if isClassification else RandomForestRegressor(n_estimators=selector_args["e_n_estimators"], max_depth=selector_args["e_max_depth"], n_jobs=parallelism, random_state=42)

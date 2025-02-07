@@ -145,27 +145,28 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
                 model_flatness = get_flat_models(X_train)
                 flatness_future = client.scatter(model_flatness, direct=True)
 
-                splits = kf.split(X_train, model_flatness)
-
-                # dask export for better cluster behaviour
-
-                folds = {}
-                for i, (train_index, test_index) in enumerate(splits):
-                    X_train_inner = X_train.iloc[train_index]
-                    X_test_inner = X_train.iloc[test_index]
-                    y_train_inner = y_train.iloc[train_index]
-                    y_test_inner = y_train.iloc[test_index]
-                    # feature preprocessing
-                    future_pre = client.submit(precompute_feature_selection,features, is_classification, X_train_inner, X_test_inner, y_train_inner, y_test_inner, flatness_future, 0.9, cores, pure=True)
-                    future_pre = client.submit(transform_dict_to_var_dict, future_pre)
-                    folds[i] = future_pre
-
                 feature_groups = load_feature_groups(pathData)
 
                 best_params = {}
                 journal_path = "no journal"
                 verbose = False
                 if selectorHPO:
+                    splits = kf.split(X_train, model_flatness)
+
+                    # dask export for better cluster behaviour
+
+                    folds = {}
+                    for i, (train_index, test_index) in enumerate(splits):
+                        X_train_inner = X_train.iloc[train_index]
+                        X_test_inner = X_train.iloc[test_index]
+                        y_train_inner = y_train.iloc[train_index]
+                        y_test_inner = y_train.iloc[test_index]
+                        # feature preprocessing
+                        future_pre = client.submit(precompute_feature_selection, features, is_classification,
+                                                   X_train_inner, X_test_inner, y_train_inner, y_test_inner,
+                                                   flatness_future, 0.9, cores, pure=True)
+                        future_pre = client.submit(transform_dict_to_var_dict, future_pre)
+                        folds[i] = future_pre
                     objective_function = lambda trial: objective(trial, folds, features, model, modelHPO, is_classification, feature_groups, feature_count, cores)
 
                     journal_path = run_config["path_output"] + "/" + run_config["name"] + ".journal"
