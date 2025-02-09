@@ -3,6 +3,7 @@ import os
 import tempfile
 import time
 import multiprocessing as mp
+from multiprocessing import freeze_support
 
 import cloudpickle
 import pandas as pd
@@ -241,6 +242,7 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
 
 
 if __name__ == '__main__':
+    freeze_support()
     args = parse_input()
     cpus_per_node = int(os.getenv("SLURM_CPUS_ON_NODE", 128)) // int(os.getenv("OMP_NUM_THREADS", 2))
     no_nodes = int(os.getenv("SLURM_JOB_NUM_NODES", 1))
@@ -249,7 +251,7 @@ if __name__ == '__main__':
 
     function_args = (worker_count, os.environ.get("HOME")+"/"+os.path.expandvars(args.pathData), os.environ.get("HOME")+"/"+os.path.expandvars(args.pathOutput), args.features, args.task, args.model, args.modelHPO, args.selectorHPO, args.HPOits, args.foldNo)
 
-    ctx = mp.get_context("forkserver")
+    ctx = mp.get_context("spawn")
     processes = [ctx.Process(target=main, args=((i,)+function_args)) for i in range(cpus_per_node)]
     for p in processes:
         p.start()
