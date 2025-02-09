@@ -239,6 +239,7 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
             with open(path, "wb") as f:
                 cloudpickle.dump(output, f)
             print(f"Exported model at {path}")
+            client.shutdown()
 
 
 if __name__ == '__main__':
