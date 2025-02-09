@@ -249,7 +249,7 @@ def compute_MI_mod(feature_values, ind, is_classification):
 
 def compute_MI(X, y, is_classification):
     # function to compute mutual information between two variables
-    return mutual_info_classif(X, y, random_state=42, n_jobs=-1) if is_classification else mutual_info_regression(X, y, random_state=42, n_jobs=-1)
+    return mutual_info_classif(X, y, random_state=42, n_jobs=1) if is_classification else mutual_info_regression(X, y, random_state=42, n_jobs=1)
 
 
 # -------------------------  Relief  -------------------------------------------#
