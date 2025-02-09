@@ -1,23 +1,16 @@
 #!/bin/bash
 #SBATCH --time=1:0:0
 #SBATCH --job-name=eval_model
-#SBATCH --ntasks=256
-#SBATCH --cpus-per-task=2
+#SBATCH --ntasks=4
+#SBATCH --cpus-per-task=128
 #SBATCH --mem-per-cpu=1950
 #SBATCH --nodes=2-70
 #SBATCH --use-min-nodes
 
 
-export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
+export OMP_NUM_THREADS=2
 echo -e "JOB_ID=${SLURM_JOB_ID}"
 echo -e "OMP_THREADS=${OMP_NUM_THREADS}"
-
-container="ml_analysis"
-
-mkdir -p $TMPDIR/in/
-mkdir -p $TMPDIR/out/
-mkdir -p $TMPDIR/tmp/
-
 
 echo -e "########\nCONTAINER START"
 ENROOT_CONFIG_PATH=$HOME/enroot_config/

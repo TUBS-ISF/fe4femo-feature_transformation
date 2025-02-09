@@ -2,22 +2,19 @@ import math
 import os
 import tempfile
 import time
-import warnings
+import multiprocessing as mp
 
 import cloudpickle
 import pandas as pd
 from optuna.samplers import TPESampler
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import RobustScaler, LabelEncoder
+from sklearn.preprocessing import LabelEncoder
 
 os.environ['MPLCONFIGDIR'] = tempfile.mkdtemp()
 from pathlib import Path
 from statistics import mean
 
-import joblib
 import optuna
 from dask.distributed import Client
-from dask_jobqueue.slurm import SLURMRunner
 import dask
 from distributed import worker_client, performance_report, get_task_stream
 from sklearn.metrics import matthews_corrcoef, r2_score, d2_absolute_error_score
@@ -25,12 +22,12 @@ from sklearn.model_selection import StratifiedKFold
 
 from helper.SlurmMemRunner import SLURMMemRunner
 from helper.feature_selection import get_selection_HPO_space, get_feature_selection, precompute_feature_selection, \
-    impute_and_scale, transform_dict_to_var_dict
+     transform_dict_to_var_dict
 from helper.input_parser import parse_input
 from helper.load_dataset import generate_xy_split, get_dataset, get_flat_models, is_task_classification, \
     load_feature_groups
 from helper.model_training import get_model_HPO_space, get_model
-from helper.optuna_helper import copyStudy, categorical_distance_function
+from helper.optuna_helper import categorical_distance_function
 
 
 # 1. Train/Test Split
@@ -90,21 +87,8 @@ def optimize_optuna(study: optuna.study.Study, objective_function, lock : dask.d
             counter.set(counter_value - 1)
         study.optimize(objective_function, n_trials=1)
 
-def main(pathData: str, pathOutput: str, features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, foldNo : int):
-    Path(pathOutput).mkdir(parents=True, exist_ok=True)
-    run_config = {
-        "name": create_run_name(features, task, model, modelHPO, selectorHPO, hpo_its, foldNo),
-        "path_data": pathData,
-        "path_output": pathOutput,
-        "features": features,
-        "task": task,
-        "model": model,
-        "modelHPO": modelHPO,
-        "selectorHPO" : selectorHPO,
-        "hpo_its": hpo_its,
-        "foldNo": foldNo,
-    }
-
+def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, foldNo : int):
+    cores = int(os.getenv("OMP_NUM_THREADS", "1"))
     scheduler_options = {
         "interface": "ib0",
     }
@@ -112,21 +96,35 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
         "local_directory": "$TMPDIR/",
         "nthreads": 1,
         "interface": "ib0",
-        "memory_limit": f"{int(os.getenv("SLURM_CPUS_PER_TASK", 2)) * int(os.getenv("SLURM_MEM_PER_CPU", 2000))}MB"
+        "memory_limit": f"{cores * int(os.getenv("SLURM_MEM_PER_CPU", 2000))}MB"
     }
     scheduler_path = Path(os.path.expandvars("$HOME") + "/tmp/scheduler_files")
     scheduler_path.mkdir(parents=True, exist_ok=True)
 
-    cores = int(os.getenv("OMP_NUM_THREADS", "1"))
-    with (SLURMMemRunner(scheduler_file=str(scheduler_path)+"/scheduler-{job_id}.json",
+
+    with (SLURMMemRunner(scheduler_file=str(scheduler_path)+"/scheduler-{job_id}.json", in_proc_id=in_proc_id,
                       worker_options=worker_options, scheduler_options=scheduler_options) as runner):
         with Client(runner, direct_to_workers=True) as client:
+            Path(pathOutput).mkdir(parents=True, exist_ok=True)
+            run_config = {
+                "name": create_run_name(features, task, model, modelHPO, selectorHPO, hpo_its, foldNo),
+                "path_data": pathData,
+                "path_output": pathOutput,
+                "features": features,
+                "task": task,
+                "model": model,
+                "modelHPO": modelHPO,
+                "selectorHPO" : selectorHPO,
+                "hpo_its": hpo_its,
+                "foldNo": foldNo,
+            }
             with (
                 performance_report(filename=run_config["path_output"] + "/" + run_config["name"] + ".html"),
                 get_task_stream() as task_stream
             ):
+
                 print(f"Dask dashboard is available at {client.dashboard_link}")
-                client.wait_for_workers(runner.n_workers)
+                client.wait_for_workers(worker_count)
                 print("Initialized all workers")
 
                 X, y = get_dataset(pathData, task)
@@ -244,5 +242,17 @@ def main(pathData: str, pathOutput: str, features: str, task: str, model: str, m
 
 if __name__ == '__main__':
     args = parse_input()
-    warnings.filterwarnings("ignore", message="'force_all_finite'")
-    main(os.environ.get("HOME")+"/"+os.path.expandvars(args.pathData), os.environ.get("HOME")+"/"+os.path.expandvars(args.pathOutput), args.features, args.task, args.model, args.modelHPO, args.selectorHPO, args.HPOits, args.foldNo)
+    cpus_per_node = int(os.getenv("SLURM_CPUS_ON_NODE", 128)) // int(os.getenv("OMP_NUM_THREADS", 2))
+    no_nodes = int(os.getenv("SLURM_JOB_NUM_NODES", 1))
+    worker_count = cpus_per_node*no_nodes - 2
+    print(f"Starting {worker_count} workers with {int(os.getenv("OMP_NUM_THREADS", 2))} cores per worker")
+
+    function_args = (worker_count, os.environ.get("HOME")+"/"+os.path.expandvars(args.pathData), os.environ.get("HOME")+"/"+os.path.expandvars(args.pathOutput), args.features, args.task, args.model, args.modelHPO, args.selectorHPO, args.HPOits, args.foldNo)
+
+    ctx = mp.get_context("forkserver")
+    processes = [ctx.Process(target=main, args=((i,)+function_args)) for i in range(cpus_per_node)]
+    for p in processes:
+        p.start()
+    print("Started all subprocesses!")
+    exit_codes = [p.wait() for p in processes]
+    print("Main python exited")

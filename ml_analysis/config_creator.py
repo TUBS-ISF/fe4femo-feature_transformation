@@ -9,13 +9,13 @@ def is_modelHPO(feature: str) -> bool:
     return is_selectorHPO(feature)
 
 def is_selectorHPO(feature: str) -> bool:
-    return feature not in ["genetic"]
+    return feature not in ["genetic", "HFMOEA"]
 
 def get_task_count(feature: str) -> int:
-    if feature in ["genetic"]:
-        return 256
+    if feature in ["genetic", "HFMOEA"]:
+        return 4
     else:
-        return 192
+        return 3
 
 def get_runtime(hpoIts: int, feature: str) -> str:
     selector_modifier_m = {

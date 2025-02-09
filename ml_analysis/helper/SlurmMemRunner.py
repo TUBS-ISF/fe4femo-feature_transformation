@@ -3,22 +3,23 @@ import json
 import os
 from pathlib import Path
 
-from dask_jobqueue import JobQueueCluster
 from dask_jobqueue.runner import BaseRunner, Role
 from dask_jobqueue.slurm import WorldTooSmallException
 from distributed import Scheduler
 
 
 class SLURMMemRunner(BaseRunner):
-    def __init__(self, *args, scheduler_file="scheduler-{job_id}.json", **kwargs):
+    def __init__(self, *args, in_proc_id=-1, scheduler_file="scheduler-{job_id}.json", **kwargs):
+        self.in_proc_id = in_proc_id
         try:
             self.proc_id = int(os.environ["SLURM_PROCID"])
-            self.world_size = self.n_workers = int(os.environ["SLURM_NTASKS"])
             self.job_id = int(os.environ["SLURM_JOB_ID"])
         except KeyError as e:
             raise RuntimeError(
                 "SLURM_PROCID, SLURM_NTASKS, and SLURM_JOB_ID must be present in the environment."
             ) from e
+        if in_proc_id < 0 :
+            raise RuntimeError("In-Proc ID must be positive!")
         if not scheduler_file:
             scheduler_file = kwargs.get("scheduler_options", {}).get("scheduler_file")
 
@@ -38,7 +39,7 @@ class SLURMMemRunner(BaseRunner):
             kwargs["scheduler_options"] = {"scheduler_file": scheduler_file}
         if isinstance(kwargs.get("worker_options"), dict):
             kwargs["worker_options"]["scheduler_file"] = scheduler_file
-            kwargs["worker_options"]["local_directory"] = os.environ["TMPDIR"]+"/"+os.environ["SLURM_PROCID"]
+            kwargs["worker_options"]["local_directory"] = os.environ["TMPDIR"]+"/"+os.environ["SLURM_PROCID"]+f"_{self.in_proc_id}"
             Path(kwargs["worker_options"]["local_directory"]).mkdir(parents=True, exist_ok=True)
         else:
             kwargs["worker_options"] = {"scheduler_file": scheduler_file}
@@ -48,20 +49,9 @@ class SLURMMemRunner(BaseRunner):
         super().__init__(*args, **kwargs)
 
     async def get_role(self) -> str:
-        if self.scheduler and self.client and self.world_size < 3:
-            raise WorldTooSmallException(
-                f"Not enough Slurm tasks to start cluster, found {self.world_size}, "
-                "needs at least 3, one each for the scheduler, client and a worker."
-            )
-        elif self.scheduler and self.world_size < 2:
-            raise WorldTooSmallException(
-                f"Not enough Slurm tasks to start cluster, found {self.world_size}, "
-                "needs at least 2, one each for the scheduler and a worker."
-            )
-        self.n_workers -= int(self.scheduler) + int(self.client)
-        if self.proc_id == 0 and self.scheduler:
+        if self.proc_id == 0 and self.in_proc_id == 0 and self.scheduler:
             return Role.scheduler
-        elif self.proc_id == 1 and self.client:
+        elif self.proc_id == 0 and self.in_proc_id == 1 and self.client:
             return Role.client
         else:
             return Role.worker
@@ -76,4 +66,4 @@ class SLURMMemRunner(BaseRunner):
         return cfg["address"]
 
     async def get_worker_name(self) -> str:
-        return self.proc_id
+        return f"{self.proc_id}_{self.in_proc_id}"
