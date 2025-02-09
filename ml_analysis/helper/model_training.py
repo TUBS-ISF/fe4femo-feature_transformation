@@ -25,7 +25,7 @@ def get_model(model : str, isClassification : bool, parallelism : int = 1, model
             del model_args["n_jobs"]
             if not isClassification :
                 del model_args["random_state"]
-            return SVC(**model_args) if isClassification else SVR(**model_args)
+            return SVC(**model_args, cache_size=750, max_iter=10000) if isClassification else SVR(**model_args, cache_size=750, max_iter=10000)
         case "kNN":
             del model_args["random_state"]
             return KNeighborsClassifier(**model_args) if isClassification else KNeighborsRegressor(**model_args)
@@ -34,7 +34,7 @@ def get_model(model : str, isClassification : bool, parallelism : int = 1, model
             return AdaBoostClassifier(**model_args) if isClassification else AdaBoostRegressor(**model_args)
         case "MLP":
             del model_args["n_jobs"]
-            return MLPClassifier(**model_args) if isClassification else MLPRegressor(**model_args)
+            return MLPClassifier(**model_args, solver="lbfgs", max_fun=12000) if isClassification else MLPRegressor(**model_args, solver="lbfgs", max_fun=12000)
         case _:
             raise ValueError("Unknown model")
 
@@ -56,9 +56,7 @@ def get_model_HPO_space(model : str, trial : Trial, isClassification : bool) -> 
              params = {
                 "kernel" : trial.suggest_categorical("kernel", ["linear", "rbf", "sigmoid", "poly"]),
                 "C" : trial.suggest_float("C", 10e-5, 10e5, log=True),
-                "gamma" : trial.suggest_float("gamma", 10e-5, 10e5, log=True),
-                "cache_size" : 750, # use mem better
-                "max_iter": 10000 #set limit to limit max runtime
+                "gamma" : trial.suggest_float("gamma", 10e-5, 10e5, log=True)
              }
              if params["kernel"] == "poly":
                  params["degree"] = trial.suggest_int("degree", 1, 5)
@@ -80,9 +78,7 @@ def get_model_HPO_space(model : str, trial : Trial, isClassification : bool) -> 
             return {
                 "hidden_layer_sizes" : trial.suggest_categorical("hidden_layer_sizes", ["100", "100#50#10#50", "100#50#10", "20#20#20", "50#10#50", "100#25#11#7#5#3", "200#100#50#20#11#8#5#3#5", "200#100#50#20", "200#100#10#100"]),
                 "activation" : trial.suggest_categorical("activation", ["relu", "tanh", "logistic", "identity"]),
-                "alpha" : trial.suggest_float("alpha", 10e-7, 10e2, log=True),
-                "solver" : "lbfgs",
-                "max_fun" : 12000
+                "alpha" : trial.suggest_float("alpha", 10e-7, 10e2, log=True)
             }
         case _:
             raise ValueError("Unknown model")
