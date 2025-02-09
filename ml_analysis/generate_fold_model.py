@@ -123,9 +123,9 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                 get_task_stream() as task_stream
             ):
 
-                print(f"Dask dashboard is available at {client.dashboard_link}")
+                dask.distributed.print(f"Dask dashboard is available at {client.dashboard_link}")
                 client.wait_for_workers(worker_count)
-                print("Initialized all workers")
+                dask.distributed.print("Initialized all workers")
 
                 X, y = get_dataset(pathData, task)
                 is_classification = is_task_classification(task)
@@ -150,7 +150,7 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                 journal_path = "no journal"
                 verbose = False
 
-                print("Loaded all Data")
+                dask.distributed.print("Loaded all Data")
                 if selectorHPO:
                     splits = kf.split(X_train, model_flatness)
 
@@ -168,7 +168,7 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                                                    flatness_future, 0.9, cores, pure=True)
                         future_pre = client.submit(transform_dict_to_var_dict, future_pre)
                         folds[i] = future_pre
-                    print("Initialized Folds")
+                    dask.distributed.print("Initialized Folds")
                     objective_function = lambda trial: objective(trial, folds, features, model, modelHPO, is_classification, feature_groups, feature_count, cores)
 
                     journal_path = run_config["path_output"] + "/" + run_config["name"] + ".journal"
@@ -185,13 +185,13 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                     lock = dask.distributed.Lock("LOCK_COUNTER_VAR")
                     counter = dask.distributed.Variable()
                     counter.set(n_trials)
-                    print("Initialized optuna")
+                    dask.distributed.print("Initialized optuna")
                     futures = [
                         client.submit(optimize_optuna, study, objective_function, lock, counter, pure=False) for _ in range(n_jobs)
                     ]
-                    print("Started optuna worker")
+                    dask.distributed.print("Started optuna worker")
                     dask.distributed.wait(futures)
-                    print("Optuna optimization completed")
+                    dask.distributed.print("Optuna optimization completed")
                     # train complete model with HPO values
                     best_params = study.best_params
                     frozen_best_trial = study.best_trial
@@ -205,7 +205,7 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                     selector_config = {}
                     verbose=True
 
-                print("Start training final model")
+                dask.distributed.print("Start training final model")
                 model_instance_selector = get_model(model, is_classification, 1, model_config)
                 start_FS = time.time()
                 precomputed = client.submit(precompute_feature_selection, features, is_classification, X_train, X_test, y_train, y_test, model_flatness, parallelism=cores, pure=False)
@@ -213,13 +213,13 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                 fs_future = client.submit(get_feature_selection, precomputed.result(), features, is_classification, selector_config, model_instance_selector, feature_groups, parallelism=cores, verbose=verbose, dask_parallel=True, pure=False)
                 X_train, X_test = fs_future.result()
                 end_FS = time.time()
-                print("Finished feature selection of final model")
+                dask.distributed.print("Finished feature selection of final model")
                 model_instance = get_model(model, is_classification, cores, model_config)
                 start_Model =time.time()
                 model_instance.fit(X_train, y_train)
                 end_Model =time.time()
                 model_complete = model_instance
-                print("Finished training final model")
+                dask.distributed.print("Finished training final model")
 
                 # export for later use
                 output = {

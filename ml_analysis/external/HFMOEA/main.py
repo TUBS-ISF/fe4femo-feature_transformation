@@ -36,7 +36,7 @@ def compute(X_train_var, y_train_var, fold_vars : list, estimator, is_classifica
 
     if pop_size < 10:
         pop_size = 10
-        print("Population size cannot be less than 10.")
+        dask.distributed.print("Population size cannot be less than 10.")
 
     init_size = len(sol)
     initial_chromosome = np.zeros(shape=(pop_size, X_train.shape[1]))
