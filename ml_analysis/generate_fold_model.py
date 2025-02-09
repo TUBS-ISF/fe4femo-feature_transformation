@@ -254,5 +254,5 @@ if __name__ == '__main__':
     for p in processes:
         p.start()
     print("Started all subprocesses!")
-    exit_codes = [p.wait() for p in processes]
+    exit_codes = [p.join() for p in processes]
     print("Main python exited")
