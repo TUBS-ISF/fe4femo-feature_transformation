@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from operator import itemgetter
 
 import dask.distributed
@@ -57,7 +57,7 @@ def compute(X_train_var, y_train_var, fold_vars : list, estimator, is_classifica
     fun1_dict = {}
     while (gen_no <= max_gen):
         if verbose:
-            dask.distributed.print(str(datetime.datetime.now()) + "  Generation number: "+ str(gen_no))
+            dask.distributed.print(str(datetime.now()) + "  Generation number: "+ str(gen_no))
 
         # Generating offsprings
         solution2 = crossover(np.array(solution), offspring_size=(pop_size, num_features))
