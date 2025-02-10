@@ -8,7 +8,7 @@ from sklearn.neural_network import MLPClassifier, MLPRegressor
 from sklearn.svm import SVC, SVR
 
 
-def get_model(model : str, isClassification : bool, parallelism : int = 1, model_args=None):
+def get_model(model : str, isClassification : bool, parallelism : int = 1, model_args=None, easy_model = False):
     if model_args is None:
         model_args = {}
     if "hidden_layer_sizes" in model_args:
@@ -18,6 +18,10 @@ def get_model(model : str, isClassification : bool, parallelism : int = 1, model
     model_args["random_state"] = 42
     match model:
         case "randomForest":
+            if easy_model and "max_depth" not in model_args.keys():
+                model_args["max_depth"] = 10
+            if easy_model and "n_estimators" not in model_args.keys():
+                model_args["n_estimators"] = 70
             return RandomForestClassifier(**model_args) if isClassification else  RandomForestRegressor(**model_args)
         case "gradboostForest":
             return xgb.XGBClassifier(**model_args) if isClassification else xgb.XGBRegressor(**model_args)
@@ -42,8 +46,9 @@ def get_model_HPO_space(model : str, trial : Trial, isClassification : bool) -> 
     match model:
         case "randomForest":
             return {
-                "n_estimators" : trial.suggest_int("n_estimators", 10, 1000),
-                "max_depth" : trial.suggest_categorical("max_depth", [None, 10, 50, 100, 500, 1000]),
+                "n_estimators" : trial.suggest_int("n_estimators", 10, 2000),
+                "max_features" : trial.suggest_float("max_features", 0.001, 1.0),
+                "max_depth" : trial.suggest_categorical("max_depth", [None, 3, 5, 10, 50, 100]),
             }
         case "gradboostForest":
             return {

@@ -207,8 +207,8 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                     selector_config = {}
                     verbose=True
 
-                model_instance_selector = get_model(model, is_classification, 1, model_config)
                 dask.distributed.print(str(datetime.datetime.now()) + "  Start training final model")
+                model_instance_selector = get_model(model, is_classification, 1, model_config, easy_model=easy_model)
                 start_FS = time.time()
                 precomputed = client.submit(precompute_feature_selection, features, is_classification, X_train, X_test, y_train, y_test, model_flatness, parallelism=cores, pure=False)
                 precomputed = client.submit(transform_dict_to_var_dict, precomputed, pure=False)
