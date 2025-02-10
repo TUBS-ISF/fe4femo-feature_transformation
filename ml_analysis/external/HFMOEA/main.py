@@ -27,7 +27,7 @@ def compute_sol(data : np.ndarray, target : np.ndarray, is_classification : bool
         sol = client.gather(sol_future, direct=True)
     return pd.Series([x for x in sol if x is not None])
 
-def compute(X_train_var, y_train_var, fold_vars : list, estimator, is_classification : bool, topk=25, pop_size=250, max_gen=1000, mutation_probability=0.06, n_jobs=1, sol = None, seed=42424242424242, dask_parallel : bool = False, verbose = False):
+def compute(X_train_var, y_train_var, fold_vars : list, estimator, is_classification : bool, topk=25, pop_size=250, max_gen=500, mutation_probability=0.06, n_jobs=1, sol = None, seed=42424242424242, dask_parallel : bool = False, verbose = False):
     rnd = np.random.default_rng(seed=seed)
 
     if sol is None:
@@ -101,7 +101,7 @@ def compute(X_train_var, y_train_var, fold_vars : list, estimator, is_classifica
     pareto_front = [ (-1 * df[index][0], df[index][1], solution[index]) for index, isOptimal in enumerate(pareto_index) if isOptimal]
     return pareto_front
 
-def reduceFeaturesMaxAcc(X_train_var, y_train_var, fold_vars : list, estimator, is_classification : bool, topk=25, pop_size=250, max_gen=1000, mutation_probability=0.06, n_jobs=1, sol=None, dask_parallel : bool = False, verbose = False):
+def reduceFeaturesMaxAcc(X_train_var, y_train_var, fold_vars : list, estimator, is_classification : bool, topk=25, pop_size=250, max_gen=500, mutation_probability=0.06, n_jobs=1, sol=None, dask_parallel : bool = False, verbose = False):
     pareto_front = compute(X_train_var, y_train_var, fold_vars, estimator, is_classification, topk, pop_size, max_gen, mutation_probability, n_jobs, sol, dask_parallel=dask_parallel, verbose=verbose)
     acc, size, config = max(pareto_front, key=itemgetter(0))
     masked_x = X_train_var.get().result().loc[:, [ i == 1 for i in config]]
