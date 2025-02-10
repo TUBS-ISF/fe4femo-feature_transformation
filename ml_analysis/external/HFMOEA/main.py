@@ -1,3 +1,4 @@
+import logging
 from operator import itemgetter
 
 import dask.distributed
@@ -27,6 +28,7 @@ def compute_sol(data : np.ndarray, target : np.ndarray, is_classification : bool
     return pd.Series([x for x in sol if x is not None])
 
 def compute(X_train_var, y_train_var, fold_vars : list, estimator, is_classification : bool, topk=25, pop_size=250, max_gen=1000, mutation_probability=0.06, n_jobs=1, sol = None, seed=42424242424242, dask_parallel : bool = False, verbose = False):
+    logger = logging.getLogger("HFMOEA")
     rnd = np.random.default_rng(seed=seed)
 
     if sol is None:
@@ -56,7 +58,7 @@ def compute(X_train_var, y_train_var, fold_vars : list, estimator, is_classifica
     fun1_dict = {}
     while (gen_no <= max_gen):
         if verbose:
-            dask.distributed.print("Generation number: "+ str(gen_no))
+            logger.info("Generation number: "+ str(gen_no))
 
         # Generating offsprings
         solution2 = crossover(np.array(solution), offspring_size=(pop_size, num_features))
