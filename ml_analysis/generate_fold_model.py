@@ -151,6 +151,7 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                 best_params = {}
                 journal_path = "no journal"
                 verbose = False
+                easy_model = False
 
                 dask.distributed.print(str(datetime.datetime.now()) + "  Loaded all Data")
                 if selectorHPO:
@@ -206,6 +207,7 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                     model_config = {}
                     selector_config = {}
                     verbose=True
+                    easy_model = True
 
                 dask.distributed.print(str(datetime.datetime.now()) + "  Start training final model")
                 model_instance_selector = get_model(model, is_classification, 1, model_config, easy_model=easy_model)
