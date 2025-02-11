@@ -1,7 +1,9 @@
 import time
 import warnings
+from datetime import datetime
 from statistics import mean
 
+import dask.distributed
 import numpy as np
 import scipy
 from distributed import worker_client
@@ -25,8 +27,11 @@ def _negatable_objective(objective_function, model, X_train_orig, y_train_orig, 
 
 def compute_cv(objective_function, model, X_train_orig, y_train_orig, folds, chosen_features, kwargs,
                          minimize: bool, n_jobs=1):
-    scores = Parallel(n_jobs=n_jobs)(delayed(_negatable_objective)(objective_function, model, X_train_orig, y_train_orig, fold, chosen_features, kwargs, minimize) for fold in folds)
-    return mean(scores)
+    try:
+        scores = Parallel(n_jobs=n_jobs)(delayed(_negatable_objective)(objective_function, model, X_train_orig, y_train_orig, fold, chosen_features, kwargs, minimize) for fold in folds)
+        return mean(scores)
+    except Exception as e:
+        return -100.4242
 
 
 class GeneticParallel(GeneticOptimization):

@@ -70,14 +70,17 @@ def compute_fold(client, model, features, is_classification, model_config, selec
     return client.submit(eval_model_performance, model_instance, X_train_test, precomputed, is_classification, pure=False)
 
 def objective(trial: optuna.Trial, folds, features, model, should_modelHPO, is_classification, feature_groups, feature_count, cores : int) -> float:
-    model_config = get_model_HPO_space(model, trial, is_classification) if should_modelHPO else None
-    selector_config = get_selection_HPO_space(features, trial, is_classification, feature_groups, feature_count)
-    with worker_client() as client:
-        futures = [
-            compute_fold(client, model, features, is_classification, model_config, selector_config, feature_groups, future_precompute, cores)
-            for i, future_precompute in folds.items()]
-        results = client.gather(futures, direct=True)
-    return mean(results)
+    try:
+        model_config = get_model_HPO_space(model, trial, is_classification) if should_modelHPO else None
+        selector_config = get_selection_HPO_space(features, trial, is_classification, feature_groups, feature_count)
+        with worker_client() as client:
+            futures = [
+                compute_fold(client, model, features, is_classification, model_config, selector_config, feature_groups, future_precompute, cores)
+                for i, future_precompute in folds.items()]
+            results = client.gather(futures, direct=True)
+        return mean(results)
+    except Exception as e:
+        return -100.4242
 
 def create_run_name(features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, foldNo : int) -> str:
     return f"{task}#{features}#{model}#{modelHPO}#{selectorHPO}#{hpo_its}#{foldNo}"

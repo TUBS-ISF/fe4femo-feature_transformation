@@ -1,6 +1,8 @@
+from datetime import datetime
 from statistics import mean
 
 import dask
+import dask.distributed
 import numpy as np
 import math
 import sklearn.svm
@@ -211,11 +213,14 @@ def compute_score(curr_solution, estimator, X_train_orig, y_train_orig, fold : F
         return d2_absolute_error_score(y_test, y_pred)
 
 def compute_cv(curr_solution, estimator, X_train_orig, y_train_orig, is_classification, folds, n_jobs =1):
-    if n_jobs == 1:
-        scores = [compute_score(curr_solution, estimator, X_train_orig, y_train_orig, fold, is_classification) for fold in folds]
-    else:
-        scores = Parallel(n_jobs=n_jobs)(delayed(compute_score)(curr_solution, estimator, X_train_orig, y_train_orig, fold, is_classification) for fold in folds)
-    return mean(scores)
+    try:
+        if n_jobs == 1:
+            scores = [compute_score(curr_solution, estimator, X_train_orig, y_train_orig, fold, is_classification) for fold in folds]
+        else:
+            scores = Parallel(n_jobs=n_jobs)(delayed(compute_score)(curr_solution, estimator, X_train_orig, y_train_orig, fold, is_classification) for fold in folds)
+        return mean(scores)
+    except Exception as e:
+        return -100.4242
 
 def generate_hash_string(solution):
     return str(solution)
