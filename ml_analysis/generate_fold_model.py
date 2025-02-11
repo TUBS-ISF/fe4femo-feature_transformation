@@ -101,7 +101,6 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
         "nthreads": 1,
         "interface": "ib0",
         "memory_limit": f"{cores * int(os.getenv("SLURM_MEM_PER_CPU", 2000))}MB",
-        "silence_logs" : 40,
     }
     scheduler_path = Path(os.path.expandvars("$HOME") + "/tmp/scheduler_files")
     scheduler_path.mkdir(parents=True, exist_ok=True)
