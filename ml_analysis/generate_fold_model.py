@@ -241,9 +241,6 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                 with open(path, "wb") as f:
                     cloudpickle.dump(output, f)
                 print(f"{datetime.now()}   Exported model at {path}")
-                with silence_logging_cmgr(logging.CRITICAL): #handle silent shutdown
-                    client.cancel(client.futures.values())
-                    client.shutdown()
         print(f"{datetime.now()}  Shutdown main-client completed")
 
 
