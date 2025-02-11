@@ -1,6 +1,5 @@
-import logging
+import contextlib
 from datetime import datetime
-import math
 import os
 import tempfile
 import time
@@ -9,7 +8,6 @@ from multiprocessing import freeze_support
 
 import cloudpickle
 import pandas as pd
-from distributed.utils import silence_logging_cmgr
 from optuna.samplers import TPESampler
 from sklearn.preprocessing import LabelEncoder
 
@@ -32,16 +30,6 @@ from helper.load_dataset import generate_xy_split, get_dataset, get_flat_models,
     load_feature_groups
 from helper.model_training import get_model_HPO_space, get_model
 from helper.optuna_helper import categorical_distance_function
-
-
-# 1. Train/Test Split
-# 2. 10-CV
-#     - Methode für get-HPO (Model + Selection --> Optuna + static-fold Cross-Val) auf 9-split
-#     - Preproc + Trainieren Model auf 9-split mit HPs --> ggf. mit frozen_trial --> alle relevanten Metriken speichern
-# 3. Modell mit selbigen wie in CV trainieren auf ganzen Train --> Speichern + HPs
-# 4. weitere Eval auf Model --> Speichern
-
-# als separate Main: Multi-Objective für RQ2b
 
 def eval_model_performance(model_instance, X_train_test, precomputed, is_classification):
     y_test = precomputed["y_test"].get().result()
@@ -108,9 +96,9 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
     scheduler_path = Path(os.path.expandvars("$HOME") + "/tmp/scheduler_files")
     scheduler_path.mkdir(parents=True, exist_ok=True)
 
-
-    with (SLURMMemRunner(scheduler_file=str(scheduler_path)+"/scheduler-{job_id}.json", in_proc_id=in_proc_id,
+    with (SLURMMemRunner(scheduler_file=str(scheduler_path)+f"/scheduler-{{job_id}}_{foldNo}.json", in_proc_id=in_proc_id, fold_no=foldNo,
                       worker_options=worker_options, scheduler_options=scheduler_options) as runner):
+        scheduler_file = runner.scheduler_file
         with Client(runner, direct_to_workers=True) as client:
             Path(pathOutput).mkdir(parents=True, exist_ok=True)
             run_config = {
@@ -247,6 +235,8 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
             #shutdown_all_worker(client)
 
     print(f"{datetime.now()}  Shutdown main-client completed")
+    with contextlib.suppress(FileNotFoundError):
+        os.remove(scheduler_file)
 
 
 if __name__ == '__main__':
