@@ -22,7 +22,7 @@ ENROOT_CONFIG_PATH=$HOME/enroot_config/
 # helper: srun --container-image=$HOME/fe4femo/ml_analysis/slurm_scripts/ml_analysis_i.sqsh --container-name=ml_analysis:no_exec    --container-mounts=/etc/slurm/task_prolog:/etc/slurm/task_prolog,/scratch:/scratch    --container-workdir=/app/ --time=10 --partition=dev_single --no-container-entrypoint /bin/bash
 
 if [ "$ML_FOLD" = "-1" ]; then
-  RUN_COMMAND=("source /app/slurm_scripts/fold_connector.sh")
+  RUN_COMMAND=("/app/slurm_scripts/fold_connector.sh")
 else
   RUN_COMMAND=("conda" "run" "--no-capture-output" "-n" "ml_analysis" "python" "-Wignore::FutureWarning" "generate_fold_model.py" "--foldNo" "$ML_FOLD")
 fi
