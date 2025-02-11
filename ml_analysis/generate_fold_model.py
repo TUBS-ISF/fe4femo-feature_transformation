@@ -180,8 +180,6 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                     sampler = TPESampler(seed=None, multivariate=True, group=True, constant_liar=True, categorical_distance_func=categorical_distance_function())
                     study = optuna.create_study(storage=storage, direction="maximize", sampler=sampler)
 
-                    if int(os.getenv("SLURM_NTASKS", 1)) < 27:
-                        raise ValueError("Not enough worker, needs more than 32")
                     n_jobs = 25 #2 less than tasks for scheduler and main-node
                     n_trials = math.ceil(hpo_its / n_jobs)
 
@@ -251,6 +249,8 @@ if __name__ == '__main__':
     cpus_per_node = int(os.getenv("SLURM_CPUS_ON_NODE", 128)) // int(os.getenv("OMP_NUM_THREADS", 2))
     no_nodes = int(os.getenv("SLURM_JOB_NUM_NODES", 1))
     worker_count = cpus_per_node*no_nodes - 2
+    if worker_count < 25:
+        raise ValueError("Not enough worker, needs at least 25")
     print(f"Starting {worker_count} workers with {int(os.getenv("OMP_NUM_THREADS", 2))} cores per worker")
 
     function_args = (worker_count, os.environ.get("HOME")+"/"+os.path.expandvars(args.pathData), os.environ.get("HOME")+"/"+os.path.expandvars(args.pathOutput), args.features, args.task, args.model, args.modelHPO, args.selectorHPO, args.HPOits, args.foldNo)
