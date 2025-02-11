@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 import math
 import os
@@ -8,6 +9,7 @@ from multiprocessing import freeze_support
 
 import cloudpickle
 import pandas as pd
+from distributed.utils import silence_logging_cmgr
 from optuna.samplers import TPESampler
 from sklearn.preprocessing import LabelEncoder
 
@@ -239,7 +241,9 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
             with open(path, "wb") as f:
                 cloudpickle.dump(output, f)
             print(f"{datetime.now()}   Exported model at {path}")
-            client.shutdown()
+            with silence_logging_cmgr(logging.CRITICAL): #handle silent shutdown
+                client.cancel(client.futures.values())
+                client.shutdown()
         print(f"{datetime.now()}  Shutdown main-client completed")
 
 
