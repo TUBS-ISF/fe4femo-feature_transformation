@@ -123,6 +123,7 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
             "foldNo": foldNo,
         }
         with (
+            client.as_current(),
             performance_report(filename=run_config["path_output"] + "/" + run_config["name"] + ".html"),
             get_task_stream() as task_stream
         ):
