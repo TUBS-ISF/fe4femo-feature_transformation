@@ -69,7 +69,7 @@ class GeneticParallel(GeneticOptimization):
                     score = self.feature_score_hash[feature_hash]
                 else:
                     score = client.submit(compute_cv, self.objective_function, model, x_train,
-                                              y_train, folds, chosen_features, self.kwargs, self.minimize, pure=False)
+                                              y_train, folds, chosen_features, self.kwargs, self.minimize, self.parallelism, pure=False)
                 future_scores.append(score)
             scores = client.gather(future_scores, direct=True)
 
