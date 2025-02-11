@@ -46,7 +46,7 @@ while [[ maxIt -ge 0 ]] ; do
 
     ############
 
-    output=$(sbatch -J "$name" -n "$task_count" --time="$runtime" --output=$out_path  --partition="${partition}" "$script_path" --foldNo "$fold_no" --feature "$feature" --task "$task" --model "$model" --HPOits "$HPOits" "$modelHPO" "$selectorHPO" "$data_path" "$output_path" )
+    output=$(sbatch -J "$name" -n "$task_count" --time="$runtime" --output=$out_path  --partition="${partition}" --export=ALL,ML_FOLD="$fold_no" "$script_path" --feature "$feature" --task "$task" --model "$model" --HPOits "$HPOits" "$modelHPO" "$selectorHPO" "$data_path" "$output_path" )
     if [[ $output =~ "error" ]]; then
        echo "Error in Submission, trying again!"
     else
