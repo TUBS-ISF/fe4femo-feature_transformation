@@ -1,4 +1,3 @@
-import contextlib
 from datetime import datetime
 import os
 import tempfile
@@ -98,7 +97,7 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
 
     with (SLURMMemRunner(scheduler_file=str(scheduler_path)+f"/scheduler-{{job_id}}_{foldNo}.json", in_proc_id=in_proc_id, fold_no=foldNo,
                       worker_options=worker_options, scheduler_options=scheduler_options) as runner):
-        scheduler_file = runner.scheduler_file
+        scheduler_file = Path(runner.scheduler_file)
         with Client(runner, direct_to_workers=True) as client:
             Path(pathOutput).mkdir(parents=True, exist_ok=True)
             run_config = {
@@ -235,8 +234,7 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
             #shutdown_all_worker(client)
 
     print(f"{datetime.now()}  Shutdown main-client completed")
-    with contextlib.suppress(FileNotFoundError):
-        os.remove(scheduler_file)
+    scheduler_file.unlink(missing_ok=True)
 
 
 if __name__ == '__main__':
