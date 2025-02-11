@@ -106,140 +106,141 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
 
     with (SLURMMemRunner(scheduler_file=str(scheduler_path)+"/scheduler-{job_id}.json", in_proc_id=in_proc_id,
                       worker_options=worker_options, scheduler_options=scheduler_options) as runner):
-        with Client(runner, direct_to_workers=True) as client:
-            Path(pathOutput).mkdir(parents=True, exist_ok=True)
-            run_config = {
-                "name": create_run_name(features, task, model, modelHPO, selectorHPO, hpo_its, foldNo),
-                "path_data": pathData,
-                "path_output": pathOutput,
-                "features": features,
-                "task": task,
-                "model": model,
-                "modelHPO": modelHPO,
-                "selectorHPO" : selectorHPO,
-                "hpo_its": hpo_its,
-                "foldNo": foldNo,
+        client = Client(runner, direct_to_workers=True)
+        Path(pathOutput).mkdir(parents=True, exist_ok=True)
+        run_config = {
+            "name": create_run_name(features, task, model, modelHPO, selectorHPO, hpo_its, foldNo),
+            "path_data": pathData,
+            "path_output": pathOutput,
+            "features": features,
+            "task": task,
+            "model": model,
+            "modelHPO": modelHPO,
+            "selectorHPO" : selectorHPO,
+            "hpo_its": hpo_its,
+            "foldNo": foldNo,
+        }
+        with (
+            performance_report(filename=run_config["path_output"] + "/" + run_config["name"] + ".html"),
+            get_task_stream() as task_stream
+        ):
+
+            dask.distributed.print(f"{datetime.now()}   Dask dashboard is available at {client.dashboard_link}")
+            client.wait_for_workers(worker_count)
+            dask.distributed.print(str(datetime.now()) + "  Initialized all workers")
+
+            X, y = get_dataset(pathData, task)
+            is_classification = is_task_classification(task)
+            label_encoder = None
+            if is_classification:
+                y_index = y.index
+                label_encoder = LabelEncoder()
+                y = label_encoder.fit_transform(y)
+                y = pd.Series(y, index=y_index)
+            y = pd.to_numeric(y, downcast='float')
+            X_train, X_test, y_train, y_test = generate_xy_split(X, y, pathData+"/folds.txt", foldNo)
+
+            feature_count = X_train.shape[1]
+
+            kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
+            model_flatness = get_flat_models(X_train)
+            flatness_future = client.scatter(model_flatness, direct=True)
+
+            feature_groups = load_feature_groups(pathData)
+
+            best_params = {}
+            journal_path = "no journal"
+            verbose = False
+            easy_model = False
+
+            dask.distributed.print(str(datetime.now()) + "  Loaded all Data")
+            if selectorHPO:
+                splits = kf.split(X_train, model_flatness)
+
+                # dask export for better cluster behaviour
+
+                folds = {}
+                for i, (train_index, test_index) in enumerate(splits):
+                    X_train_inner = X_train.iloc[train_index]
+                    X_test_inner = X_train.iloc[test_index]
+                    y_train_inner = y_train.iloc[train_index]
+                    y_test_inner = y_train.iloc[test_index]
+                    # feature preprocessing
+                    future_pre = client.submit(precompute_feature_selection, features, is_classification,
+                                               X_train_inner, X_test_inner, y_train_inner, y_test_inner,
+                                               flatness_future, 0.9, cores, pure=True)
+                    future_pre = client.submit(transform_dict_to_var_dict, future_pre)
+                    folds[i] = future_pre
+                dask.distributed.print(str(datetime.now()) + "  Initialized Folds")
+                objective_function = lambda trial: objective(trial, folds, features, model, modelHPO, is_classification, feature_groups, feature_count, cores)
+
+                journal_path = run_config["path_output"] + "/" + run_config["name"] + ".journal"
+                journal = optuna.storages.JournalStorage(optuna.storages.journal.JournalFileBackend(journal_path))
+                storage = optuna.integration.dask.DaskStorage(journal)
+                sampler = TPESampler(seed=None, multivariate=True, group=True, constant_liar=True, categorical_distance_func=categorical_distance_function())
+                study = optuna.create_study(storage=storage, direction="maximize", sampler=sampler)
+
+                n_jobs = 25 #2 less than tasks for scheduler and main-node
+
+                lock = dask.distributed.Lock("LOCK_COUNTER_VAR")
+                counter = dask.distributed.Variable()
+                counter.set(hpo_its)
+                dask.distributed.print(str(datetime.now()) + "  Initialized optuna")
+                futures = [
+                    client.submit(optimize_optuna, study, objective_function, lock, counter, pure=False) for _ in range(n_jobs)
+                ]
+                dask.distributed.print(str(datetime.now()) + "  Started optuna worker")
+                dask.distributed.wait(futures)
+                dask.distributed.print(str(datetime.now()) + "  Optuna optimization completed")
+                # train complete model with HPO values
+                best_params = study.best_params
+                frozen_best_trial = study.best_trial
+
+
+                # feature selection + model training
+                model_config = get_model_HPO_space(model, frozen_best_trial, is_classification) if modelHPO else None
+                selector_config = get_selection_HPO_space(features, frozen_best_trial, is_classification, feature_groups, X_train.shape[1])
+            else:
+                model_config = {}
+                selector_config = {}
+                verbose=True
+                easy_model = True
+
+            dask.distributed.print(str(datetime.now()) + "  Start training final model")
+            model_instance_selector = get_model(model, is_classification, 1, model_config, easy_model=easy_model)
+            start_FS = time.time()
+            precomputed = client.submit(precompute_feature_selection, features, is_classification, X_train, X_test, y_train, y_test, model_flatness, parallelism=cores, pure=False)
+            precomputed = client.submit(transform_dict_to_var_dict, precomputed, pure=False)
+            fs_future = client.submit(get_feature_selection, precomputed.result(), features, is_classification, selector_config, model_instance_selector, feature_groups, parallelism=cores, verbose=verbose, dask_parallel=True, pure=False)
+            X_train, X_test = fs_future.result()
+            end_FS = time.time()
+            dask.distributed.print(str(datetime.now()) + "  Finished feature selection of final model")
+            model_instance = get_model(model, is_classification, cores, model_config)
+            start_Model =time.time()
+            model_instance.fit(X_train, y_train)
+            end_Model =time.time()
+            model_complete = model_instance
+            dask.distributed.print(str(datetime.now()) + "  Finished training final model")
+
+            # export for later use
+            output = {
+                "model": model_complete,
+                "X_test": X_test,
+                "y_test": y_test,
+                "label_encoder" : label_encoder,
+                "best_params": best_params,
+                "run_config": run_config,
+                "journal_path": journal_path,
+                "time_Feature" : end_FS - start_FS,
+                "time_Model" : end_Model - start_Model,
             }
-            with (
-                performance_report(filename=run_config["path_output"] + "/" + run_config["name"] + ".html"),
-                get_task_stream() as task_stream
-            ):
-
-                dask.distributed.print(f"{datetime.now()}   Dask dashboard is available at {client.dashboard_link}")
-                client.wait_for_workers(worker_count)
-                dask.distributed.print(str(datetime.now()) + "  Initialized all workers")
-
-                X, y = get_dataset(pathData, task)
-                is_classification = is_task_classification(task)
-                label_encoder = None
-                if is_classification:
-                    y_index = y.index
-                    label_encoder = LabelEncoder()
-                    y = label_encoder.fit_transform(y)
-                    y = pd.Series(y, index=y_index)
-                y = pd.to_numeric(y, downcast='float')
-                X_train, X_test, y_train, y_test = generate_xy_split(X, y, pathData+"/folds.txt", foldNo)
-
-                feature_count = X_train.shape[1]
-
-                kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
-                model_flatness = get_flat_models(X_train)
-                flatness_future = client.scatter(model_flatness, direct=True)
-
-                feature_groups = load_feature_groups(pathData)
-
-                best_params = {}
-                journal_path = "no journal"
-                verbose = False
-                easy_model = False
-
-                dask.distributed.print(str(datetime.now()) + "  Loaded all Data")
-                if selectorHPO:
-                    splits = kf.split(X_train, model_flatness)
-
-                    # dask export for better cluster behaviour
-
-                    folds = {}
-                    for i, (train_index, test_index) in enumerate(splits):
-                        X_train_inner = X_train.iloc[train_index]
-                        X_test_inner = X_train.iloc[test_index]
-                        y_train_inner = y_train.iloc[train_index]
-                        y_test_inner = y_train.iloc[test_index]
-                        # feature preprocessing
-                        future_pre = client.submit(precompute_feature_selection, features, is_classification,
-                                                   X_train_inner, X_test_inner, y_train_inner, y_test_inner,
-                                                   flatness_future, 0.9, cores, pure=True)
-                        future_pre = client.submit(transform_dict_to_var_dict, future_pre)
-                        folds[i] = future_pre
-                    dask.distributed.print(str(datetime.now()) + "  Initialized Folds")
-                    objective_function = lambda trial: objective(trial, folds, features, model, modelHPO, is_classification, feature_groups, feature_count, cores)
-
-                    journal_path = run_config["path_output"] + "/" + run_config["name"] + ".journal"
-                    journal = optuna.storages.JournalStorage(optuna.storages.journal.JournalFileBackend(journal_path))
-                    storage = optuna.integration.dask.DaskStorage(journal)
-                    sampler = TPESampler(seed=None, multivariate=True, group=True, constant_liar=True, categorical_distance_func=categorical_distance_function())
-                    study = optuna.create_study(storage=storage, direction="maximize", sampler=sampler)
-
-                    n_jobs = 25 #2 less than tasks for scheduler and main-node
-
-                    lock = dask.distributed.Lock("LOCK_COUNTER_VAR")
-                    counter = dask.distributed.Variable()
-                    counter.set(hpo_its)
-                    dask.distributed.print(str(datetime.now()) + "  Initialized optuna")
-                    futures = [
-                        client.submit(optimize_optuna, study, objective_function, lock, counter, pure=False) for _ in range(n_jobs)
-                    ]
-                    dask.distributed.print(str(datetime.now()) + "  Started optuna worker")
-                    dask.distributed.wait(futures)
-                    dask.distributed.print(str(datetime.now()) + "  Optuna optimization completed")
-                    # train complete model with HPO values
-                    best_params = study.best_params
-                    frozen_best_trial = study.best_trial
-
-
-                    # feature selection + model training
-                    model_config = get_model_HPO_space(model, frozen_best_trial, is_classification) if modelHPO else None
-                    selector_config = get_selection_HPO_space(features, frozen_best_trial, is_classification, feature_groups, X_train.shape[1])
-                else:
-                    model_config = {}
-                    selector_config = {}
-                    verbose=True
-                    easy_model = True
-
-                dask.distributed.print(str(datetime.now()) + "  Start training final model")
-                model_instance_selector = get_model(model, is_classification, 1, model_config, easy_model=easy_model)
-                start_FS = time.time()
-                precomputed = client.submit(precompute_feature_selection, features, is_classification, X_train, X_test, y_train, y_test, model_flatness, parallelism=cores, pure=False)
-                precomputed = client.submit(transform_dict_to_var_dict, precomputed, pure=False)
-                fs_future = client.submit(get_feature_selection, precomputed.result(), features, is_classification, selector_config, model_instance_selector, feature_groups, parallelism=cores, verbose=verbose, dask_parallel=True, pure=False)
-                X_train, X_test = fs_future.result()
-                end_FS = time.time()
-                dask.distributed.print(str(datetime.now()) + "  Finished feature selection of final model")
-                model_instance = get_model(model, is_classification, cores, model_config)
-                start_Model =time.time()
-                model_instance.fit(X_train, y_train)
-                end_Model =time.time()
-                model_complete = model_instance
-                dask.distributed.print(str(datetime.now()) + "  Finished training final model")
-
-                # export for later use
-                output = {
-                    "model": model_complete,
-                    "X_test": X_test,
-                    "y_test": y_test,
-                    "label_encoder" : label_encoder,
-                    "best_params": best_params,
-                    "run_config": run_config,
-                    "journal_path": journal_path,
-                    "time_Feature" : end_FS - start_FS,
-                    "time_Model" : end_Model - start_Model,
-                }
             output["task_stream"] = task_stream.data
             path = run_config["path_output"] + "/" + run_config["name"] + ".pkl"
             with open(path, "wb") as f:
                 cloudpickle.dump(output, f)
             print(f"{datetime.now()}   Exported model at {path}")
             client.shutdown()
+        print(f"{datetime.now()}  Shutdown main-client completed")
 
 
 if __name__ == '__main__':
