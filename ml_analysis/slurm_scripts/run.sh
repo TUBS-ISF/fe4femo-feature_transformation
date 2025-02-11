@@ -12,6 +12,8 @@ if [[ -z "$ML_FOLD" ]]; then
   exit 1
 fi
 
+export DASK_DISTRIBUTED__LOGGING=WARN
+
 export OMP_NUM_THREADS=2
 echo -e "JOB_ID=${SLURM_JOB_ID}"
 echo -e "OMP_THREADS=${OMP_NUM_THREADS}"
