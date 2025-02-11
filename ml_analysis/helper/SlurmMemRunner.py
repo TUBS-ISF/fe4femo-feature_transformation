@@ -9,8 +9,9 @@ from distributed import Scheduler
 
 
 class SLURMMemRunner(BaseRunner):
-    def __init__(self, *args, in_proc_id=-1, scheduler_file="scheduler-{job_id}.json", **kwargs):
+    def __init__(self, *args, in_proc_id=-1, fold_no=-1, scheduler_file="scheduler-{job_id}.json", **kwargs):
         self.in_proc_id = in_proc_id
+        self.fold_no = fold_no
         try:
             self.proc_id = int(os.environ["SLURM_PROCID"])
             self.job_id = int(os.environ["SLURM_JOB_ID"])
@@ -20,6 +21,8 @@ class SLURMMemRunner(BaseRunner):
             ) from e
         if in_proc_id < 0 :
             raise RuntimeError("In-Proc ID must be positive!")
+        if fold_no < 0 :
+            raise RuntimeError("Fold No must be positive!")
         if not scheduler_file:
             scheduler_file = kwargs.get("scheduler_options", {}).get("scheduler_file")
 
@@ -39,7 +42,7 @@ class SLURMMemRunner(BaseRunner):
             kwargs["scheduler_options"] = {"scheduler_file": scheduler_file}
         if isinstance(kwargs.get("worker_options"), dict):
             kwargs["worker_options"]["scheduler_file"] = scheduler_file
-            kwargs["worker_options"]["local_directory"] = os.environ["TMPDIR"]+"/"+os.environ["SLURM_PROCID"]+f"_{self.in_proc_id}"
+            kwargs["worker_options"]["local_directory"] = os.environ["TMPDIR"]+"/"+os.environ["SLURM_PROCID"]+f"_{self.in_proc_id}+{self.fold_no}"
             Path(kwargs["worker_options"]["local_directory"]).mkdir(parents=True, exist_ok=True)
         else:
             kwargs["worker_options"] = {"scheduler_file": scheduler_file}

@@ -239,12 +239,15 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                     "time_Feature" : end_FS - start_FS,
                     "time_Model" : end_Model - start_Model,
                 }
-                output["task_stream"] = task_stream.data
-                path = run_config["path_output"] + "/" + run_config["name"] + ".pkl"
-                with open(path, "wb") as f:
-                    cloudpickle.dump(output, f)
-                print(f"{datetime.now()}   Exported model at {path}")
         print(f"{datetime.now()}  Shutdown main-client completed")
+            output["task_stream"] = task_stream.data
+            path = run_config["path_output"] + "/" + run_config["name"] + ".pkl"
+            with open(path, "wb") as f:
+                cloudpickle.dump(output, f)
+            print(f"{datetime.now()}   Exported model at {path}")
+            #shutdown_all_worker(client)
+
+    print(f"{datetime.now()}  Shutdown main-client completed")
 
 
 if __name__ == '__main__':
@@ -263,5 +266,5 @@ if __name__ == '__main__':
     processes = [ctx.Process(target=main, args=((i,)+function_args), daemon=False) for i in range(cpus_per_node)]
     for p in processes:
         p.start()
-    print("Started all subprocesses!")
-    print("Main python exited")
+    for p in processes:
+        exit_value = p.join()
