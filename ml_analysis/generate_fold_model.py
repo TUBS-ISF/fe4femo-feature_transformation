@@ -239,7 +239,6 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                     "time_Feature" : end_FS - start_FS,
                     "time_Model" : end_Model - start_Model,
                 }
-        print(f"{datetime.now()}  Shutdown main-client completed")
             output["task_stream"] = task_stream.data
             path = run_config["path_output"] + "/" + run_config["name"] + ".pkl"
             with open(path, "wb") as f:

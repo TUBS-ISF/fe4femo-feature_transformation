@@ -1,11 +1,13 @@
 import asyncio
 import json
 import os
+import signal
+from contextlib import suppress
 from pathlib import Path
 
 from dask_jobqueue.runner import BaseRunner, Role
-from dask_jobqueue.slurm import WorldTooSmallException
-from distributed import Scheduler
+from distributed import Scheduler, Status, rpc
+from distributed.comm import CommClosedError
 
 
 class SLURMMemRunner(BaseRunner):
@@ -70,3 +72,38 @@ class SLURMMemRunner(BaseRunner):
 
     async def get_worker_name(self) -> str:
         return f"{self.proc_id}_{self.in_proc_id}"
+
+    async def _start(self) -> None:
+        self.role = await self.get_role()
+        if self.role == Role.scheduler:
+            await self.start_scheduler()
+            os.kill(
+                os.getpid(), signal.SIGTERM
+            )  # Shutdown with a signal to give the event loop time to close
+            await asyncio.sleep(15)
+            os.kill(
+                os.getpid(), signal.SIGKILL
+            )
+        elif self.role == Role.worker:
+            await self.start_worker()
+            os.kill(
+                os.getpid(), signal.SIGTERM
+            )  # Shutdown with a signal to give the event loop time to close
+            await asyncio.sleep(15)
+            os.kill(
+                os.getpid(), signal.SIGKILL
+            )
+        elif self.role == Role.client:
+            self.scheduler_address = await self.get_scheduler_address()
+            if self.scheduler_address:
+                self.scheduler_comm = rpc(self.scheduler_address)
+            await self.before_client_start()
+        self.status = Status.running
+
+    async def _close(self) -> None:
+        if self.status == Status.running:
+            if self.scheduler_comm:
+                with suppress(CommClosedError):
+                    await self.scheduler_comm.terminate()
+            self.status = Status.closed
+
