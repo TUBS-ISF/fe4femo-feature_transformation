@@ -181,11 +181,10 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                     study = optuna.create_study(storage=storage, direction="maximize", sampler=sampler)
 
                     n_jobs = 25 #2 less than tasks for scheduler and main-node
-                    n_trials = math.ceil(hpo_its / n_jobs)
 
                     lock = dask.distributed.Lock("LOCK_COUNTER_VAR")
                     counter = dask.distributed.Variable()
-                    counter.set(n_trials)
+                    counter.set(hpo_its)
                     dask.distributed.print(str(datetime.now()) + "  Initialized optuna")
                     futures = [
                         client.submit(optimize_optuna, study, objective_function, lock, counter, pure=False) for _ in range(n_jobs)
