@@ -255,9 +255,8 @@ if __name__ == '__main__':
     function_args = (worker_count, os.environ.get("HOME")+"/"+os.path.expandvars(args.pathData), os.environ.get("HOME")+"/"+os.path.expandvars(args.pathOutput), args.features, args.task, args.model, args.modelHPO, args.selectorHPO, args.HPOits, args.foldNo)
 
     ctx = mp.get_context("spawn")
-    processes = [ctx.Process(target=main, args=((i,)+function_args)) for i in range(cpus_per_node)]
+    processes = [ctx.Process(target=main, args=((i,)+function_args), daemon=False) for i in range(cpus_per_node)]
     for p in processes:
         p.start()
     print("Started all subprocesses!")
-    exit_codes = [p.join() for p in processes]
     print("Main python exited")
