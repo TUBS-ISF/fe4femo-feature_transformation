@@ -40,9 +40,9 @@ while [[ maxIt -ge 0 ]] ; do
     model=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $8}' $config)
     HPOits=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $9}' $config)
     bool_modelHPO=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $10}' $config)
-    [[ "$bool_modelHPO" == "True" ]] && modelHPO="--modelHPO" || modelHPO=""
+    [[ "$bool_modelHPO" == "True" ]] && modelHPO="--modelHPO" || modelHPO="--no-modelHPO"
     bool_selectorHPO=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $11}' $config)
-    [[ "$bool_selectorHPO" == "True" ]] && selectorHPO="--selectorHPO" || selectorHPO=""
+    [[ "$bool_selectorHPO" == "True" ]] && selectorHPO="--selectorHPO" || selectorHPO="--no-selectorHPO"
 
     ############
 
