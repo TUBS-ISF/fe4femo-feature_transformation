@@ -70,7 +70,12 @@ def objective(trial: optuna.Trial, folds, features, model, should_modelHPO, is_c
         return -100.4242
 
 def create_run_name(features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, foldNo : int) -> str:
-    return f"{task}#{features}#{model}#{modelHPO}#{selectorHPO}#{hpo_its}#{foldNo}"
+    ret_value = f"{task}#{features}#{model}#{modelHPO}#{selectorHPO}"
+    if modelHPO or selectorHPO:
+        ret_value += f"#{hpo_its}"
+    if foldNo >= 0:
+        ret_value += f"#{foldNo}"
+    return ret_value
 
 def optimize_optuna(study: optuna.study.Study, objective_function, lock : dask.distributed.Lock, counter : dask.distributed.Variable):
     while True:

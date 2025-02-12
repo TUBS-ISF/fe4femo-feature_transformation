@@ -17,7 +17,7 @@ def get_task_count(feature: str) -> int:
     else:
         return 3
 
-def get_runtime(hpoIts: int, feature: str) -> str:
+def get_runtime(hpoIts: int, feature: str, individual_folds : bool) -> str:
     selector_modifier_m = {
         "all" : 30,
         "prefilter" : 10,
@@ -41,6 +41,8 @@ def get_runtime(hpoIts: int, feature: str) -> str:
     value = selector_modifier_m[feature]
     if feature != "genetic":
         value *= hpoIts / 50
+    if not individual_folds:
+        value *= 10
     value *= final_modifier
 
     return str(math.ceil(value))
@@ -52,19 +54,29 @@ def check_valid(feature: str, model: str, task: str) -> bool:
         return False
     return True
 
+#todo configure
 def check_desired(feature: str, model: str, task: str):
-    return True
+    if model == "randomForest" and task == "value_ssat":
+        return True
+    else:
+        return False
 
 
 if __name__ == '__main__':
+    #todo configure
     hpoIts=150
+    individual_folds = False
+
+
+
+    folds = range(10) if individual_folds else [-1]
     combinations = [
-        (fold, feature, model, task) for fold, feature, model, task in itertools.product(range(10), get_feature_list(), get_model_list(), get_task_list())
+        (fold, feature, model, task) for fold, feature, model, task in itertools.product(folds, get_feature_list(), get_model_list(), get_task_list())
         if check_valid(feature, model, task) and check_desired(feature, model, task)
     ]
 
     experiments = [
-        f"{i} {create_run_name(feature, task, model, is_modelHPO(feature), is_selectorHPO(feature), hpoIts, fold)} {get_task_count(feature)} {get_runtime(hpoIts, feature)} {fold} {feature} {task} {model} {hpoIts} {is_modelHPO(feature)} {is_selectorHPO(feature)}"
+        f"{i} {create_run_name(feature, task, model, is_modelHPO(feature), is_selectorHPO(feature), hpoIts, fold)} {get_task_count(feature)} {get_runtime(hpoIts, feature, individual_folds)} {fold} {feature} {task} {model} {hpoIts} {is_modelHPO(feature)} {is_selectorHPO(feature)}"
         for i, (fold, feature, model, task) in enumerate(combinations)
     ]
 
@@ -72,7 +84,6 @@ if __name__ == '__main__':
     for experiment in experiments:
         runtime_estimation += int(experiment.split(" ")[3])
     print(f"Total estimated sequential runtime: {timedelta(minutes=runtime_estimation)}")
-
 
 
     with open("config.txt", "w") as f:
