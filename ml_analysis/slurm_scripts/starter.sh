@@ -43,10 +43,12 @@ while [[ maxIt -ge 0 ]] ; do
     [[ "$bool_modelHPO" == "True" ]] && modelHPO="--modelHPO" || modelHPO="--no-modelHPO"
     bool_selectorHPO=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $11}' $config)
     [[ "$bool_selectorHPO" == "True" ]] && selectorHPO="--selectorHPO" || selectorHPO="--no-selectorHPO"
+    bool_multiObjective=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $12}' $config)
+    [[ "$bool_multiObjective" == "True" ]] && multiObjective="--multiObjective" || multiObjective="--no-multiObjective"
 
     ############
 
-    output=$(sbatch -J "$name" -n "$task_count" --time="$runtime" --output=$out_path  --partition="${partition}" --export=ALL,ML_FOLD="$fold_no" "$script_path" --feature "$feature" --task "$task" --model "$model" --HPOits "$HPOits" "$modelHPO" "$selectorHPO" "$data_path" "$output_path" )
+    output=$(sbatch -J "$name" -n "$task_count" --time="$runtime" --output=$out_path  --partition="${partition}" --export=ALL,ML_FOLD="$fold_no" "$script_path" --feature "$feature" --task "$task" --model "$model" --HPOits "$HPOits" "$modelHPO" "$selectorHPO" "$multiObjective" "$data_path" "$output_path" )
     if [[ $output =~ "error" ]]; then
        echo "Error in Submission, trying again!"
     else

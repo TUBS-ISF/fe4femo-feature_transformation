@@ -47,15 +47,17 @@ def get_runtime(hpoIts: int, feature: str, individual_folds : bool) -> str:
 
     return str(math.ceil(value))
 
-def check_valid(feature: str, model: str, task: str) -> bool:
+def check_valid(feature: str, model: str, task: str, multi_objective: bool) -> bool:
     if feature == "harris-hawks":
         return False
     if feature == "RFE" and not (model == "gradboostForest" or model == "randomForest" or model == "adaboost"):
         return False
+    if multi_objective and feature not in ["optuna-combined"]:
+        return False
     return True
 
 #todo configure
-def check_desired(feature: str, model: str, task: str):
+def check_desired(feature: str, model: str, task: str, multi_objective: bool) -> bool:
     if model == "randomForest" and task == "value_ssat":
         return True
     else:
@@ -71,13 +73,13 @@ if __name__ == '__main__':
 
     folds = range(10) if individual_folds else [-1]
     combinations = [
-        (fold, feature, model, task) for fold, feature, model, task in itertools.product(folds, get_feature_list(), get_model_list(), get_task_list())
-        if check_valid(feature, model, task) and check_desired(feature, model, task)
+        (fold, feature, model, task, multi_objective) for fold, feature, model, task, multi_objective in itertools.product(folds, get_feature_list(), get_model_list(), get_task_list(), [True, False])
+        if check_valid(feature, model, task, multi_objective) and check_desired(feature, model, task, multi_objective)
     ]
 
     experiments = [
-        f"{i} {create_run_name(feature, task, model, is_modelHPO(feature), is_selectorHPO(feature), hpoIts, fold)} {get_task_count(feature)} {get_runtime(hpoIts, feature, individual_folds)} {fold} {feature} {task} {model} {hpoIts} {is_modelHPO(feature)} {is_selectorHPO(feature)}"
-        for i, (fold, feature, model, task) in enumerate(combinations)
+        f"{i} {create_run_name(feature, task, model, is_modelHPO(feature), is_selectorHPO(feature), hpoIts, multi_objective, fold)} {get_task_count(feature)} {get_runtime(hpoIts, feature, individual_folds)} {fold} {feature} {task} {model} {hpoIts} {is_modelHPO(feature)} {is_selectorHPO(feature)} {multi_objective}"
+        for i, (fold, feature, model, task, multi_objective) in enumerate(combinations)
     ]
 
     runtime_estimation = 0
@@ -87,6 +89,6 @@ if __name__ == '__main__':
 
 
     with open("config.txt", "w") as f:
-        f.write("NO NAME TASK_COUNT RUNTIME FOLD_NO FEATURE TASK MODEL HPO_ITS MODEL_HPO SELECTOR_HPO\n")
+        f.write("NO NAME TASK_COUNT RUNTIME FOLD_NO FEATURE TASK MODEL HPO_ITS MODEL_HPO SELECTOR_HPO MULTI_OBJECTIVE\n")
         f.write("\n".join(experiments))
 

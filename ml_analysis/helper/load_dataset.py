@@ -165,6 +165,13 @@ def load_feature_groups(path: str) -> dict[str, list[str]]:
     df = pd.read_csv(path+"/featureExtraction/groupMapping.csv", header=0)
     return df.groupby("groupName")['featureName'].apply(list).to_dict()
 
+def load_feature_group_times(path: str) -> pd.DataFrame:
+    df = pd.read_csv(path+"/featureExtraction/groupTimes.csv", header=0)
+    df = pd.pivot_table(df, values="groupTimeS", index=["modelNo", "groupName"])["groupTimeS"].unstack(level=1)
+    df = df.astype('float32')
+    return df
+
+
 def generate_xy_split(X, y, fold_path, foldNo) -> tuple:
     with open(fold_path) as f:
         splits = [[int(x) for x in line.split()] for line in f]

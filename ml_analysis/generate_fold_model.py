@@ -11,6 +11,8 @@ import pandas as pd
 from optuna.samplers import TPESampler
 from sklearn.preprocessing import LabelEncoder
 
+from helper.data_classes import FoldResult, TrialContainer
+
 os.environ['MPLCONFIGDIR'] = tempfile.mkdtemp()
 from pathlib import Path
 from statistics import mean
@@ -27,7 +29,7 @@ from helper.feature_selection import get_selection_HPO_space, get_feature_select
      transform_dict_to_var_dict
 from helper.input_parser import parse_input
 from helper.load_dataset import generate_xy_split, get_dataset, get_flat_models, is_task_classification, \
-    load_feature_groups
+    load_feature_groups, load_feature_group_times
 from helper.model_training import get_model_HPO_space, get_model
 from helper.optuna_helper import categorical_distance_function
 
@@ -51,29 +53,54 @@ def do_feature_selection(model, is_classification, model_config, precomputed, fe
     model_instance_selector = get_model(model, is_classification, 1, model_config )
     return get_feature_selection(precomputed, features, is_classification, selector_config, model_instance_selector, feature_groups, parallelism=cores, verbose=verbose, dask_parallel=False)
 
-def compute_fold(client, model, features, is_classification, model_config, selector_config, feature_groups, precomputed, cores : int, verbose = False)  -> float:
+def eval_feature_group_runtime(X_train_test, feature_groups: dict[str, list[str]], feature_group_times: pd.DataFrame) -> float:
+    X_train, X_test = X_train_test
+    instances = list(set(X_train.index.values).union(set(X_test.index.values)))
+    active_features = set(X_train.columns.values)
+    active_groups = [ group for group, feature_list in feature_groups if any( feature in active_features for feature in feature_list ) ]
+    return feature_group_times.loc[instances, active_groups].sum(axis=1).mean()
+
+#add further objectives here
+def build_fold_result(model_performance: float, feature_computation_time: float) -> FoldResult:
+    return FoldResult(
+        model_quality=model_performance,
+        feature_computation_time=feature_computation_time,
+    )
+
+def compute_fold(client, model, features, is_classification, model_config, selector_config, feature_groups, feature_group_times, precomputed, cores : int, verbose = False)  -> float:
     # feature selection + model training
     X_train_test = client.submit(do_feature_selection, model, is_classification, model_config, precomputed, features, selector_config, feature_groups, cores, verbose,pure=False)
     model_instance = client.submit(train_model, model, is_classification, cores, model_config, X_train_test, precomputed, pure=False)
-    return client.submit(eval_model_performance, model_instance, X_train_test, precomputed, is_classification, pure=False)
+    model_performance = client.submit(eval_model_performance, model_instance, X_train_test, precomputed, is_classification, pure=False)
+    feature_computation_time = client.submit(eval_feature_group_runtime, X_train_test, feature_groups, feature_group_times, pure=False)
+    #add further objectives here
+    return client.submit(build_fold_result, model_performance, feature_computation_time, pure=False)
 
-def objective(trial: optuna.Trial, folds, features, model, should_modelHPO, is_classification, feature_groups, feature_count, cores : int) -> float:
+def objective(trial: optuna.Trial, folds, features, model, should_modelHPO, is_classification, feature_groups, feature_group_times, feature_count, cores : int, multi_objective : bool) -> float | tuple[float, float]:
     try:
         model_config = get_model_HPO_space(model, trial, is_classification) if should_modelHPO else None
         selector_config = get_selection_HPO_space(features, trial, is_classification, feature_groups, feature_count)
         with worker_client() as client:
             futures = [
-                compute_fold(client, model, features, is_classification, model_config, selector_config, feature_groups, future_precompute, cores)
+                compute_fold(client, model, features, is_classification, model_config, selector_config, feature_groups, feature_group_times, future_precompute, cores)
                 for i, future_precompute in folds.items()]
             results = client.gather(futures, direct=True)
-        return mean(results)
+        if multi_objective:
+            return mean(x.model_quality for x in results), mean(x.feature_computation_time for x in results)
+        else:
+            return mean(x.model_quality for x in results)
     except Exception as e:
-        return -100.4242
+        # fix if further objectives added
+        if multi_objective:
+            return -100.4242, 42*10e9
+        else:
+            return -100.4242
 
-def create_run_name(features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, foldNo : int) -> str:
+def create_run_name(features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, multi_objective : bool, foldNo : int) -> str:
     ret_value = f"{task}#{features}#{model}#{modelHPO}#{selectorHPO}"
     if modelHPO or selectorHPO:
         ret_value += f"#{hpo_its}"
+    ret_value += f"#{multi_objective}"
     if foldNo >= 0:
         ret_value += f"#{foldNo}"
     return ret_value
@@ -87,7 +114,27 @@ def optimize_optuna(study: optuna.study.Study, objective_function, lock : dask.d
             counter.set(counter_value - 1)
         study.optimize(objective_function, n_trials=1)
 
-def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, foldNo : int):
+
+def compute_final_model(client, model, features, X_train, X_test, y_train, y_test, is_classification, model_config, selector_config, model_flatness, feature_groups, easy_model, cores, verbose):
+    model_instance_selector = get_model(model, is_classification, 1, model_config, easy_model=easy_model)
+    start_FS = time.time()
+    precomputed = client.submit(precompute_feature_selection, features, is_classification, X_train, X_test, y_train,
+                                y_test, model_flatness, parallelism=cores, pure=False)
+    precomputed = client.submit(transform_dict_to_var_dict, precomputed, pure=False)
+    fs_future = client.submit(get_feature_selection, precomputed, features, is_classification, selector_config,
+                              model_instance_selector, feature_groups, parallelism=cores, verbose=verbose,
+                              dask_parallel=True, pure=False)
+    X_train, X_test = fs_future.result()
+    end_FS = time.time()
+    model_instance = get_model(model, is_classification, cores, model_config)
+    start_Model = time.time()
+    model_instance.fit(X_train, y_train)
+    end_Model = time.time()
+    model_complete = model_instance
+    return model_complete, end_FS - start_FS, end_Model - start_Model
+
+
+def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, multi_objective: bool, foldNo : int):
     warnings.simplefilter("ignore", UserWarning)
     cores = int(os.getenv("OMP_NUM_THREADS", "1"))
     scheduler_options = {
@@ -108,7 +155,7 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
         with Client(runner, direct_to_workers=True) as client:
             Path(pathOutput).mkdir(parents=True, exist_ok=True)
             run_config = {
-                "name": create_run_name(features, task, model, modelHPO, selectorHPO, hpo_its, foldNo),
+                "name": create_run_name(features, task, model, modelHPO, selectorHPO, hpo_its, multi_objective, foldNo),
                 "path_data": pathData,
                 "path_output": pathOutput,
                 "features": features,
@@ -117,6 +164,7 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                 "modelHPO": modelHPO,
                 "selectorHPO" : selectorHPO,
                 "hpo_its": hpo_its,
+                "multiObjective": multi_objective,
                 "foldNo": foldNo,
             }
 
@@ -146,6 +194,9 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                 flatness_future = client.scatter(model_flatness, direct=True)
 
                 feature_groups = load_feature_groups(pathData)
+                feature_group_times = load_feature_group_times(pathData)
+                feature_group_times_future = client.scatter(feature_group_times, direct=True)
+
 
                 best_params = {}
                 journal_path = "no journal"
@@ -171,13 +222,14 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                         future_pre = client.submit(transform_dict_to_var_dict, future_pre)
                         folds[i] = future_pre
                     dask.distributed.print(str(datetime.now()) + "  Initialized Folds")
-                    objective_function = lambda trial: objective(trial, folds, features, model, modelHPO, is_classification, feature_groups, feature_count, cores)
+                    objective_function = lambda trial: objective(trial, folds, features, model, modelHPO, is_classification, feature_groups, feature_group_times_future, feature_count, cores, multi_objective)
 
                     journal_path = run_config["path_output"] + "/" + run_config["name"] + ".journal"
                     journal = optuna.storages.JournalStorage(optuna.storages.journal.JournalFileBackend(journal_path))
                     storage = optuna.integration.dask.DaskStorage(journal)
                     sampler = TPESampler(seed=None, multivariate=True, group=True, constant_liar=True, categorical_distance_func=categorical_distance_function())
-                    study = optuna.create_study(storage=storage, direction="maximize", sampler=sampler)
+                    optuna_direction = ["maximize", "minimize"] if multi_objective else "maximize"
+                    study = optuna.create_study(storage=storage, direction=optuna_direction, sampler=sampler)
 
                     n_jobs = 25 #2 less than tasks for scheduler and main-node
 
@@ -191,54 +243,53 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                     dask.distributed.print(str(datetime.now()) + "  Started optuna worker")
                     dask.distributed.wait(futures)
                     dask.distributed.print(str(datetime.now()) + "  Optuna optimization completed")
-                    # train complete model with HPO values
-                    best_params = study.best_params
-                    frozen_best_trial = study.best_trial
 
+                dask.distributed.print(f"{datetime.now()}  Start training final models")
+                if selectorHPO:
+                    trial_container = []
+                    frozen_trials = study.best_trials if multi_objective else [study.best_trial]
+                    for j, frozen_best_trial in enumerate(frozen_trials):
+                        dask.distributed.print(f"{datetime.now()}  Start training final model {j}")
+                        # feature selection + model training
+                        best_params = frozen_best_trial.params
+                        model_config = get_model_HPO_space(model, frozen_best_trial, is_classification) if modelHPO else None
+                        selector_config = get_selection_HPO_space(features, frozen_best_trial, is_classification, feature_groups, X_train.shape[1])
+                        model_complete, time_feature, time_model = compute_final_model(client, model, features, X_train,
+                                                                                       X_test, y_train, y_test,
+                                                                                       is_classification, model_config,
+                                                                                       selector_config, model_flatness,
+                                                                                       feature_groups, easy_model, cores,
+                                                                                       verbose)
+                        trial_container.append(TrialContainer(model=model_complete, best_params=best_params, time_Feature=time_feature, time_Model=time_model))
 
-                    # feature selection + model training
-                    model_config = get_model_HPO_space(model, frozen_best_trial, is_classification) if modelHPO else None
-                    selector_config = get_selection_HPO_space(features, frozen_best_trial, is_classification, feature_groups, X_train.shape[1])
                 else:
                     model_config = {}
                     selector_config = {}
                     verbose=True
                     easy_model = True
 
-                dask.distributed.print(str(datetime.now()) + "  Start training final model")
-                model_instance_selector = get_model(model, is_classification, 1, model_config, easy_model=easy_model)
-                start_FS = time.time()
-                precomputed = client.submit(precompute_feature_selection, features, is_classification, X_train, X_test, y_train, y_test, model_flatness, parallelism=cores, pure=False)
-                precomputed = client.submit(transform_dict_to_var_dict, precomputed, pure=False)
-                fs_future = client.submit(get_feature_selection, precomputed, features, is_classification, selector_config, model_instance_selector, feature_groups, parallelism=cores, verbose=verbose, dask_parallel=True, pure=False)
-                X_train, X_test = fs_future.result()
-                end_FS = time.time()
-                dask.distributed.print(str(datetime.now()) + "  Finished feature selection of final model")
-                model_instance = get_model(model, is_classification, cores, model_config)
-                start_Model =time.time()
-                model_instance.fit(X_train, y_train)
-                end_Model =time.time()
-                model_complete = model_instance
-                dask.distributed.print(str(datetime.now()) + "  Finished training final model")
+                    model_complete, time_feature, time_model = compute_final_model(client, model, features, X_train,
+                                                                                   X_test, y_train, y_test,
+                                                                                   is_classification, model_config,
+                                                                                   selector_config, model_flatness,
+                                                                                   feature_groups, easy_model, cores,
+                                                                                   verbose)
+                    trial_container = [TrialContainer(model=model_complete, best_params=best_params, time_Feature=time_feature, time_Model=time_model)]
 
                 # export for later use
                 output = {
-                    "model": model_complete,
                     "X_test": X_test,
                     "y_test": y_test,
                     "label_encoder" : label_encoder,
-                    "best_params": best_params,
                     "run_config": run_config,
                     "journal_path": journal_path,
-                    "time_Feature" : end_FS - start_FS,
-                    "time_Model" : end_Model - start_Model,
+                    "trial_container" : trial_container
                 }
             output["task_stream"] = task_stream.data
             path = run_config["path_output"] + "/" + run_config["name"] + ".pkl"
             with open(path, "wb") as f:
                 cloudpickle.dump(output, f)
             print(f"{datetime.now()}   Exported model at {path}")
-            #shutdown_all_worker(client)
 
     print(f"{datetime.now()}  Shutdown main-client completed")
     scheduler_file.unlink(missing_ok=True)
@@ -254,7 +305,7 @@ if __name__ == '__main__':
         raise ValueError("Not enough worker, needs at least 25")
     print(f"Starting {worker_count} workers with {int(os.getenv("OMP_NUM_THREADS", 2))} cores per worker")
 
-    function_args = (worker_count, os.environ.get("HOME")+"/"+os.path.expandvars(args.pathData), os.environ.get("HOME")+"/"+os.path.expandvars(args.pathOutput), args.features, args.task, args.model, args.modelHPO, args.selectorHPO, args.HPOits, args.foldNo)
+    function_args = (worker_count, os.environ.get("HOME")+"/"+os.path.expandvars(args.pathData), os.environ.get("HOME")+"/"+os.path.expandvars(args.pathOutput), args.features, args.task, args.model, args.modelHPO, args.selectorHPO, args.HPOits, args.multiObjective, args.foldNo)
 
     ctx = mp.get_context("spawn")
     processes = [ctx.Process(target=main, args=((i,)+function_args), daemon=False) for i in range(cpus_per_node)]
