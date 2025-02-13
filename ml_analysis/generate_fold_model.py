@@ -1,3 +1,4 @@
+import warnings
 from datetime import datetime
 import os
 import tempfile
@@ -87,6 +88,7 @@ def optimize_optuna(study: optuna.study.Study, objective_function, lock : dask.d
         study.optimize(objective_function, n_trials=1)
 
 def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, foldNo : int):
+    warnings.simplefilter("ignore", UserWarning)
     cores = int(os.getenv("OMP_NUM_THREADS", "1"))
     scheduler_options = {
         "interface": "ib0",
