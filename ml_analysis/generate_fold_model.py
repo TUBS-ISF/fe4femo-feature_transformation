@@ -57,7 +57,7 @@ def eval_feature_group_runtime(X_train_test, feature_groups: dict[str, list[str]
     X_train, X_test = X_train_test
     instances = list(set(X_train.index.values).union(set(X_test.index.values)))
     active_features = set(X_train.columns.values)
-    active_groups = [ group for group, feature_list in feature_groups if any( feature in active_features for feature in feature_list ) ]
+    active_groups = [ group for group, feature_list in feature_groups.items() if any( feature in active_features for feature in feature_list ) ]
     return feature_group_times.loc[instances, active_groups].sum(axis=1).mean()
 
 #add further objectives here
