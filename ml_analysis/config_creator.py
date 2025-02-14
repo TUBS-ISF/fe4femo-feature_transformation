@@ -47,6 +47,13 @@ def get_runtime(hpoIts: int, feature: str, individual_folds : bool) -> str:
 
     return str(math.ceil(value))
 
+def get_HPO_its(multi_objective: bool) -> int:
+    if multi_objective:
+        return 400
+    else:
+        return 200
+
+
 def check_valid(feature: str, model: str, task: str, multi_objective: bool) -> bool:
     if feature == "harris-hawks":
         return False
@@ -66,7 +73,6 @@ def check_desired(feature: str, model: str, task: str, multi_objective: bool) ->
 
 if __name__ == '__main__':
     #todo configure
-    hpoIts=150
     individual_folds = False
 
 
@@ -78,7 +84,7 @@ if __name__ == '__main__':
     ]
 
     experiments = [
-        f"{i} {create_run_name(feature, task, model, is_modelHPO(feature), is_selectorHPO(feature), hpoIts, multi_objective, fold)} {get_task_count(feature)} {get_runtime(hpoIts, feature, individual_folds)} {fold} {feature} {task} {model} {hpoIts} {is_modelHPO(feature)} {is_selectorHPO(feature)} {multi_objective}"
+        f"{i} {create_run_name(feature, task, model, is_modelHPO(feature), is_selectorHPO(feature), get_HPO_its(multi_objective), multi_objective, fold)} {get_task_count(feature)} {get_runtime(get_HPO_its(multi_objective), feature, individual_folds)} {fold} {feature} {task} {model} {get_HPO_its(multi_objective)} {is_modelHPO(feature)} {is_selectorHPO(feature)} {multi_objective}"
         for i, (fold, feature, model, task, multi_objective) in enumerate(combinations)
     ]
 
