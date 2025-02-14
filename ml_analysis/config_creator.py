@@ -49,9 +49,9 @@ def get_runtime(hpoIts: int, feature: str, individual_folds : bool) -> str:
 
 def get_HPO_its(multi_objective: bool) -> int:
     if multi_objective:
-        return 400
+        return 300
     else:
-        return 200
+        return 150
 
 
 def check_valid(feature: str, model: str, task: str, multi_objective: bool) -> bool:
