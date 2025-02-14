@@ -131,7 +131,7 @@ def compute_final_model(client, model, features, X_train, X_test, y_train, y_tes
     model_instance.fit(X_train, y_train)
     end_Model = time.time()
     model_complete = model_instance
-    return model_complete, end_FS - start_FS, end_Model - start_Model
+    return model_complete, X_test, end_FS - start_FS, end_Model - start_Model
 
 
 def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, multi_objective: bool, foldNo : int):
@@ -177,6 +177,11 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                 dask.distributed.print(str(datetime.now()) + "  Initialized all workers")
 
                 X, y = get_dataset(pathData, task)
+
+                #handle #SAT parameters
+                if task == "value_ssat":
+                    X = X.drop(['',''], axis=1)
+
                 is_classification = is_task_classification(task)
                 label_encoder = None
                 if is_classification:
@@ -254,13 +259,13 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                         best_params = frozen_best_trial.params
                         model_config = get_model_HPO_space(model, frozen_best_trial, is_classification) if modelHPO else None
                         selector_config = get_selection_HPO_space(features, frozen_best_trial, is_classification, feature_groups, X_train.shape[1])
-                        model_complete, time_feature, time_model = compute_final_model(client, model, features, X_train,
+                        model_complete, X_test, time_feature, time_model = compute_final_model(client, model, features, X_train,
                                                                                        X_test, y_train, y_test,
                                                                                        is_classification, model_config,
                                                                                        selector_config, model_flatness,
                                                                                        feature_groups, easy_model, cores,
                                                                                        verbose)
-                        trial_container.append(TrialContainer(model=model_complete, best_params=best_params, time_Feature=time_feature, time_Model=time_model))
+                        trial_container.append(TrialContainer(model=model_complete, best_params=best_params, time_Feature=time_feature, time_Model=time_model, x_test=X_test))
 
                 else:
                     model_config = {}
@@ -268,17 +273,16 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                     verbose=True
                     easy_model = True
 
-                    model_complete, time_feature, time_model = compute_final_model(client, model, features, X_train,
+                    model_complete, X_test, time_feature, time_model = compute_final_model(client, model, features, X_train,
                                                                                    X_test, y_train, y_test,
                                                                                    is_classification, model_config,
                                                                                    selector_config, model_flatness,
                                                                                    feature_groups, easy_model, cores,
                                                                                    verbose)
-                    trial_container = [TrialContainer(model=model_complete, best_params=best_params, time_Feature=time_feature, time_Model=time_model)]
+                    trial_container = [TrialContainer(model=model_complete, best_params=best_params, time_Feature=time_feature, time_Model=time_model, x_test=X_test)]
 
                 # export for later use
                 output = {
-                    "X_test": X_test,
                     "y_test": y_test,
                     "label_encoder" : label_encoder,
                     "run_config": run_config,

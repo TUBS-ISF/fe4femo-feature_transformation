@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 import numpy as np
+import pandas as pd
 from sklearn.base import BaseEstimator
 
 
@@ -18,6 +19,7 @@ class FoldResult:
 @dataclass(frozen=True)
 class TrialContainer:
     model: BaseEstimator
+    x_test: pd.DataFrame
     best_params: dict[str, any]
     time_Feature: float
     time_Model: float
