@@ -178,9 +178,9 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
 
                 X, y = get_dataset(pathData, task)
 
-                #handle #SAT parameters
+                #remove #SAT features for #SAT prediction
                 if task == "value_ssat":
-                    X = X.drop(['',''], axis=1)
+                    X = X.drop(['DyMMer_9/DyMMer/Number_of_valid_configurations_(NVC)','FMBA_18/FMBA/NumberOfValidConfigurationsLog', 'FM_Characterization_1/FM_Characterization/ANALYSIS/Configurations/value', 'FM_Characterization_1/FM_Characterization/ANALYSIS/Partial_variability/value', 'FM_Characterization_1/FM_Characterization/ANALYSIS/Total_variability/value'], axis=1)
 
                 is_classification = is_task_classification(task)
                 label_encoder = None
