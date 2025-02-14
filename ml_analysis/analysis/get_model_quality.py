@@ -1,7 +1,7 @@
 from sklearn.base import is_classifier
 from sklearn.metrics import matthews_corrcoef, d2_absolute_error_score
 
-from analysis.helper import get_pickle_dict
+from analysis.analysis_helper import get_pickle_dict
 
 def get_model_quality(file):
     dictonary = get_pickle_dict(file)

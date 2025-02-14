@@ -1,6 +1,6 @@
 import pandas as pd
 
-from analysis.helper import get_pickle_dict
+from analysis.analysis_helper import get_pickle_dict
 
 
 def get_task_cumsum(file):
