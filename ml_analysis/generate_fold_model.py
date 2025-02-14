@@ -258,13 +258,13 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                         best_params = frozen_best_trial.params
                         model_config = get_model_HPO_space(model, frozen_best_trial, is_classification) if modelHPO else None
                         selector_config = get_selection_HPO_space(features, frozen_best_trial, is_classification, feature_groups, X_train.shape[1])
-                        model_complete, X_test, time_feature, time_model = compute_final_model(client, model, features, X_train,
+                        model_complete, X_test_mod, time_feature, time_model = compute_final_model(client, model, features, X_train,
                                                                                        X_test, y_train, y_test,
                                                                                        is_classification, model_config,
                                                                                        selector_config, model_flatness,
                                                                                        feature_groups, easy_model, cores,
                                                                                        verbose)
-                        trial_container.append(TrialContainer(model=model_complete, best_params=best_params, time_Feature=time_feature, time_Model=time_model, x_test=X_test))
+                        trial_container.append(TrialContainer(model=model_complete, best_params=best_params, time_Feature=time_feature, time_Model=time_model, x_test=X_test_mod))
 
                 else:
                     model_config = {}
