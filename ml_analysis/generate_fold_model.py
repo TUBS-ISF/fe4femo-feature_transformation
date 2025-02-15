@@ -233,7 +233,7 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                     journal = optuna.storages.JournalStorage(optuna.storages.journal.JournalFileBackend(journal_path))
                     storage = optuna.integration.dask.DaskStorage(journal)
                     sampler = TPESampler(seed=None, multivariate=True, group=True, constant_liar=True, categorical_distance_func=categorical_distance_function())
-                    study = optuna.create_study(study_name=run_config["name"], storage=storage, directions=["maximize", "minimize"], sampler=sampler) if multi_objective else optuna.create_study(storage=storage, direction="maximize", sampler=sampler)
+                    study = optuna.create_study(study_name=run_config["name"], storage=storage, directions=["maximize", "minimize"], sampler=sampler) if multi_objective else optuna.create_study(study_name=run_config["name"], storage=storage, direction="maximize", sampler=sampler)
 
                     n_jobs = 25 #2 less than tasks for scheduler and main-node
 
