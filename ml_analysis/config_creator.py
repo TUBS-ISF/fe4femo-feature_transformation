@@ -17,32 +17,34 @@ def get_task_count(feature: str) -> int:
     else:
         return 3
 
-def get_runtime(hpoIts: int, feature: str, individual_folds : bool) -> str:
+def get_runtime(hpoIts: int, feature: str, individual_folds : bool, multi_objective: bool) -> str:
     selector_modifier_m = {
-        "all" : 30,
-        "prefilter" : 10,
-        "SATzilla" : 5,
-        "SATfeatPy" : 8,
-        "FMBA" : 5,
-        "FM_Chara" : 4,
-        "kbest-mutalinfo" : 7,
-        "multisurf" : 8,
-        "mRMR" : 6,
-        "RFE" : 45,
-        "genetic" : 90,
-        "HFMOEA" : 120,
-        "embedded-tree" : 10,
-        "SVD-entropy" : 4,
-        "NDFS" : 8,
-        "optuna-combined" : 6
+        "all" : 140,
+        "prefilter" : 90,
+        "SATzilla" : 32,
+        "SATfeatPy" : 40,
+        "FMBA" : 12,
+        "FM_Chara" : 11,
+        "kbest-mutalinfo" : 45,
+        "multisurf" : 60,
+        "mRMR" : 60,
+        "RFE" : 6*60,
+        "genetic" : 3*60 + 30,
+        "HFMOEA" : 50*60 + 30,
+        "embedded-tree" : 145,
+        "SVD-entropy" : 30,
+        "NDFS" : 36,
+        "optuna-combined" : 60
     }
 
     final_modifier = 1.2
     value = selector_modifier_m[feature]
     if feature != "genetic":
-        value *= hpoIts / 50
-    if not individual_folds:
-        value *= 10
+        value *= hpoIts / 150
+    if individual_folds:
+        value /= 8 #less since additional startup for container
+    if multi_objective:
+        value *= 2
     value *= final_modifier
 
     return str(math.ceil(value))
@@ -65,10 +67,7 @@ def check_valid(feature: str, model: str, task: str, multi_objective: bool) -> b
 
 #todo configure
 def check_desired(feature: str, model: str, task: str, multi_objective: bool) -> bool:
-    if model == "randomForest" and task == "value_ssat":
-        return True
-    else:
-        return False
+    return True
 
 
 if __name__ == '__main__':
@@ -83,8 +82,10 @@ if __name__ == '__main__':
         if check_valid(feature, model, task, multi_objective) and check_desired(feature, model, task, multi_objective)
     ]
 
+    combinations.sort(key=lambda c: int(get_runtime(get_HPO_its(c[4]), c[1], individual_folds, c[4])))
+
     experiments = [
-        f"{i} {create_run_name(feature, task, model, is_modelHPO(feature), is_selectorHPO(feature), get_HPO_its(multi_objective), multi_objective, fold)} {get_task_count(feature)} {get_runtime(get_HPO_its(multi_objective), feature, individual_folds)} {fold} {feature} {task} {model} {get_HPO_its(multi_objective)} {is_modelHPO(feature)} {is_selectorHPO(feature)} {multi_objective}"
+        f"{i} {create_run_name(feature, task, model, is_modelHPO(feature), is_selectorHPO(feature), get_HPO_its(multi_objective), multi_objective, fold)} {get_task_count(feature)} {get_runtime(get_HPO_its(multi_objective), feature, individual_folds, multi_objective)} {fold} {feature} {task} {model} {get_HPO_its(multi_objective)} {is_modelHPO(feature)} {is_selectorHPO(feature)} {multi_objective}"
         for i, (fold, feature, model, task, multi_objective) in enumerate(combinations)
     ]
 
