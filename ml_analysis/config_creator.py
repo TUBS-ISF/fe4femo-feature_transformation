@@ -19,25 +19,25 @@ def get_task_count(feature: str) -> int:
 
 def get_runtime(hpoIts: int, feature: str, individual_folds : bool, multi_objective: bool) -> str:
     selector_modifier_m = {
-        "all" : 140,
-        "prefilter" : 90,
+        "all" : 160,
+        "prefilter" : 100,
         "SATzilla" : 32,
         "SATfeatPy" : 40,
         "FMBA" : 12,
         "FM_Chara" : 11,
         "kbest-mutalinfo" : 45,
         "multisurf" : 60,
-        "mRMR" : 60,
+        "mRMR" : 70,
         "RFE" : 6*60,
         "genetic" : 3*60 + 30,
         "HFMOEA" : 50*60 + 30,
-        "embedded-tree" : 145,
+        "embedded-tree" : 165,
         "SVD-entropy" : 30,
         "NDFS" : 36,
-        "optuna-combined" : 60
+        "optuna-combined" : 70
     }
 
-    final_modifier = 1.2
+    final_modifier = 1.6
     value = selector_modifier_m[feature]
     if feature != "genetic":
         value *= hpoIts / 150
@@ -46,8 +46,11 @@ def get_runtime(hpoIts: int, feature: str, individual_folds : bool, multi_object
     if multi_objective:
         value *= 2
     value *= final_modifier
+    value += 10
 
-    return str(math.ceil(value))
+    value = math.ceil(value)
+    value = min(value, 72*60)
+    return str(value)
 
 def get_HPO_its(multi_objective: bool) -> int:
     if multi_objective:
