@@ -1,12 +1,21 @@
 from typing import Any
 
 from optuna import Trial
+from sklearn.base import is_classifier
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, AdaBoostClassifier, AdaBoostRegressor
 import xgboost as xgb
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.neural_network import MLPClassifier, MLPRegressor
 from sklearn.svm import SVC, SVR
 
+
+def is_model_classifier(model) -> bool:
+    if isinstance(model, xgb.XGBClassifier):
+        return True
+    elif isinstance(model, xgb.XGBRegressor):
+        return False
+    else:
+        return is_classifier(model)
 
 def get_model(model : str, isClassification : bool, parallelism : int = 1, model_args=None, easy_model = False):
     if model_args is None:

@@ -13,7 +13,6 @@ from mrmr import mrmr_classif, mrmr_regression
 from optuna import Trial
 from functools import partial
 
-from sklearn.base import is_classifier
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.feature_selection import SelectKBest, mutual_info_classif, mutual_info_regression, \
     SelectFromModel, VarianceThreshold, RFE
@@ -32,6 +31,8 @@ from external.skfeature.sparse_learning import feature_ranking
 from external.svd_entropy import keep_high_contrib_features
 from helper.data_classes import FoldSplit
 from helper.load_dataset import filter_SATzilla, filter_SATfeatPy, filter_FMBA, filter_FMChara
+from helper.model_training import is_model_classifier
+
 
 def transform_dict_to_var_dict(dictionary : dict) -> dict:
     ret_dict = {}
@@ -48,7 +49,7 @@ def transform_dict_to_var_dict(dictionary : dict) -> dict:
 def objective_function_zoo(model, X_train, y_train, X_test, y_test):
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
-    if is_classifier(model):
+    if is_model_classifier(model):
         return matthews_corrcoef(y_test, y_pred)
     else:
         return d2_absolute_error_score(y_test, y_pred)

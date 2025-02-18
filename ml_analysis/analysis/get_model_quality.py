@@ -2,6 +2,8 @@ from sklearn.base import is_classifier
 from sklearn.metrics import matthews_corrcoef, d2_absolute_error_score
 
 from analysis.analysis_helper import get_pickle_dict
+from helper.model_training import is_model_classifier
+
 
 def get_model_quality(file):
     dictonary = get_pickle_dict(file)
@@ -9,7 +11,7 @@ def get_model_quality(file):
     for trial_container in dictonary["trial_container"]:
         y_pred = trial_container.model.predict(trial_container.x_test)
         y_test = dictonary["y_test"]
-        if is_classifier(trial_container.model):
+        if is_model_classifier(trial_container.model):
             ret_list.append(matthews_corrcoef(y_test, y_pred).item())
         else:
             ret_list.append(d2_absolute_error_score(y_test, y_pred).item())
