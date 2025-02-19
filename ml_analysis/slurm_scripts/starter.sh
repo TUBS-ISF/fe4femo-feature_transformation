@@ -9,7 +9,7 @@ mkdir -p $HOME/$output_path
 
 partition="${1:-multiple_il}"
 maxIt=$(wc -l < "$config")
-((maxIt=maxIt-2))
+((maxIt=maxIt-1))
 maxConcurrent=50
 
 tmpQUEUE=$(squeue | grep -c '^')
