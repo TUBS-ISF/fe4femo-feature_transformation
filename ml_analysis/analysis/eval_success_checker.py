@@ -31,4 +31,4 @@ if __name__ == '__main__':
             missing_instances.append(experiment_instance.name)
 
     print("Missing instances:")
-    print(missing_instances)
+    print(set(missing_instances))
