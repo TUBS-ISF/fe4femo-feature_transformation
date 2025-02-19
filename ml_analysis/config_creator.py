@@ -97,6 +97,19 @@ if __name__ == '__main__':
         runtime_estimation += int(experiment.split(" ")[3])
     print(f"Total estimated sequential runtime: {timedelta(minutes=runtime_estimation)}")
 
+    file_count = 0
+    for experiment in experiments:
+        fold = int(experiment.split(" ")[4])
+        uses_hpo = experiment.split(" ")[9] == "True" or experiment.split(" ")[10]  == "True"
+        file_count += 1 # for .out file
+        tmp_count = 2
+        if uses_hpo:
+            tmp_count += 1
+        if fold == -1:
+            tmp_count *= 10
+        file_count += tmp_count
+    print(f"Total number of generated files: {file_count}")
+
 
     with open("config.txt", "w") as f:
         f.write("NO NAME TASK_COUNT RUNTIME FOLD_NO FEATURE TASK MODEL HPO_ITS MODEL_HPO SELECTOR_HPO MULTI_OBJECTIVE\n")
