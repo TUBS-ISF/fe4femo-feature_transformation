@@ -37,6 +37,7 @@ class ExperimentInstance:
 
 def list_experiment_instances(config_path: Path, data_path: Path) -> Iterable[ExperimentInstance]:
     with open(config_path, "r") as f:
+        next(f)
         for line in f:
             line_array = line.strip().split(" ")
             folds = range(10) if line_array[4] == "-1" else int(line_array[4])
