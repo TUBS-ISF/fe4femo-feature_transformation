@@ -15,16 +15,16 @@ if __name__ == '__main__':
     for experiment_instance in experiment_instances:
         missing = False
         if not check_file_existence(experiment_instance.path_pickle):
-            print(f"Missing pickle for {experiment_instance.name}")
+            print(f"Missing pickle for {experiment_instance.name}, fold {experiment_instance.fold_no}")
             missing = True
         if (experiment_instance.is_model_hpo or experiment_instance.is_selector_hpo) and not check_file_existence(experiment_instance.path_journal):
-            print(f"Missing journal for {experiment_instance.name}")
+            print(f"Missing journal for {experiment_instance.name}, fold {experiment_instance.fold_no}")
             missing = True
         if not check_file_existence(experiment_instance.path_dask):
-            print(f"Missing dask for {experiment_instance.name}")
+            print(f"Missing dask for {experiment_instance.name}, fold {experiment_instance.fold_no}")
             missing = True
         if not check_file_existence(experiment_instance.path_log):
-            print(f"Missing log for {experiment_instance.name}")
+            print(f"Missing log for {experiment_instance.name}, fold {experiment_instance.fold_no}")
             missing = True
 
         if missing:
