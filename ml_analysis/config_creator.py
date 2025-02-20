@@ -23,21 +23,21 @@ def get_runtime(hpoIts: int, feature: str, individual_folds : bool, multi_object
         "prefilter" : 100,
         "SATzilla" : 32,
         "SATfeatPy" : 40,
-        "FMBA" : 12,
-        "FM_Chara" : 11,
+        "FMBA" : 18,
+        "FM_Chara" : 18,
         "kbest-mutalinfo" : 45,
         "multisurf" : 60,
         "mRMR" : 70,
         "RFE" : 6*60,
         "genetic" : 3*60 + 30,
         "HFMOEA" : 50*60 + 30,
-        "embedded-tree" : 165,
+        "embedded-tree" : 175,
         "SVD-entropy" : 30,
         "NDFS" : 36,
         "optuna-combined" : 70
     }
 
-    final_modifier = 1.6
+    final_modifier = 1.8
     value = selector_modifier_m[feature]
     if feature != "genetic":
         value *= hpoIts / 150
@@ -46,7 +46,7 @@ def get_runtime(hpoIts: int, feature: str, individual_folds : bool, multi_object
     if multi_objective:
         value *= 2
     value *= final_modifier
-    value += 10
+    value += 20
 
     value = math.ceil(value)
     value = min(value, 72*60)
