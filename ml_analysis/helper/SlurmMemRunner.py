@@ -2,7 +2,9 @@ import asyncio
 import json
 import os
 import signal
+import traceback
 from contextlib import suppress
+from json import JSONDecodeError
 from pathlib import Path
 
 from dask_jobqueue.runner import BaseRunner, Role
@@ -67,8 +69,13 @@ class SLURMMemRunner(BaseRunner):
     async def get_scheduler_address(self) -> str:
         while not self.scheduler_file or not self.scheduler_file.exists():
             await asyncio.sleep(0.2)
-        cfg = json.loads(self.scheduler_file.read_text())
-        return cfg["address"]
+        while True:
+            try:
+                cfg = json.loads(self.scheduler_file.read_text())
+                return cfg["address"]
+            except JSONDecodeError:
+                print(traceback.format_exc())
+                await asyncio.sleep(0.2)
 
     async def get_worker_name(self) -> str:
         return f"{self.proc_id}_{self.in_proc_id}"
