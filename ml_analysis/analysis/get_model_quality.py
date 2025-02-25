@@ -19,7 +19,7 @@ def get_model_quality(file) -> list[float]:
         y_pred = model.predict(trial_container.x_test)
         y_test = dictonary["y_test"]
         if is_model_classifier(trial_container.model):
-            ret_list.append(matthews_corrcoef(y_test, y_pred).item())
+            ret_list.append(matthews_corrcoef(y_test, y_pred))
         else:
             ret_list.append(d2_absolute_error_score(y_test, y_pred).item())
     return ret_list
