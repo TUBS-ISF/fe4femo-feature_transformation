@@ -26,6 +26,7 @@ def get_model_quality(file) -> list[float]:
     return ret_list
 
 def _parallel_wrapper(experiment_instance : ExperimentInstance)->tuple[tuple, list[float]]:
+    print(f"Handling {experiment_instance}")
     qualities = get_model_quality(experiment_instance.path_pickle)
     index_tuple = experiment_instance.ml_task, experiment_instance.feature_selector, experiment_instance.ml_model, experiment_instance.is_model_hpo, experiment_instance.is_selector_hpo, experiment_instance.is_multi_objective, experiment_instance.fold_no
     return index_tuple, qualities
