@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -34,7 +35,7 @@ if __name__ == '__main__':
     data_path = Path("~/fe4femo/ml_analysis/out/main/").expanduser()
 
     experiment_instances = list_experiment_instances(config_path, data_path)
-    ret_gen = Parallel(n_jobs=-1, verbose=10, return_as="generator_unordered")(delayed(_parallel_wrapper)(experiment_instance) for experiment_instance in experiment_instances)
+    ret_gen = Parallel(n_jobs=os.environ.get("SLURM_CPUS_ON_NODE", -1), verbose=10, return_as="generator_unordered")(delayed(_parallel_wrapper)(experiment_instance) for experiment_instance in experiment_instances)
 
     index_tuples = []
     values = []
