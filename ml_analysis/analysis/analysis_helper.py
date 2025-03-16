@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+import pandas as pd
 from cloudpickle import cloudpickle
 from optuna import load_study
 from optuna.storages import JournalStorage
@@ -16,6 +17,14 @@ def get_optuna_study(file, study_name):
     journal = JournalStorage(JournalFileBackend(file))
     study = load_study(storage=journal, study_name=study_name)
     return study, journal
+
+def get_modified_performance(file) -> pd.DataFrame:
+    df = pd.read_csv(file, index_col=[0, 1, 2, 3, 4, 5, 6])['model_quality']
+    df.index = [df.index.get_level_values(0), df.index.map(lambda idx: f"{idx[1]}_MO" if idx[5] else idx[1]),
+                df.index.get_level_values(2), df.index.get_level_values(6)]
+    df = df.rename_axis(["ml_task", "feature_selector", "ml_model", "fold"])
+    df = df.reset_index()
+    return df
 
 @dataclass(frozen=True, eq=True)
 class ExperimentInstance:
