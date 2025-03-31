@@ -11,7 +11,7 @@ from helper.load_dataset import load_feature_groups, load_feature_group_times
 
 def get_feature_cumsum(file, feature_groups: dict[str, list[str]], feature_group_times: pd.DataFrame) -> float:
     dictonary = get_pickle_dict(file)
-    active_features = set(dictonary["trial_container"].x_test.columns.values)
+    active_features = set(dictonary["trial_container"][0].x_test.columns.values) #todo fix: currently only picks first (no problem for everything except multi-target optimiziation)
     active_groups = [group for group, feature_list in feature_groups.items() if
                      any(feature in active_features for feature in feature_list)]
     return feature_group_times[active_groups].sum(axis=1).mean()
