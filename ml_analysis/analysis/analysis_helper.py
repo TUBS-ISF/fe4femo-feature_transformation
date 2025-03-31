@@ -24,6 +24,8 @@ def get_modified_performance(file) -> pd.DataFrame:
                 df.index.get_level_values(2), df.index.get_level_values(6)]
     df = df.rename_axis(["ml_task", "feature_selector", "ml_model", "fold"])
     df = df.reset_index()
+    # filter optuna-combined_MO
+    df = df[df['feature_selector'] != "optuna-combined_MO"]
     return df
 
 @dataclass(frozen=True, eq=True)
