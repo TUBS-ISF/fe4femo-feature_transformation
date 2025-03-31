@@ -38,9 +38,9 @@ if __name__ == '__main__':
 
     index_tuples = []
     values = []
-    for index_tuple, qualities in ret_gen:
+    for index_tuple, time in ret_gen:
         index_tuples.append(index_tuple)
-        values.append(max(qualities))
+        values.append(time)
 
     multi_index = MultiIndex.from_tuples(index_tuples,
                                          names=["ml_task", "feature_selector", "ml_model", "model_hpo", "selector_hpo",
