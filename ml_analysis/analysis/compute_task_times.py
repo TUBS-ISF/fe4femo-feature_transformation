@@ -35,7 +35,7 @@ if __name__ == '__main__':
 
     experiment_instances = list_experiment_instances(config_path, data_path)
     #ret_gen = Parallel(n_jobs=40, verbose=10, return_as="generator_unordered")(delayed(_parallel_wrapper)(experiment_instance) for experiment_instance in experiment_instances)
-    ret_gen = [_parallel_wrapper(experiment_instance) for experiment_instance in experiment_instances]
+    ret_gen = (_parallel_wrapper(experiment_instance) for experiment_instance in experiment_instances)
 
     for name, series in ret_gen:
         series.to_csv(out_file/ f"{name}.csv")
