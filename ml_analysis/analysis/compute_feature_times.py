@@ -2,8 +2,7 @@ import os
 from pathlib import Path
 
 import pandas as pd
-from dask import delayed
-from joblib import Parallel
+from joblib import Parallel, delayed
 from pandas import MultiIndex
 
 from analysis.analysis_helper import get_pickle_dict, list_experiment_instances, ExperimentInstance
