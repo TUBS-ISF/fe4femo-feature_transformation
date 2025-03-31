@@ -33,8 +33,8 @@ if __name__ == '__main__':
     out_file = Path("~/fe4femo/ml_analysis/out/task_times.hdf").expanduser()
 
     experiment_instances = list_experiment_instances(config_path, data_path)
-    ret_gen = Parallel(n_jobs=40, verbose=10, return_as="generator_unordered")(delayed(_parallel_wrapper)(experiment_instance) for experiment_instance in experiment_instances)
-    #ret_gen = [_parallel_wrapper(experiment_instance) for experiment_instance in experiment_instances]
+    #ret_gen = Parallel(n_jobs=40, verbose=10, return_as="generator_unordered")(delayed(_parallel_wrapper)(experiment_instance) for experiment_instance in experiment_instances)
+    ret_gen = [_parallel_wrapper(experiment_instance) for experiment_instance in experiment_instances]
 
     for name, series in ret_gen:
         series.to_hdf(path_or_buf=out_file, key=name, append=True)
