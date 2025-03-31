@@ -1,0 +1,50 @@
+import os
+from pathlib import Path
+
+import pandas as pd
+from dask import delayed
+from joblib import Parallel
+from pandas import MultiIndex
+
+from analysis.analysis_helper import get_pickle_dict, list_experiment_instances, ExperimentInstance
+from helper.load_dataset import load_feature_groups, load_feature_group_times
+
+
+def get_feature_cumsum(file, feature_groups: dict[str, list[str]], feature_group_times: pd.DataFrame) -> float:
+    dictonary = get_pickle_dict(file)
+    active_features = set(dictonary["trial_container"].x_test.columns.values)
+    active_groups = [group for group, feature_list in feature_groups.items() if
+                     any(feature in active_features for feature in feature_list)]
+    return feature_group_times[active_groups].sum(axis=1).mean()
+
+
+def _parallel_wrapper(experiment_instance : ExperimentInstance, feature_groups: dict[str, list[str]], feature_group_times: pd.DataFrame)->tuple[tuple, float]:
+    print(f"Handling {experiment_instance}")
+    qualities = get_feature_cumsum(experiment_instance.path_pickle, feature_groups, feature_group_times)
+    index_tuple = experiment_instance.ml_task, experiment_instance.feature_selector, experiment_instance.ml_model, experiment_instance.is_model_hpo, experiment_instance.is_selector_hpo, experiment_instance.is_multi_objective, experiment_instance.fold_no
+    return index_tuple, qualities
+
+if __name__ == '__main__':
+    config_path = Path("~/fe4femo/ml_analysis/slurm_scripts/config.txt").expanduser()
+    data_path = Path("~/fe4femo/ml_analysis/out/main/").expanduser()
+    feature_data_path = Path("~/raphael-dunkel-master/data/").expanduser()
+    out_file = Path("~/fe4femo/ml_analysis/out/feature_times.csv").expanduser()
+
+    feature_groups = load_feature_groups(str(feature_data_path))
+    feature_group_times = load_feature_group_times(str(feature_data_path))
+
+    experiment_instances = list_experiment_instances(config_path, data_path)
+    ret_gen = Parallel(n_jobs=os.environ.get("SLURM_CPUS_ON_NODE", -1), verbose=10, return_as="generator_unordered")(delayed(_parallel_wrapper)(experiment_instance, feature_groups, feature_group_times) for experiment_instance in experiment_instances)
+    #ret_gen = [_parallel_wrapper(experiment_instance, feature_groups, feature_group_times) for experiment_instance in experiment_instances]
+
+    index_tuples = []
+    values = []
+    for index_tuple, qualities in ret_gen:
+        index_tuples.append(index_tuple)
+        values.append(max(qualities))
+
+    multi_index = MultiIndex.from_tuples(index_tuples,
+                                         names=["ml_task", "feature_selector", "ml_model", "model_hpo", "selector_hpo",
+                                                "multi_objective", "fold"])
+    df = pd.Series(values, index=multi_index, name="feature_time")
+    df.to_csv(out_file)

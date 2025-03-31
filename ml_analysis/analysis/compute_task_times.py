@@ -31,7 +31,7 @@ def _parallel_wrapper(experiment_instance : ExperimentInstance)->tuple[str, pd.S
 if __name__ == '__main__':
     config_path = Path("~/fe4femo/ml_analysis/slurm_scripts/config.txt").expanduser()
     data_path = Path("~/fe4femo/ml_analysis/out/main/").expanduser()
-    out_file = "~/fe4femo/ml_analysis/out/task_times.hdf"
+    out_file = Path("~/fe4femo/ml_analysis/out/task_times.hdf").expanduser()
 
     experiment_instances = list_experiment_instances(config_path, data_path)
     ret_gen = Parallel(n_jobs=os.environ.get("SLURM_CPUS_ON_NODE", -1), verbose=10, return_as="generator_unordered")(delayed(_parallel_wrapper)(experiment_instance) for experiment_instance in experiment_instances)
