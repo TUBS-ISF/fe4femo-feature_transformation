@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 from analysis.analysis_helper import get_modified_performance
 
-path = "/home/ubuntu/MA/fe4femo/ml_analysis/copy/model_quality.csv"
+path = "/home/ubuntu/MA/data/extracted_ml_results/model_quality.csv"
 
 
 sns.set_theme(style="whitegrid", palette="colorblind", rc={"figure.figsize":(6,15)}, font_scale=1)
