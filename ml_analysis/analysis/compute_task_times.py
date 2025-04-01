@@ -25,7 +25,7 @@ def get_task_cumsum(file):
 def _parallel_wrapper(experiment_instance : ExperimentInstance)->tuple[str, pd.Series]:
     print(f"Handling {experiment_instance}")
     qualities = get_task_cumsum(experiment_instance.path_pickle)
-    return experiment_instance.name, qualities
+    return f"{experiment_instance.name}#{experiment_instance.fold_no}", qualities
 
 if __name__ == '__main__':
     config_path = Path("~/fe4femo/ml_analysis/slurm_scripts/config.txt").expanduser()
