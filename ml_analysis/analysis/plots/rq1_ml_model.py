@@ -12,7 +12,7 @@ sns.set_theme(style="whitegrid", palette="colorblind")
 
 df = get_modified_performance(path)
 
-d = sns.catplot(df, x="model_quality", y="feature_selector", hue="ml_model", row="ml_task", estimator="median", errorbar="sd", kind="point", orient="h", dodge=.9, linestyles="none", facet_kws={"xlim":(-1,1)}, aspect=1, height=10, legend="auto")
+d = sns.catplot(df, x="model_quality", y="ml_model", col="ml_task", col_wrap=2, estimator="median", errorbar="sd", kind="box", orient="h", facet_kws={"xlim":(-1,1)}, legend="auto")
 
-
-plt.savefig("test.pdf")
+#plt.savefig("test.pdf")
+plt.show()
