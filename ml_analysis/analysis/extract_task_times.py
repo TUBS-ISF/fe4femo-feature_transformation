@@ -46,7 +46,7 @@ def transform_task_times(config_path: Path, data_path: Path, ) -> pd.Series:
     multi_index = MultiIndex.from_tuples(index_tuples,
                                          names=["ml_task", "feature_selector", "ml_model", "model_hpo", "selector_hpo",
                                                 "multi_objective", "fold"])
-    return pd.Series(tmp_list, index=multi_index, name="feature_time")
+    return pd.Series(tmp_list, index=multi_index, name="task_time")
 
 if __name__ == '__main__':
     config_path = Path("~/fe4femo/ml_analysis/slurm_scripts/config.txt").expanduser()
