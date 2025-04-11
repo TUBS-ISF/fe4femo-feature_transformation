@@ -1,0 +1,48 @@
+import os
+from pathlib import Path
+
+import pandas as pd
+from joblib import Parallel, delayed
+from pandas import MultiIndex
+
+from analysis.analysis_helper import get_pickle_dict, list_experiment_instances, ExperimentInstance
+from helper.load_dataset import load_feature_groups, load_feature_group_times
+
+
+def get_features(file, feature_names: list[str]) -> dict[str, bool]:
+    dictonary = get_pickle_dict(file)
+    active_features = set(dictonary["trial_container"][0].x_test.columns.values) #todo fix: currently only picks first (no problem for everything except multi-target optimiziation)
+    return {f:True for f in active_features}
+
+
+def _parallel_wrapper(experiment_instance : ExperimentInstance, feature_names: list[str])->tuple[tuple, dict]:
+    print(f"Handling {experiment_instance}")
+    features = get_features(experiment_instance.path_pickle, feature_names)
+    index_tuple = experiment_instance.ml_task, experiment_instance.feature_selector, experiment_instance.ml_model, experiment_instance.is_model_hpo, experiment_instance.is_selector_hpo, experiment_instance.is_multi_objective, experiment_instance.fold_no
+    return index_tuple, features
+
+if __name__ == '__main__':
+    config_path = Path("~/fe4femo/ml_analysis/slurm_scripts/config.txt").expanduser()
+    data_path = Path("~/fe4femo/ml_analysis/out/main/").expanduser()
+    feature_data_path = Path("~/raphael-dunkel-master/data/").expanduser()
+    out_file = Path("~/fe4femo/ml_analysis/out/feature_active.csv").expanduser()
+
+    feature_groups = load_feature_groups(str(feature_data_path))
+    feature_names = [ feature for group, features in feature_groups.items() for feature in features]
+
+    experiment_instances = list_experiment_instances(config_path, data_path)
+    #ret_gen = Parallel(n_jobs=40, verbose=10, return_as="generator_unordered")(delayed(_parallel_wrapper)(experiment_instance, feature_names) for experiment_instance in experiment_instances)
+    ret_gen = (_parallel_wrapper(experiment_instance, feature_names) for experiment_instance in experiment_instances)
+
+    index_tuples = []
+    values = []
+    for index_tuple, time in ret_gen:
+        index_tuples.append(index_tuple)
+        values.append(time)
+
+    multi_index = MultiIndex.from_tuples(index_tuples,
+                                         names=["ml_task", "feature_selector", "ml_model", "model_hpo", "selector_hpo",
+                                                "multi_objective", "fold"])
+    df = pd.DataFrame(values, index=multi_index, columns=feature_names)
+    df = df.fillna(value=False).infer_objects()
+    df.to_csv(out_file)
