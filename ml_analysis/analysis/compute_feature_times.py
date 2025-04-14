@@ -9,19 +9,28 @@ from analysis.analysis_helper import get_pickle_dict, list_experiment_instances,
 from helper.load_dataset import load_feature_groups, load_feature_group_times
 
 
-def get_feature_cumsum(file, feature_groups: dict[str, list[str]], feature_group_times: pd.DataFrame) -> float:
+def get_feature_cumsum(file, feature_groups: dict[str, list[str]], feature_group_times: pd.DataFrame, index_dict : dict[str, str]) -> pd.DataFrame:
     dictonary = get_pickle_dict(file)
     active_features = set(dictonary["trial_container"][0].x_test.columns.values) #todo fix: currently only picks first (no problem for everything except multi-target optimiziation)
     active_groups = [group for group, feature_list in feature_groups.items() if
                      any(feature in active_features for feature in feature_list)]
-    return feature_group_times[active_groups].sum(axis=1).to_list()
+    df = pd.DataFrame(feature_group_times[active_groups].sum(axis=1).rename('feature_time')).reset_index()
+    for name, value in index_dict.items():
+        df[name] = value
+    return df
 
-
-def _parallel_wrapper(experiment_instance : ExperimentInstance, feature_groups: dict[str, list[str]], feature_group_times: pd.DataFrame)->tuple[tuple, float]:
+def _parallel_wrapper(experiment_instance : ExperimentInstance, feature_groups: dict[str, list[str]], feature_group_times: pd.DataFrame, )-> pd.DataFrame:
     print(f"Handling {experiment_instance}")
-    qualities = get_feature_cumsum(experiment_instance.path_pickle, feature_groups, feature_group_times)
-    index_tuple = experiment_instance.ml_task, experiment_instance.feature_selector, experiment_instance.ml_model, experiment_instance.is_model_hpo, experiment_instance.is_selector_hpo, experiment_instance.is_multi_objective, experiment_instance.fold_no
-    return index_tuple, qualities
+    index_dict = {
+        "ml_task": experiment_instance.ml_task,
+        "feature_selector": experiment_instance.feature_selector,
+        "ml_model": experiment_instance.ml_model,
+        "model_hpo": experiment_instance.is_model_hpo,
+        "selector_hpo": experiment_instance.is_selector_hpo,
+        "multi_objective": experiment_instance.is_multi_objective,
+        "fold": experiment_instance.fold_no,
+    }
+    return get_feature_cumsum(experiment_instance.path_pickle, feature_groups, feature_group_times, index_dict)
 
 if __name__ == '__main__':
     config_path = Path("~/fe4femo/ml_analysis/slurm_scripts/config.txt").expanduser()
@@ -36,14 +45,6 @@ if __name__ == '__main__':
     #ret_gen = Parallel(n_jobs=40, verbose=10, return_as="generator_unordered")(delayed(_parallel_wrapper)(experiment_instance, feature_groups, feature_group_times) for experiment_instance in experiment_instances)
     ret_gen = (_parallel_wrapper(experiment_instance, feature_groups, feature_group_times) for experiment_instance in experiment_instances)
 
-    index_tuples = []
-    values = []
-    for index_tuple, time in ret_gen:
-        index_tuples.append(index_tuple)
-        values.append(time)
 
-    multi_index = MultiIndex.from_tuples(index_tuples,
-                                         names=["ml_task", "feature_selector", "ml_model", "model_hpo", "selector_hpo",
-                                                "multi_objective", "fold"])
-    df = pd.Series(values, index=multi_index, name="feature_time").explode()
-    df.to_csv(out_file)
+    df = pd.concat(ret_gen, axis=0, ignore_index=True)
+    df.to_csv(out_file, index=False)
