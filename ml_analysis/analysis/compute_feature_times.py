@@ -14,7 +14,7 @@ def get_feature_cumsum(file, feature_groups: dict[str, list[str]], feature_group
     active_features = set(dictonary["trial_container"][0].x_test.columns.values) #todo fix: currently only picks first (no problem for everything except multi-target optimiziation)
     active_groups = [group for group, feature_list in feature_groups.items() if
                      any(feature in active_features for feature in feature_list)]
-    return feature_group_times[active_groups].sum(axis=1).median()
+    return feature_group_times[active_groups].sum(axis=1).to_list()
 
 
 def _parallel_wrapper(experiment_instance : ExperimentInstance, feature_groups: dict[str, list[str]], feature_group_times: pd.DataFrame)->tuple[tuple, float]:
@@ -45,5 +45,5 @@ if __name__ == '__main__':
     multi_index = MultiIndex.from_tuples(index_tuples,
                                          names=["ml_task", "feature_selector", "ml_model", "model_hpo", "selector_hpo",
                                                 "multi_objective", "fold"])
-    df = pd.Series(values, index=multi_index, name="feature_time")
+    df = pd.Series(values, index=multi_index, name="feature_time").explode()
     df.to_csv(out_file)
