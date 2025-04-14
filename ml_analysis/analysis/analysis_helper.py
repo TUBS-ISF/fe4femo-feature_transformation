@@ -33,7 +33,13 @@ def get_modified_performance(file) -> pd.DataFrame:
     return load_multiindex(file, 'model_quality')
 
 def get_modified_feature_time(file) -> pd.DataFrame:
-    df = load_multiindex(file, 'feature_time')
+    df = pd.read_csv(file, index_col=[0, 2, 3, 4, 5, 6, 7, 8])['feature_time']
+    df.index = [df.index.get_level_values(0), df.index.get_level_values(1), df.index.map(lambda idx: f"{idx[2]}_MO" if idx[6] else idx[2]),
+                df.index.get_level_values(3), df.index.get_level_values(7)]
+    df = df.rename_axis(["model_no", "ml_task", "feature_selector", "ml_model", "fold"])
+    df = df.reset_index()
+    # filter optuna-combined_MO
+    df = df[df['feature_selector'] != "optuna-combined_MO"]
     return df
 
 def get_modified_task_time(file) -> pd.DataFrame:

@@ -4,14 +4,15 @@ import scipy.stats as stats
 
 from analysis.analysis_helper import get_modified_performance, get_modified_feature_time
 
-path_qual = "/home/ubuntu/MA/data/extracted_ml_results/model_quality.csv"
-path_time = "/home/ubuntu/MA/data/extracted_ml_results/feature_times.csv"
+path_qual = "/home/ubuntu/MA/raphael-dunkel-master/data/extracted_ml_results/model_quality.csv"
+path_time = "/home/ubuntu/MA/raphael-dunkel-master/data/extracted_ml_results/feature_times.csv"
 
 df_qual = get_modified_performance(path_qual)
 df_qual.set_index(["ml_task", "feature_selector", "ml_model", "fold"], inplace=True)
 
 df_time = get_modified_feature_time(path_time)
-df_time.set_index(["ml_task", "feature_selector", "ml_model", "fold"], inplace=True)
+df_time.set_index(["ml_task", "feature_selector", "ml_model", "fold","model_no"], inplace=True)
+df_time = df_time.groupby["ml_task", "feature_selector", "ml_model", "fold",].median()
 
 df = pd.concat([df_qual, df_time], axis=1)
 print(df)
