@@ -1,8 +1,11 @@
+from dataclasses import dataclass
+
 import pandas as pd
 import numpy as np
 import seaborn as sns
 import seaborn.objects as so
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 from analysis.analysis_helper import get_modified_performance, get_modified_feature_time, get_modified_task_time
 
@@ -40,6 +43,31 @@ plot = (so.Plot(df, y="model_quality", color="feature_selector")
         .add(so.Dot()).limit(y=(-1,1))
         .layout(size=(15,20)).scale(x="log")
         .label(x=str_trans, y=str_trans, title=str_trans, legend="Feature Selector"))
+#todo ggf. anpassen mit relativ-wert zu median
 plt.tight_layout()
 plot.show()
 #plot.savefig("rq2_tradeoff_time_stability.pdf")
+
+plt.clf()
+
+df_mod = df.groupby(['feature_selector', 'ml_task'])['model_quality'].median().to_dict()
+print(df_mod)
+df['med_qual'] = df[['feature_selector', 'ml_task']].apply(axis=1, func=lambda x: df_mod[(x[0],x[1])])
+df['rel_qual'] = df['model_quality'] - df['med_qual']
+print(df)
+
+figure = plt.figure(figsize=(15,20))
+
+plot = (so.Plot(df, y="rel_qual", color="feature_selector")
+        .on(figure)
+        .pair(x=['feature_time', "task_time"]).facet(row="ml_task")
+        .add(so.Dot()).limit(y=(-1,1))
+        .layout(size=(15,20)).scale(x="log")
+        .label(x=str_trans, y="Relative Model Quality", title=str_trans, legend="Feature Selector")).plot()
+#todo ggf. anpassen mit relativ-wert zu median
+
+for ax in figure.get_axes():
+    ax.axhline(y=0, color="r", linestyle="--")
+
+figure.tight_layout()
+figure.show()

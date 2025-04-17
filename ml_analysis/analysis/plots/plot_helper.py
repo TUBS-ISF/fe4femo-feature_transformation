@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patheffects as path_effects
 
 # https://stackoverflow.com/a/63295846
-def add_median_labels(ax: plt.Axes, fmt:int = 2, size='x-small', boxen=False, scientific=True) -> None:
+def add_median_labels(ax: plt.Axes, fmt:int = 2, size='x-small', boxen=False, scientific=False) -> None:
     fmt = f".{fmt}{"E" if scientific else "f"}"
     lines = ax.get_lines()
     boxes = [c for c in ax.get_children() if "Patch" in str(c)]
