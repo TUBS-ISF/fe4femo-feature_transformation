@@ -248,6 +248,7 @@ dependencies:
       - bottle==0.13.2
       - category-encoders==2.8.0
       - cycler==0.12.1
+      - kaleido==0.2.1
       - mrmr-selection==0.2.8
       - optuna-dashboard==0.17.0
       - optuna-integration==4.2.0
