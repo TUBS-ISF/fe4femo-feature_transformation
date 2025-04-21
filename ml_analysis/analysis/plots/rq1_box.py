@@ -21,5 +21,5 @@ plot.set(xlim=(-1,1), ylabel="Feature Selector", xlabel="Model Quality")
 plot.set_titles(col_template="{col_name}")
 plot.tight_layout()
 
-plt.show()
-#plot.savefig("rq1_box.pdf")
+#plt.show()
+plot.savefig("out/rq1_box.pdf")

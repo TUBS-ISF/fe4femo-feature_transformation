@@ -23,5 +23,5 @@ plot.tight_layout()
 
 #plot = sns.barplot(df, x="feature_time", y="feature_selector", hue="ml_task", log_scale=True)
 
-plt.show()
-#plot.savefig("rq2_training.pdf")
+#plt.show()
+plot.savefig("out/rq2_training_time.pdf")

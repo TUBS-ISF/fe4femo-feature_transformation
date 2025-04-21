@@ -33,7 +33,8 @@ plot.set(xscale="log", yscale="log")
 plot.set(ylabel="Training Time", xlabel="Feature Time")
 plot.set_titles(col_template="{col_name}")
 plot.tight_layout()
-plt.show()
+#plt.show()
+plot.savefig("out/rq2_tradeoff_times.pdf")
 
 plt.clf()
 
@@ -45,8 +46,8 @@ plot = (so.Plot(df, y="model_quality", color="feature_selector")
         .label(x=str_trans, y=str_trans, title=str_trans, legend="Feature Selector"))
 #todo ggf. anpassen mit relativ-wert zu median
 plt.tight_layout()
-plot.show()
-#plot.savefig("rq2_tradeoff_time_stability.pdf")
+#plot.show()
+plot.save("out/rq2_tradeoff_qual_time.pdf")
 
 plt.clf()
 
@@ -70,4 +71,5 @@ for ax in figure.get_axes():
     ax.axhline(y=0, color="r", linestyle="--")
 
 figure.tight_layout()
-figure.show()
+#figure.show()
+figure.savefig("out/rq2_tradeoff_qual_time_rel.pdf")

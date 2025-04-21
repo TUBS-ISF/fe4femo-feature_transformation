@@ -27,5 +27,5 @@ plot.set(ylim=(-1,1.02), xlim=(0,1.05), xlabel="Selection Stability", ylabel="Mo
 
 plot.tight_layout()
 
-#plot.savefig("rq1_tradeoff_time_stability.pdf")
-plt.show()
+plot.savefig("out/rq1_tradeoff_time_qual_stability.pdf")
+#plt.show()

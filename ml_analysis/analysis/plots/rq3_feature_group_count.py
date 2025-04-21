@@ -73,4 +73,4 @@ order = df.groupby(['group', 'feature_selector'])['rel_count'].mean().groupby(['
     #.add(so.Text(color="k"), MiddleStack())
     .layout(size=(10,14))
     .scale(y=so.Nominal(order=order))
-).show()
+).save("out/rq3_feature_group_count.pdf")

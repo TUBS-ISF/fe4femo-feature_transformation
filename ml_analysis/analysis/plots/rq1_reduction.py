@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from analysis.analysis_helper import get_modified_performance
 from analysis.plots.plot_helper import add_median_labels
 
+sns.set_theme(style="whitegrid", palette="colorblind")
 
 path = "/home/ubuntu/MA/raphael-dunkel-master/data/extracted_ml_results/feature_active.csv"
 path_groups = "/home/ubuntu/MA/raphael-dunkel-master/data/featureExtraction/groupMapping.csv"
@@ -32,5 +33,5 @@ for ax in plot.axes.flat:
     add_median_labels(ax, size='x-small')
 plot.tight_layout()
 
-#plot.savefig("test.pdf")
-plt.show()
+plot.savefig("out/rq1_count_reduction.pdf")
+#plt.show()

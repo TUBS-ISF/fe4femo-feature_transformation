@@ -22,5 +22,5 @@ for ax in plot.axes.flat:
 
 plot.tight_layout()
 
-#plot.savefig("test.pdf")
-plt.show()
+plot.savefig("out/rq1_selector.pdf")
+#plt.show()

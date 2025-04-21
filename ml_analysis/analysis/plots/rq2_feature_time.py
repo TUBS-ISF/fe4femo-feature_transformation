@@ -17,9 +17,9 @@ plot = sns.catplot(df, x="feature_time", y="feature_selector",  estimator="media
 plot.set(xlabel="Cumulated Feature Computation Time", ylabel="Feature Selector", )
 
 for ax in plot.axes.flat:
-    add_median_labels(ax, size='x-small', boxen=True)
+    add_median_labels(ax, size='x-small', boxen=True, scientific=True)
 
 plot.tight_layout()
 
-plt.show()
-#plot.savefig("rq2_feature.pdf")
+#plt.show()
+plot.savefig("out/rq2_feature_time.pdf")

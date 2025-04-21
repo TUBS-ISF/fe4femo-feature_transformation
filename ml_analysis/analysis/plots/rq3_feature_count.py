@@ -34,5 +34,5 @@ order = df.groupby(['feature'])['count'].sum().sort_values(ascending=False).inde
 
 plot = sns.catplot(df, x="count", y="feature", estimator=sum, orient="h", height=80, kind="bar", errorbar=None, order=order)
 plot.tight_layout()
-plt.show()
-#plot.savefig("rq3_feature_count.pdf")
+#plt.show()
+plot.savefig("out/rq3_feature_count.pdf")

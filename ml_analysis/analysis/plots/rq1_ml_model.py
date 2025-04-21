@@ -21,5 +21,5 @@ for ax in plot.axes.flat:
     add_median_labels(ax, size='small')
 plot.tight_layout()
 
-#plot.savefig("test.pdf")
-plt.show()
+plot.savefig("out/rq1_model.pdf")
+#plt.show()
