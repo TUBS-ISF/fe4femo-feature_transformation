@@ -83,7 +83,7 @@ print(df)
 
 order = df.groupby(['group', 'feature_selector'])['rel_count'].mean().groupby(['group']).sum().sort_values(ascending=False).index.values
 plot = (
-    so.Plot(df, y="group", x="rel_count", color="feature_selector", )
+    so.Plot(df.rename(columns={"feature_selector":"Feature Selector"}), y="group", x="rel_count", color="Feature Selector", )
     #.facet(row="ml_task")
     .add(so.Bar(), so.Agg("mean"), SemiStack())
     #.add(so.Text(color="k"), MiddleStack())
@@ -92,5 +92,5 @@ plot = (
     .label(legend="Feature Selector",x="Percentage of ML Pipeline Trainings With Group Active", y="Feature Group")
     .scale(color=so.Nominal(order=get_order()))
 )
-plot.save("out/rq3_feature_group_count.pdf")
+plot.save("out/rq3_feature_group_count.pdf", bbox_inches='tight')
 #plot.show()

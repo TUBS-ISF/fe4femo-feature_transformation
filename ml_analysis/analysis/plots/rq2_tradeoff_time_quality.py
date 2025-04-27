@@ -36,4 +36,4 @@ plot = (so.Plot(df, y="model_quality", color="feature_selector", marker="feature
         .label(legend="Feature Selector", y="Model Quality"))
 plt.tight_layout()
 #plot.show()
-plot.save("out/rq2_tradeoff_qual_time.pdf")
+plot.save("out/rq2_tradeoff_qual_time.pdf", bbox_inches='tight')
