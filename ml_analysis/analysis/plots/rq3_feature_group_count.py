@@ -9,30 +9,43 @@ import matplotlib.pyplot as plt
 from seaborn._core.groupby import GroupBy
 from seaborn._core.moves import Move
 from seaborn._core.typing import Default
+from seaborn._core.scales import Scale
+from functools import partial
+
+from analysis.analysis_helper import get_order, get_replace_dictionary
 
 @dataclass
-class MiddleStack(Move):
-    def _stack(self, df, orient):
+class SemiStack(Move):
+    """
+    Displacement of overlapping bar or area marks along the value axis.
+    Examples
+    --------
+    .. include:: ../docstrings/objects.Stack.rst
+    """
 
+    def _stack(self, df, orient, order=None):
+
+        # TODO should stack do something with ymin/ymax style marks?
+        # Should there be an upstream conversion to baseline/height parameterization?
+        df = GroupBy(order).apply(df, lambda x: x)
         if df["baseline"].nunique() > 1:
             err = "Stack move cannot be used when baselines are already heterogeneous"
             raise RuntimeError(err)
-
         other = {"x": "y", "y": "x"}[orient]
         stacked_lengths = (df[other] - df["baseline"]).dropna().cumsum()
         offsets = stacked_lengths.shift(1).fillna(0)
-
-        df[other] = stacked_lengths - (df[other]- df["baseline"])/2
+        df[other] = stacked_lengths
         df["baseline"] = df["baseline"] + offsets
-
         return df
-
     def __call__(
-        self, data: pd.DataFrame, groupby: GroupBy, orient: str, scales: dict[str],
+        self, data: pd.DataFrame, groupby: GroupBy, orient: str, scales: dict[str, Scale],
     ) -> pd.DataFrame:
-
+        # TODO where to ensure that other semantic variables are sorted properly?
+        # TODO why are we not using the passed in groupby here?
         groupers = ["col", "row", orient]
-        return GroupBy(groupers).apply(data, self._stack, orient)
+        return GroupBy(groupers).apply(data,
+                                       partial(self._stack, order=groupby.order),
+                                       orient)
 
 sns.set_theme(style="whitegrid", palette="colorblind")
 
@@ -65,12 +78,19 @@ print(df)
 df['rel_count'] =  df['count'] / df['max_count']
 df['rel_count'] = df['rel_count'] / selector_count
 print(df)
+df.replace(get_replace_dictionary(), inplace=True)
+print(df)
+
 order = df.groupby(['group', 'feature_selector'])['rel_count'].mean().groupby(['group']).sum().sort_values(ascending=False).index.values
-(
+plot = (
     so.Plot(df, y="group", x="rel_count", color="feature_selector", )
     #.facet(row="ml_task")
-    .add(so.Bar(), so.Agg("mean"), so.Stack())
+    .add(so.Bar(), so.Agg("mean"), SemiStack())
     #.add(so.Text(color="k"), MiddleStack())
     .layout(size=(10,14))
     .scale(y=so.Nominal(order=order))
-).save("out/rq3_feature_group_count.pdf")
+    .label(legend="Feature Selector",x="Percentage of ML Pipeline Trainings With Group Active", y="Feature Group")
+    .scale(color=so.Nominal(order=get_order()))
+)
+plot.save("out/rq3_feature_group_count.pdf")
+#plot.show()

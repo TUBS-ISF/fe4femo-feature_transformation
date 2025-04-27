@@ -104,7 +104,7 @@ def confidenceIntervals(Z, alpha=0.05, res={}):
         res['variance'])  # lower bound of the confidence interval at a level alpha
     upper = res['stability'] + stats.norm.ppf(1 - alpha / 2) * math.sqrt(
         res['variance'])  # upper bound of the confidence interval
-    return {'stability': res['stability'], 'lower': lower, 'upper': upper}
+    return {'stability': res['stability'], 'variance': res['variance'], 'lower': lower, 'upper': upper}
 
 
 ## this tests whether the true stability is equal to a given value stab0
@@ -205,7 +205,7 @@ print(df)
 index = []
 data = []
 for name, group in df.groupby(['feature_selector', 'ml_task']):
-    stab = getVarianceofStability(group.to_numpy())
+    stab = confidenceIntervals(group.to_numpy())
     index.append(name)
     data.append(stab)
     print(f"Group {name}: {stab}")

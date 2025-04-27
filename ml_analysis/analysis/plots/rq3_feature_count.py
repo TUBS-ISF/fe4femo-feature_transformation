@@ -17,22 +17,28 @@ print(df)
 df.reset_index(inplace=True)
 df.replace({False: 0, True: 1}, inplace=True)
 df.drop(columns=["ml_model", "model_hpo", "selector_hpo", "multi_objective", "fold"], inplace=True)
-df = df.groupby(['ml_task', 'feature_selector']).sum()
+df['max_count'] = 1
 print(df)
 df.reset_index(inplace=True)
-df = df.melt(id_vars=["ml_task", "feature_selector"], var_name="feature", value_name="count")
+df = df.melt(id_vars=["ml_task", "feature_selector", "max_count"], var_name="feature", value_name="count")
 print(df)
 df['group_rank'] = df.groupby(["ml_task", "feature_selector"])['count'].rank(method="dense", ascending=False)
 print(df)
 
-order = df.groupby(['feature'])['count'].sum().sort_values(ascending=False).index.values
+order = df.groupby(['feature']).sum().sort_values(by="count",ascending=False).index.values
 
 #p = (
 #    so.Plot(df, x="count", y="feature", color="feature_selector").add(so.Bars(), so.Agg(sum), so.Stack()).layout(size=(80,80)).scale(y=so.Nominal(order=order))
 #)
 #p.show()
 
-plot = sns.catplot(df, x="count", y="feature", estimator=sum, orient="h", height=80, kind="bar", errorbar=None, order=order)
-plot.tight_layout()
+#plot = sns.catplot(df, x="count", y="feature", estimator=sum, orient="h", height=80, kind="bar", errorbar=None, order=order)
+#plot.tight_layout()
 #plt.show()
-plot.savefig("out/rq3_feature_count.pdf")
+#plot.savefig("out/rq3_feature_count.pdf")
+
+
+df_sort = df.drop(columns=['ml_task', 'feature_selector', "group_rank"]).groupby(['feature']).sum().drop(index="index")
+df_sort["rel_count"] = df_sort['count'] / df_sort['max_count']
+df_sort.sort_values(by=['rel_count'], ascending=False, inplace=True)
+print(df_sort)

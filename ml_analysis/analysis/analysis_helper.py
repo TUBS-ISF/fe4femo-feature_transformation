@@ -27,6 +27,7 @@ def load_multiindex(file, column) -> pd.DataFrame:
     df = df.reset_index()
     # filter optuna-combined_MO
     df = df[df['feature_selector'] != "optuna-combined_MO"]
+    df.replace(get_replace_dictionary(), inplace=True)
     return df
 
 def get_modified_performance(file) -> pd.DataFrame:
@@ -40,12 +41,43 @@ def get_modified_feature_time(file) -> pd.DataFrame:
     df = df.reset_index()
     # filter optuna-combined_MO
     df = df[df['feature_selector'] != "optuna-combined_MO"]
+    df.replace(get_replace_dictionary(), inplace=True)
     return df
 
 def get_modified_task_time(file) -> pd.DataFrame:
     df = load_multiindex(file, 'task_time')
     df['task_time'] = pd.to_timedelta(df['task_time'])
+    df.replace(get_replace_dictionary(), inplace=True)
+
+    df['task_time'] = df['task_time'].dt.total_seconds()
+    mask = ~((df['feature_selector'] == 'Genetic') | (df['feature_selector'] == 'HFMOEA'))
+    df.loc[mask, "task_time"] = df.loc[mask, "task_time"] / 150
     return df
+
+def get_reduction(path):
+    df_orig = pd.read_csv(path, index_col=[0, 1, 2, 3, 4, 5, 6])
+    df_orig = df_orig[df_orig.index.get_level_values(5) == False]
+    feature_max = len(df_orig.columns)
+    df_orig.replace({False: 0, True: 1}, inplace=True)
+
+    df = df_orig.sum(axis=1).reset_index()
+    df = df.rename(columns={df.columns[-1]: "feature_count"})
+    df['rel_count'] = df['feature_count'] / feature_max
+    df.replace(get_replace_dictionary(), inplace=True)
+    return df
+
+
+def get_replace_dictionary() -> dict:
+    return {"SATzilla": "SATZilla", "FM_Chara": "FM Fact Label", "kbest-mutalinfo": "MI Filtering", "multisurf":"MultiSURF",
+            "genetic" : "Genetic", "embedded-tree" : "Embedded Tree", "optuna-combined" : "FS as HPO", "SVD-entropy" : "SVD-Entropy",
+            "runtime_sat" : "Runtime Kissat", "runtime_backbone" : "Runtime CaDiBack", "runtime_spur" : "Runtime Spur",
+            "value_ssat" : "FM Cardinality", "value_backbone" : "Backbone Size", "algo_selection" : "#SAT Algorithm Selection",
+            "all": "Complete", "prefilter": "Prefiltering",
+            "randomForest" : "Random Forest", "gradboostForest" : "GB Trees", "adaboost": "AdaBoost"}
+
+def get_order() -> list:
+    return ["Complete", "Prefiltering", "SATZilla", "SATfeatPy", "FMBA", "FM Fact Label", "MI Filtering", "MultiSURF",
+            "mRMR", "RFE", "Genetic", "HFMOEA", "Embedded Tree", "FS as HPO", "SVD-Entropy", "NDFS"]
 
 @dataclass(frozen=True, eq=True)
 class ExperimentInstance:
