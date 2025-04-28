@@ -81,7 +81,23 @@ print(df)
 df.replace(get_replace_dictionary(), inplace=True)
 print(df)
 
+map_dict = {
+    "FMBA" : "FMBA",
+    "SATZilla2024": "SATZilla",
+    "SATfeatPy":"SATfeatPy",
+    "FM":"FM Fact Label",
+    "DyMMer":"DyMMer",
+    "ESYES":"ESYES"
+}
+
+def groupTransformer(x : str) -> str:
+    no = x.split("_")[-1]
+    name = x.split("_")[0]
+    return f"{map_dict[name]} {no}"
+
+df['group'] = df['group'].apply(groupTransformer)
 order = df.groupby(['group', 'feature_selector'])['rel_count'].mean().groupby(['group']).sum().sort_values(ascending=False).index.values
+
 plot = (
     so.Plot(df.rename(columns={"feature_selector":"Feature Selector"}), y="group", x="rel_count", color="Feature Selector", )
     #.facet(row="ml_task")
