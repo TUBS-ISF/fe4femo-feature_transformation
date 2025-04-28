@@ -41,4 +41,4 @@ order = df.groupby(['feature']).sum().sort_values(by="count",ascending=False).in
 df_sort = df.drop(columns=['ml_task', 'feature_selector', "group_rank"]).groupby(['feature']).sum().drop(index="index")
 df_sort["rel_count"] = df_sort['count'] / df_sort['max_count']
 df_sort.sort_values(by=['rel_count'], ascending=False, inplace=True)
-print(df_sort)
+print(df_sort.to_string())

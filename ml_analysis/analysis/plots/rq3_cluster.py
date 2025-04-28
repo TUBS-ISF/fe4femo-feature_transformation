@@ -66,6 +66,6 @@ plot.ax_cbar.tick_params(labelsize=70)
 #plot.ax_heatmap.set_xticklabels(plot.ax_heatmap.get_xmajorticklabels(), fontsize = 0.1)
 #plot.ax_heatmap.set_yticklabels(plot.ax_heatmap.get_ymajorticklabels(), fontsize = 0.1)
 
-plot.savefig("out/rq3_feature_corr.png")
+plot.savefig("out/rq3_feature_corr.png", facecolor=(1,1,1,0))
 #plot.savefig("test.png")
 #plt.show()
