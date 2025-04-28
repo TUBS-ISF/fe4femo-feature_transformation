@@ -22,7 +22,7 @@ print(df)
 #plot.savefig("out/rq1_stability_selector.pdf")
 #plt.show()
 
-plot = so.Plot(df, y="feature_selector", x="stability", xmin="lower", xmax="upper").facet(col="ml_task", wrap=2).add(so.Bar()).add(so.Range(linewidth=2)).scale(y=so.Nominal(order=get_order()))
+plot = so.Plot(df, y="feature_selector", x="stability", xmin="lower", xmax="upper").facet(col="ml_task", wrap=2, order=['Runtime Kissat', 'Runtime CaDiBack', 'Runtime Spur', 'FM Cardinality', 'Backbone Size', '#SAT Algorithm Selection']).add(so.Bar()).add(so.Range(linewidth=2)).scale(y=so.Nominal(order=get_order()))
 plot = plot.layout(size=(8,12))
 plot = plot.limit(xlim=(0,1))
 plot = plot.label(x="Nogueira Feature Selection Stability", y="Feature Selector")
