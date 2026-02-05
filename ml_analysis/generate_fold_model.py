@@ -11,7 +11,7 @@ import pandas as pd
 from optuna.samplers import TPESampler
 from sklearn.preprocessing import LabelEncoder
 
-from helper.data_classes import FoldResult, TrialContainer
+from ml_analysis.helper.data_classes import FoldResult, TrialContainer
 
 os.environ['MPLCONFIGDIR'] = tempfile.mkdtemp()
 from pathlib import Path
@@ -24,14 +24,14 @@ from distributed import worker_client, performance_report, get_task_stream
 from sklearn.metrics import matthews_corrcoef, r2_score, d2_absolute_error_score
 from sklearn.model_selection import StratifiedKFold
 
-from helper.SlurmMemRunner import SLURMMemRunner
-from helper.feature_selection import get_selection_HPO_space, get_feature_selection, precompute_feature_selection, \
-     transform_dict_to_var_dict
-from helper.input_parser import parse_input
-from helper.load_dataset import generate_xy_split, get_dataset, get_flat_models, is_task_classification, \
+from ml_analysis.helper.SlurmMemRunner import SLURMMemRunner
+from  ml_analysis.helper.feature_selection import get_selection_HPO_space, get_feature_selection, precompute_feature_selection, \
+     transform_dict_to_var_dict, a
+from  ml_analysis.helper.input_parser import parse_input
+from  ml_analysis.helper.load_dataset import generate_xy_split, get_dataset, get_flat_models, is_task_classification, \
     load_feature_groups, load_feature_group_times
-from helper.model_training import get_model_HPO_space, get_model
-from helper.optuna_helper import categorical_distance_function
+from  ml_analysis.helper.model_training import get_model_HPO_space, get_model
+from  ml_analysis.helper.optuna_helper import categorical_distance_function
 
 def eval_model_performance(model_instance, X_train_test, precomputed, is_classification):
     y_test = precomputed["y_test"].get().result()
@@ -115,11 +115,11 @@ def optimize_optuna(study: optuna.study.Study, objective_function, lock : dask.d
         study.optimize(objective_function, n_trials=1)
 
 
-def compute_final_model(client, model, features, X_train, X_test, y_train, y_test, is_classification, model_config, selector_config, model_flatness, feature_groups, easy_model, cores, verbose):
+def compute_final_model(client, model, features, X_train, X_test, y_train, y_test, is_classification, model_config, selector_config, model_flatness, feature_groups, easy_model, cores, verbose, transform_config=None):
     model_instance_selector = get_model(model, is_classification, 1, model_config, easy_model=easy_model)
     start_FS = time.time()
     precomputed = client.submit(precompute_feature_selection, features, is_classification, X_train, X_test, y_train,
-                                y_test, model_flatness, parallelism=cores, pure=False)
+                                y_test, model_flatness, parallelism=cores, pure=False, transform_config=transform_config)
     precomputed = client.submit(transform_dict_to_var_dict, precomputed, pure=False)
     fs_future = client.submit(get_feature_selection, precomputed, features, is_classification, selector_config,
                               model_instance_selector, feature_groups, parallelism=cores, verbose=verbose,

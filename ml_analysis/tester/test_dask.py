@@ -9,9 +9,9 @@ from dask.distributed import Client
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import LabelEncoder
 
-from generate_fold_model import objective, impute_and_scale
-from helper.feature_selection import precompute_feature_selection
-from helper.load_dataset import get_dataset, is_task_classification, generate_xy_split, get_flat_models, \
+from ml_analysis.generate_fold_model import objective
+from ml_analysis.helper.feature_selection import precompute_feature_selection, impute_and_scale
+from ml_analysis.helper.load_dataset import get_dataset, is_task_classification, generate_xy_split, get_flat_models, \
     load_feature_groups
 
 if __name__ == "__main__":

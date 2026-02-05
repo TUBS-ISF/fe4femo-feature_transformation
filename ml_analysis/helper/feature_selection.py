@@ -22,16 +22,16 @@ from sklearn.model_selection import KFold, cross_val_score, train_test_split, St
 from sklearn.preprocessing import RobustScaler, StandardScaler
 from zoofs import HarrisHawkOptimization, GeneticOptimization
 
-from external.HFMOEA.main import reduceFeaturesMaxAcc, compute_sol
-from external.genetic_parallel import GeneticParallel
-from external.harrishawk_parallel import HarrisHawkParallel
-from external.multisurf_parallel import MultiSURF_Parallel
-from external.skfeature.NDFS import ndfs
-from external.skfeature.sparse_learning import feature_ranking
-from external.svd_entropy import keep_high_contrib_features
-from helper.data_classes import FoldSplit
-from helper.load_dataset import filter_SATzilla, filter_SATfeatPy, filter_FMBA, filter_FMChara
-from helper.model_training import is_model_classifier
+from ml_analysis.external.HFMOEA.main import reduceFeaturesMaxAcc, compute_sol
+from ml_analysis.external.genetic_parallel import GeneticParallel
+from ml_analysis.external.harrishawk_parallel import HarrisHawkParallel
+from ml_analysis.external.multisurf_parallel import MultiSURF_Parallel
+from ml_analysis.external.skfeature.NDFS import ndfs
+from ml_analysis.external.skfeature.sparse_learning import feature_ranking
+from ml_analysis.external.svd_entropy import keep_high_contrib_features
+from ml_analysis.helper.data_classes import FoldSplit
+from ml_analysis.helper.load_dataset import filter_SATzilla, filter_SATfeatPy, filter_FMBA, filter_FMChara
+from ml_analysis.helper.model_training import is_model_classifier
 
 
 def transform_dict_to_var_dict(dictionary : dict) -> dict:
@@ -91,8 +91,15 @@ def impute_and_scale(X_train, X_test):
     return X_train, X_test
 
 
-def precompute_feature_selection(features: str, isClassification : bool, X_train_orig : pd.DataFrame, X_test_orig : pd.DataFrame, y_train : pd.Series, y_test : pd.Series, model_flatness : pd.Series, threshold : float = .9, parallelism : int = 1, ):
+def precompute_feature_selection(features: str, isClassification : bool, X_train_orig : pd.DataFrame, X_test_orig : pd.DataFrame, y_train : pd.Series, y_test : pd.Series, model_flatness : pd.Series, threshold : float = .9, parallelism : int = 1, transform_config: dict | None=None):
     X_train_imputed, X_test_imputed = impute_and_scale(X_train_orig, X_test_orig)
+
+    X_train_imputed, X_test_imputed = apply_feature_transformation(
+        X_train_imputed,
+        X_test_imputed,
+        transform_config
+    )
+
     if features == "all": # do not prefilter for all
         return {
             "X_train": X_train_imputed,
@@ -172,6 +179,10 @@ def extract_fold_list(precomputed : dict) -> list[Variable]:
         return [precomputed[f"index_{i}"] for i in range(fold_no)]
     else:
         raise Exception("No folds in precomputed!")
+    
+def apply_feature_transformation():  #todo: transfer scaling for impute_and_scaling
+    None
+    
 
 def get_feature_selection(precomputed:dict, features : str, isClassification : bool, selector_args, estimator, group_dict : dict[str, list[str]], parallelism : int = 1, verbose = False, dask_parallel : bool = False):
     y_train = precomputed["y_train"].get().result()

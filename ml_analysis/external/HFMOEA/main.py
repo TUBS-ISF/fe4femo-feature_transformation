@@ -5,14 +5,14 @@ import dask.distributed
 from distributed import Variable
 from joblib import Parallel, delayed
 
-from external.HFMOEA.filter_methods import *
+from ml_analysis.external.HFMOEA.filter_methods import *
 import time
 import csv
 import os
 import math
 import random
 import matplotlib.pyplot as plt
-from external.HFMOEA.utils import *
+from ml_analysis.external.HFMOEA.utils import *
 import pandas as pd
 import numpy as np
 from matplotlib.ticker import MaxNLocator
