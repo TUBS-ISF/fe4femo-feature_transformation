@@ -3,11 +3,10 @@ from optuna.trial import FrozenTrial, FixedTrial
 from sklearn.metrics import matthews_corrcoef, d2_absolute_error_score
 from sklearn.preprocessing import LabelEncoder
 
-from generate_fold_model import impute_and_scale
-from helper.feature_selection import get_selection_HPO_space, get_feature_selection
-from helper.load_dataset import load_algo_selection, load_feature_data, generate_xy_split, load_dataset, \
+from ml_analysis.helper.feature_selection import get_selection_HPO_space, get_feature_selection, impute_and_scale
+from ml_analysis.helper.load_dataset import load_algo_selection, load_feature_data, generate_xy_split, load_dataset, \
     is_task_classification, load_feature_groups, get_dataset
-from helper.model_training import get_model_HPO_space, get_model
+from ml_analysis.helper.model_training import get_model_HPO_space, get_model
 
 
 
@@ -16,7 +15,7 @@ task = "runtime_backbone"
 model = "randomForest"
 features = "HFMOEA"
 modelHPO = True
-feature_groups = load_feature_groups("/home/ubuntu/MA/data")
+feature_groups = load_feature_groups("/mnt/e/Uni/Thesis/fe4femo-feature_transformation/data")
 n_jobs = 12
 frozen_best_trial = FixedTrial({
     "n_estimators" : 100,
@@ -27,12 +26,12 @@ frozen_best_trial = FixedTrial({
     "mutation_probability" : 0.1,
 })
 
-X,y = get_dataset("/home/ubuntu/MA/data", task)
+X,y = get_dataset("/mnt/e/Uni/Thesis/fe4femo-feature_transformation/data", task)
 label_encoder = LabelEncoder()
 y = label_encoder.fit_transform(y)
 y = pd.Series(y)
 
-X_train, X_test, y_train, y_test = generate_xy_split(X, y, "/home/ubuntu/MA/data/folds.txt", 0)
+X_train, X_test, y_train, y_test = generate_xy_split(X, y, "/mnt/e/Uni/Thesis/fe4femo-feature_transformation/data/folds.txt", 0)
 
 X_train, X_test = impute_and_scale(X_train, X_test)
 

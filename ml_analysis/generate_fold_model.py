@@ -26,7 +26,7 @@ from sklearn.model_selection import StratifiedKFold
 
 from ml_analysis.helper.SlurmMemRunner import SLURMMemRunner
 from  ml_analysis.helper.feature_selection import get_selection_HPO_space, get_feature_selection, precompute_feature_selection, \
-     transform_dict_to_var_dict, a
+     transform_dict_to_var_dict
 from  ml_analysis.helper.input_parser import parse_input
 from  ml_analysis.helper.load_dataset import generate_xy_split, get_dataset, get_flat_models, is_task_classification, \
     load_feature_groups, load_feature_group_times

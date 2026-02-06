@@ -91,14 +91,9 @@ def impute_and_scale(X_train, X_test):
     return X_train, X_test
 
 
-def precompute_feature_selection(features: str, isClassification : bool, X_train_orig : pd.DataFrame, X_test_orig : pd.DataFrame, y_train : pd.Series, y_test : pd.Series, model_flatness : pd.Series, threshold : float = .9, parallelism : int = 1, transform_config: dict | None=None):
+def precompute_feature_selection(features: str, isClassification : bool, X_train_orig : pd.DataFrame, X_test_orig : pd.DataFrame, y_train : pd.Series, y_test : pd.Series, model_flatness : pd.Series, threshold : float = .9, parallelism : int = 1):
     X_train_imputed, X_test_imputed = impute_and_scale(X_train_orig, X_test_orig)
 
-    X_train_imputed, X_test_imputed = apply_feature_transformation(
-        X_train_imputed,
-        X_test_imputed,
-        transform_config
-    )
 
     if features == "all": # do not prefilter for all
         return {
