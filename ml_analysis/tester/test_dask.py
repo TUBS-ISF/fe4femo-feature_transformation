@@ -24,6 +24,7 @@ if __name__ == "__main__":
     modelHPO = False
     hpo_its =10
     foldNo =0
+    transform_config = {"method": "yeo-johnson"}  
 
     print(f"Dask dashboard is available at {client.dashboard_link}")
 
@@ -57,7 +58,7 @@ if __name__ == "__main__":
         future_pre = client.submit(precompute_feature_selection, features, is_classification,  X_train_inner,        
         X_test_inner,           
         y_train_inner,          
-        y_test_inner, model_flatness, 0.9, 8)
+        y_test_inner, model_flatness, 0.9, 8, transform_config)
         future_pre = client.submit(transform_dict_to_var_dict, future_pre)
         folds[i] = future_pre
  

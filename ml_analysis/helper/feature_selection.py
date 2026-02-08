@@ -32,6 +32,7 @@ from ml_analysis.external.svd_entropy import keep_high_contrib_features
 from ml_analysis.helper.data_classes import FoldSplit
 from ml_analysis.helper.load_dataset import filter_SATzilla, filter_SATfeatPy, filter_FMBA, filter_FMChara
 from ml_analysis.helper.model_training import is_model_classifier
+from ml_analysis.helper.feature_transformation import apply_feature_transformations
 
 
 def transform_dict_to_var_dict(dictionary : dict) -> dict:
@@ -75,25 +76,26 @@ def prefilter_features(X_train_in : pd.DataFrame, X_test_in : pd.DataFrame, y_tr
     to_keep = set(X_train.columns) - set(col_corr)
     return X_train[list(to_keep)], X_test[list(to_keep)]
 
-def impute_and_scale(X_train, X_test):
+def impute_and_scale(X_train, X_test): #only imputing, remove scaling for transformations
     imputer = SimpleImputer(keep_empty_features=False, missing_values=pd.NA)
-    scaler = StandardScaler()
+    #scaler = StandardScaler()
 
     imputer.set_output(transform="pandas")
-    scaler.set_output(transform="pandas")
+    #scaler.set_output(transform="pandas")
 
     X_train = imputer.fit_transform(X_train)
-    X_train = scaler.fit_transform(X_train)
+    #X_train = scaler.fit_transform(X_train)
 
     X_test = imputer.transform(X_test)
-    X_test = scaler.transform(X_test)
+    #X_test = scaler.transform(X_test)
 
     return X_train, X_test
 
 
-def precompute_feature_selection(features: str, isClassification : bool, X_train_orig : pd.DataFrame, X_test_orig : pd.DataFrame, y_train : pd.Series, y_test : pd.Series, model_flatness : pd.Series, threshold : float = .9, parallelism : int = 1):
-    X_train_imputed, X_test_imputed = impute_and_scale(X_train_orig, X_test_orig)
+def precompute_feature_selection(features: str, isClassification : bool, X_train_orig : pd.DataFrame, X_test_orig : pd.DataFrame, y_train : pd.Series, y_test : pd.Series, model_flatness : pd.Series, threshold : float = .9, parallelism : int = 1, transform_config: dict | None = None):
+    X_train_imputed, X_test_imputed = impute_and_scale(X_train_orig, X_test_orig) #does only imputing now, scaling done in transformations
 
+    X_train_imputed, X_test_imputed = apply_feature_transformations(X_train_imputed, X_test_imputed, transform_config)
 
     if features == "all": # do not prefilter for all
         return {
