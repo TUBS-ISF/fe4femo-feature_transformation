@@ -18,13 +18,13 @@ if __name__ == "__main__":
     client = Client(n_workers=10, threads_per_worker=1)
 
     pathData = "/mnt/e/Uni/Thesis/fe4femo-feature_transformation/data"
-    features = "multisurf"
+    features = "prefilter"
     task = "runtime_backbone"
     model = "randomForest"
     modelHPO = False
     hpo_its =10
     foldNo =0
-    transform_config = {"method": "yeo-johnson"}  
+    transform_config = {"method": "nystroem-rbf"}  
 
     print(f"Dask dashboard is available at {client.dashboard_link}")
 
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     X_train, X_test, y_train, y_test = generate_xy_split(X, y, pathData+"/folds.txt", foldNo)
     model_flatness = get_flat_models(X_train)
     flatness_future = client.scatter(model_flatness, direct=True)
-    kf = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
+    kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     splits = kf.split(X_train, get_flat_models(X_train))
 
 
@@ -49,12 +49,11 @@ if __name__ == "__main__":
         #y_train_inner = client.scatter(y_train.iloc[train_index])
         #y_test_inner = client.scatter(y_train.iloc[test_index])
         # feature preprocessing
-        #X_traintest_inner = client.submit(impute_and_scale, X_train_inner, X_test_inner)
-        for i, (train_index, test_index) in enumerate(splits):
-                        X_train_inner = X_train.iloc[train_index]
-                        X_test_inner = X_train.iloc[test_index]
-                        y_train_inner = y_train.iloc[train_index]
-                        y_test_inner = y_train.iloc[test_index]
+        #X_traintest_inner = client.submit(impute_and_scale, X_train_inner, X_test_inner)                
+        X_train_inner = X_train.iloc[train_index]
+        X_test_inner = X_train.iloc[test_index]
+        y_train_inner = y_train.iloc[train_index]
+        y_test_inner = y_train.iloc[test_index]
         future_pre = client.submit(precompute_feature_selection, features, is_classification,  X_train_inner,        
         X_test_inner,           
         y_train_inner,          
@@ -80,8 +79,8 @@ if __name__ == "__main__":
     study = optuna.create_study(storage=storage, direction="maximize")
 
     futures = [
-        client.submit(study.optimize, objective_function, n_trials=2, pure=False) for _ in range(1)
+        client.submit(study.optimize, objective_function, n_trials=1, pure=False) for _ in range(1)
     ]
     dask.distributed.wait(futures)
 
-    client.shutdown()
+    client.close()
