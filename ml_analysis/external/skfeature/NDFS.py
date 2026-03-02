@@ -4,7 +4,7 @@ import math
 import sklearn.cluster
 from sklearn.cluster import KMeans
 
-from ml_analysis.external.skfeature.construct_W import construct_W
+from external.skfeature.construct_W import construct_W
 
 
 def ndfs(X, gamma=10e8, W=None, alpha=1, beta=1, F=None, n_clusters=None, verbose=False):

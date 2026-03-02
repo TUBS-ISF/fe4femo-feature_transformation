@@ -11,7 +11,7 @@ import pandas as pd
 from optuna.samplers import TPESampler
 from sklearn.preprocessing import LabelEncoder
 
-from ml_analysis.helper.data_classes import FoldResult, TrialContainer
+from helper.data_classes import FoldResult, TrialContainer
 
 os.environ['MPLCONFIGDIR'] = tempfile.mkdtemp()
 from pathlib import Path
@@ -24,14 +24,15 @@ from distributed import worker_client, performance_report, get_task_stream
 from sklearn.metrics import matthews_corrcoef, r2_score, d2_absolute_error_score
 from sklearn.model_selection import StratifiedKFold
 
-from ml_analysis.helper.SlurmMemRunner import SLURMMemRunner
-from  ml_analysis.helper.feature_selection import get_selection_HPO_space, get_feature_selection, precompute_feature_selection, \
+from helper.SlurmMemRunner import SLURMMemRunner
+from  helper.feature_selection import get_selection_HPO_space, get_feature_selection, precompute_feature_selection, \
      transform_dict_to_var_dict
-from  ml_analysis.helper.input_parser import parse_input
-from  ml_analysis.helper.load_dataset import generate_xy_split, get_dataset, get_flat_models, is_task_classification, \
+from  helper.input_parser import parse_input
+from  helper.load_dataset import generate_xy_split, get_dataset, get_flat_models, is_task_classification, \
     load_feature_groups, load_feature_group_times
-from  ml_analysis.helper.model_training import get_model_HPO_space, get_model
-from  ml_analysis.helper.optuna_helper import categorical_distance_function
+from  helper.model_training import get_model_HPO_space, get_model
+from  helper.optuna_helper import categorical_distance_function
+from  helper.run_naming import create_run_name
 
 def eval_model_performance(model_instance, X_train_test, precomputed, is_classification):
     y_test = precomputed["y_test"].get().result()
@@ -96,15 +97,6 @@ def objective(trial: optuna.Trial, folds, features, model, should_modelHPO, is_c
         else:
             return -100.4242
 
-def create_run_name(features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, multi_objective : bool, foldNo : int) -> str:
-    ret_value = f"{task}#{features}#{model}#{modelHPO}#{selectorHPO}"
-    if modelHPO or selectorHPO:
-        ret_value += f"#{hpo_its}"
-    ret_value += f"#{multi_objective}"
-    if foldNo >= 0:
-        ret_value += f"#{foldNo}"
-    return ret_value
-
 def optimize_optuna(study: optuna.study.Study, objective_function, lock : dask.distributed.Lock, counter : dask.distributed.Variable):
     while True:
         with lock:
@@ -134,7 +126,11 @@ def compute_final_model(client, model, features, X_train, X_test, y_train, y_tes
     return model_complete, X_test, end_FS - start_FS, end_Model - start_Model
 
 
-def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, multi_objective: bool, foldNo : int):
+def build_transform_config(method: str) -> dict:
+    return {"method": method}
+
+
+def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, multi_objective: bool, foldNo : int, transformation: str):
     warnings.simplefilter("ignore", UserWarning)
     cores = int(os.getenv("OMP_NUM_THREADS", "1"))
     scheduler_options = {
@@ -144,7 +140,7 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
         "local_directory": "$TMPDIR/",
         "nthreads": 1,
         "interface": "ib0",
-        "memory_limit": f"{cores * int(os.getenv("SLURM_MEM_PER_CPU", 2000))}MB",
+        "memory_limit": f"{cores * int(os.getenv('SLURM_MEM_PER_CPU', 2000))}MB",
     }
     scheduler_path = Path(os.path.expandvars("$HOME") + "/tmp/scheduler_files")
     scheduler_path.mkdir(parents=True, exist_ok=True)
@@ -155,10 +151,11 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
         with Client(runner, direct_to_workers=True) as client:
             Path(pathOutput).mkdir(parents=True, exist_ok=True)
             run_config = {
-                "name": create_run_name(features, task, model, modelHPO, selectorHPO, hpo_its, multi_objective, foldNo),
+                "name": create_run_name(features, task, model, modelHPO, selectorHPO, hpo_its, multi_objective, foldNo) + f"#{transformation}",
                 "path_data": pathData,
                 "path_output": pathOutput,
                 "features": features,
+                "transformation": transformation,
                 "task": task,
                 "model": model,
                 "modelHPO": modelHPO,
@@ -167,6 +164,7 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                 "multiObjective": multi_objective,
                 "foldNo": foldNo,
             }
+            transform_config = build_transform_config(transformation)
 
             with (
                 performance_report(filename=run_config["path_output"] + "/" + run_config["name"] + ".html"),
@@ -223,7 +221,7 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                         # feature preprocessing
                         future_pre = client.submit(precompute_feature_selection, features, is_classification,
                                                    X_train_inner, X_test_inner, y_train_inner, y_test_inner,
-                                                   flatness_future, 0.9, cores, pure=True)
+                                                   flatness_future, 0.9, cores, pure=True, transform_config=transform_config)
                         future_pre = client.submit(transform_dict_to_var_dict, future_pre)
                         folds[i] = future_pre
                     dask.distributed.print(str(datetime.now()) + "  Initialized Folds")
@@ -260,10 +258,10 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                         selector_config = get_selection_HPO_space(features, frozen_best_trial, is_classification, feature_groups, X_train.shape[1])
                         model_complete, X_test_mod, time_feature, time_model = compute_final_model(client, model, features, X_train,
                                                                                        X_test, y_train, y_test,
-                                                                                       is_classification, model_config,
-                                                                                       selector_config, model_flatness,
-                                                                                       feature_groups, easy_model, cores,
-                                                                                       verbose)
+                                                                                        is_classification, model_config,
+                                                                                        selector_config, model_flatness,
+                                                                                        feature_groups, easy_model, cores,
+                                                                                        verbose, transform_config=transform_config)
                         trial_container.append(TrialContainer(model=model_complete, best_params=best_params, time_Feature=time_feature, time_Model=time_model, x_test=X_test_mod))
 
                 else:
@@ -277,7 +275,7 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                                                                                    is_classification, model_config,
                                                                                    selector_config, model_flatness,
                                                                                    feature_groups, easy_model, cores,
-                                                                                   verbose)
+                                                                                   verbose, transform_config=transform_config)
                     trial_container = [TrialContainer(model=model_complete, best_params=best_params, time_Feature=time_feature, time_Model=time_model, x_test=X_test)]
 
                 # export for later use
@@ -306,9 +304,9 @@ if __name__ == '__main__':
     worker_count = cpus_per_node*no_nodes - 2
     if worker_count < 25:
         raise ValueError("Not enough worker, needs at least 25")
-    print(f"Starting {worker_count} workers with {int(os.getenv("OMP_NUM_THREADS", 2))} cores per worker")
+    print(f"Starting {worker_count} workers with {int(os.getenv('OMP_NUM_THREADS', 2))} cores per worker")
 
-    function_args = (worker_count, os.environ.get("HOME")+"/"+os.path.expandvars(args.pathData), os.environ.get("HOME")+"/"+os.path.expandvars(args.pathOutput), args.features, args.task, args.model, args.modelHPO, args.selectorHPO, args.HPOits, args.multiObjective, args.foldNo)
+    function_args = (worker_count, os.environ.get("HOME")+"/"+os.path.expandvars(args.pathData), os.environ.get("HOME")+"/"+os.path.expandvars(args.pathOutput), args.features, args.task, args.model, args.modelHPO, args.selectorHPO, args.HPOits, args.multiObjective, args.foldNo, args.transformation)
 
     ctx = mp.get_context("spawn")
     processes = [ctx.Process(target=main, args=((i,)+function_args), daemon=False) for i in range(cpus_per_node)]

@@ -1,23 +1,26 @@
 #!/bin/bash
+set -euo pipefail
 
-config="${3:-"$HOME/fe4femo/ml_analysis/slurm_scripts/config.txt"}"
-output_path="${2:-"fe4femo/ml_analysis/out/main"}"
-script_path="$HOME/fe4femo/ml_analysis/slurm_scripts/run.sh"
-data_path="raphael-dunkel-master/data/"
-
-mkdir -p $HOME/$output_path
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "${script_dir}/../.." && pwd)"
+repo_name="$(basename "${repo_root}")"
 
 partition="${1:-multiple_il}"
-maxIt=$(wc -l < "$config")
-((maxIt=maxIt-1))
+output_path="${2:-${repo_name}/ml_analysis/out/main}"
+config="${3:-${repo_root}/ml_analysis/config.txt}"
+data_path="${4:-${repo_name}/data/}"
+script_path="${script_dir}/run.sh"
+
+mkdir -p "$HOME/$output_path"
+
+maxIt=$(awk 'NR>1 && $1 ~ /^[0-9]+$/ {m=$1} END {print m+0}' "$config")
 maxConcurrent=50
 
 tmpQUEUE=$(squeue | grep -c '^')
 waitIt=$((maxConcurrent + 1 - tmpQUEUE))
 
-while [[ maxIt -ge 0 ]] ; do
-    while [[ $waitIt -le "-20" ]]
-    do
+while [[ $maxIt -ge 0 ]]; do
+    while [[ $waitIt -le "-20" ]]; do
         sleep 120
         queue=$(squeue | grep -c '^')
         free=$((maxConcurrent + 1 - queue))
@@ -28,27 +31,24 @@ while [[ maxIt -ge 0 ]] ; do
     echo "model $maxIt submitted"
     EXPERIMENT_NO=$maxIt
 
-    # parameters
-
-    name=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $2}' $config)
-    task_count=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $3}' $config)
-    runtime=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $4}' $config)
-    out_path=$HOME/${output_path}/${name}.out
-    fold_no=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $5}' $config)
-    feature=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $6}' $config)
-    task=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $7}' $config)
-    model=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $8}' $config)
-    HPOits=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $9}' $config)
-    bool_modelHPO=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $10}' $config)
+    name=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $2}' "$config")
+    task_count=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $3}' "$config")
+    runtime=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $4}' "$config")
+    out_path="$HOME/${output_path}/${name}.out"
+    fold_no=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $5}' "$config")
+    feature=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $6}' "$config")
+    task=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $7}' "$config")
+    model=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $8}' "$config")
+    HPOits=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $9}' "$config")
+    bool_modelHPO=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $10}' "$config")
     [[ "$bool_modelHPO" == "True" ]] && modelHPO="--modelHPO" || modelHPO="--no-modelHPO"
-    bool_selectorHPO=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $11}' $config)
+    bool_selectorHPO=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $11}' "$config")
     [[ "$bool_selectorHPO" == "True" ]] && selectorHPO="--selectorHPO" || selectorHPO="--no-selectorHPO"
-    bool_multiObjective=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $12}' $config)
+    bool_multiObjective=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $12}' "$config")
     [[ "$bool_multiObjective" == "True" ]] && multiObjective="--multiObjective" || multiObjective="--no-multiObjective"
+    transformation=$(awk -v ID=$EXPERIMENT_NO '$1==ID {print $13}' "$config")
 
-    ############
-
-    output=$(sbatch -J "$name" -n "$task_count" --time="$runtime" --output=$out_path  --partition="${partition}" --export=ALL,ML_FOLD="$fold_no" "$script_path" --feature "$feature" --task "$task" --model "$model" --HPOits "$HPOits" "$modelHPO" "$selectorHPO" "$multiObjective" "$data_path" "$output_path" )
+    output=$(sbatch -J "$name" -n "$task_count" --time="$runtime" --output="$out_path" --partition="${partition}" --export=ALL,ML_FOLD="$fold_no" "$script_path" --features "$feature" --task "$task" --model "$model" --HPOits "$HPOits" "$modelHPO" "$selectorHPO" "$multiObjective" --transformation "$transformation" "$data_path" "$output_path")
     if [[ $output =~ "error" ]]; then
        echo "Error in Submission, trying again!"
     else

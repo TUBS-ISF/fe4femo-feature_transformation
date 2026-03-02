@@ -1,16 +1,34 @@
 import argparse
 
+HEAVY_FEATURE_SELECTORS = ["genetic", "HFMOEA", "harris-hawks"]
+
 def get_feature_list() -> list[str]:
     return ["all", "prefilter", "SATzilla", "SATfeatPy", "FMBA", "FM_Chara", "kbest-mutalinfo", "multisurf", "mRMR",
             "RFE",  "genetic", "HFMOEA", "embedded-tree", "SVD-entropy", "NDFS", "optuna-combined",
                 #"harris-hawks",
             ]
 
+def get_non_heavy_feature_list() -> list[str]:
+    return [feature for feature in get_feature_list() if feature not in HEAVY_FEATURE_SELECTORS]
+
 def get_task_list() -> list[str]:
     return ["runtime_sat", "runtime_backbone", "runtime_spur", "value_ssat", "value_backbone", "algo_selection"]
 
 def get_model_list() -> list[str]:
     return ["randomForest", "gradboostForest", "SVM", "kNN", "adaboost", "MLP"]
+
+def get_transformation_list() -> list[str]:
+    return [
+        "none",
+        "standardize",
+        "minmax",
+        "signed-log1p",
+        "quantile-normal",
+        "yeo-johnson",
+        "pca",
+        "nystroem-rbf",
+        "bin-ordinal",
+    ]
 
 def parse_input() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Model Evaluation', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -30,14 +48,13 @@ def parse_input() -> argparse.Namespace:
                         default=100, type=int)
     parser.add_argument("--multiObjective", help="Multi-Objective optimization (Model Quality + Feature Computation Time)", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--foldNo", help="Fold to compute (starting from 0)", type=int, default=0)
+    parser.add_argument("--transformation", help="Feature transformation method to apply before feature selection",
+                        choices=get_transformation_list(), default="none")
     result = parser.parse_args()
     if result.features == "RFE" and not (result.model == "gradboostForest" or result.model == "randomForest" or result.model == "adaboost"):
         raise ValueError("RFE can only be used with gradboostForest, randomForest or adaboost")
     if result.features == "harris-hawks":
         raise NotImplementedError() # deactivated
-    unsupported_non_HPO = ["harris-hawks", "genetic", "HFMOEA"]
-    if result.features not in unsupported_non_HPO and not result.selectorHPO:
-        raise ValueError(f"No HPO currently only supported for {unsupported_non_HPO}")
     if not result.selectorHPO and result.modelHPO:
         raise ValueError(f"Model HPO requires selector HPO")
     supports_multi_objective = ["optuna-combined"]
