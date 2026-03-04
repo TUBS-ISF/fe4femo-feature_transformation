@@ -16,4 +16,4 @@ From: continuumio/miniconda3:24.9.2-0
     export PYTHONDONTWRITEBYTECODE=false
 
 %runscript
-    exec conda run --no-capture-output -n ml_analysis python /app/main_fold.py "$@"
+    conda run --no-capture-output -n ml_analysis python /app/generate_fold_model.py "$@"

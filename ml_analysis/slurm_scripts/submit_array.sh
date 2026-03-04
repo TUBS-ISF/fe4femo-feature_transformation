@@ -3,15 +3,15 @@ set -euo pipefail
 
 partition="${1:-multiple_il}"
 max_concurrent="${4:-50}"
-sif_path="${6:-$HOME/containers/ml_analysis_ft_v1.sif}"
+# Pragmatic hardcoded root for HPC runs; override with HARD_ROOT if needed.
+hard_root="${HARD_ROOT:-$HOME/fe4femo-feature_transformation}"
+sif_path="${6:-${hard_root}/ml_analysis/ml_analysis_ft_v1.sif}"
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-repo_root="$(cd "${script_dir}/../.." && pwd)"
-repo_name="$(basename "${repo_root}")"
 
-output_path="${2:-${repo_name}/ml_analysis/out/main}"
-config="${3:-${repo_root}/ml_analysis/config.txt}"
-data_path="${5:-${repo_name}/data/}"
+output_path="${2:-${hard_root}/ml_analysis/out/main}"
+config="${3:-${hard_root}/ml_analysis/config.txt}"
+data_path="${5:-${hard_root}/data}"
 
 run_script="${script_dir}/run_array.sh"
 
@@ -40,13 +40,13 @@ fi
 # Add a small buffer to reduce job timeout due to minor variance.
 time_limit=$((max_runtime + 10))
 
-mkdir -p "$HOME/${output_path}"
+mkdir -p "${output_path}"
 
 echo "Submitting array 0-${max_array_id}%${max_concurrent} to partition ${partition}"
 echo "Using time limit ${time_limit} minutes and ${max_tasks} tasks per job"
 echo "Config: ${config}"
 echo "Data path: ${data_path}"
-echo "Output path: $HOME/${output_path}"
+echo "Output path: ${output_path}"
 echo "SIF path: ${sif_path}"
 
 if [[ "${DRY_RUN:-0}" == "1" ]]; then
@@ -59,6 +59,6 @@ sbatch \
   --array="0-${max_array_id}%${max_concurrent}" \
   --time="${time_limit}" \
   --ntasks="${max_tasks}" \
-  --output="$HOME/${output_path}/slurm_%A_%a.out" \
+  --output="${output_path}/slurm_%A_%a.out" \
   --export=ALL,SIF_PATH="${sif_path}" \
   "${run_script}" "${config}" "${data_path}" "${output_path}"

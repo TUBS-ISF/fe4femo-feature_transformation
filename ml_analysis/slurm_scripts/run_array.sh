@@ -21,6 +21,13 @@ data_path="$2"
 output_path="$3"
 line_no=$((SLURM_ARRAY_TASK_ID + 2))
 
+if [[ "${data_path}" != /* ]]; then
+  data_path="$HOME/${data_path}"
+fi
+if [[ "${output_path}" != /* ]]; then
+  output_path="$HOME/${output_path}"
+fi
+
 if [[ ! -f "${config_path}" ]]; then
   echo "Config file not found: ${config_path}" 1>&2
   exit 1
@@ -79,15 +86,14 @@ if [[ ! -f "${sif_path}" ]]; then
   exit 1
 fi
 
-ML_FOLD="${fold_no}" srun \
+srun \
   --exact \
   -n "${task_count}" \
-  singularity exec \
+  singularity run \
   --bind /scratch:/scratch \
   --bind "$HOME:$HOME" \
   "${sif_path}" \
-  env ML_FOLD="${fold_no}" \
-  /app/slurm_scripts/slurm_fork_tracker.sh \
+  --foldNo "${fold_no}" \
   --features "${feature}" \
   --task "${task}" \
   --model "${model}" \
