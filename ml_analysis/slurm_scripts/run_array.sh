@@ -2,8 +2,7 @@
 #SBATCH --job-name=eval_model_array
 #SBATCH --cpus-per-task=128
 #SBATCH --mem-per-cpu=1950
-#SBATCH --nodes=2-70
-#SBATCH --use-min-nodes
+#SBATCH --nodes=1
 set -euo pipefail
 
 if [[ "${#}" -lt 3 ]]; then
@@ -88,7 +87,7 @@ fi
 
 srun \
   --exact \
-  -n "${task_count}" \
+  -n 1 \
   singularity run \
   --bind /scratch:/scratch \
   --bind "$HOME:$HOME" \

@@ -28,13 +28,9 @@ fi
 
 max_array_id=$(awk 'NR>1 && $1 ~ /^[0-9]+$/ {m=$1} END {print m+0}' "${config}")
 max_runtime=$(awk 'NR>1 && $1 ~ /^[0-9]+$/ { if ($4 > m) m = $4 } END { print m+0 }' "${config}")
-max_tasks=$(awk 'NR>1 && $1 ~ /^[0-9]+$/ { if ($3 > m) m = $3 } END { print m+0 }' "${config}")
 
 if [[ "${max_runtime}" -le 0 ]]; then
   max_runtime=120
-fi
-if [[ "${max_tasks}" -le 0 ]]; then
-  max_tasks=3
 fi
 
 # Add a small buffer to reduce job timeout due to minor variance.
@@ -43,7 +39,7 @@ time_limit=$((max_runtime + 10))
 mkdir -p "${output_path}"
 
 echo "Submitting array 0-${max_array_id}%${max_concurrent} to partition ${partition}"
-echo "Using time limit ${time_limit} minutes and ${max_tasks} tasks per job"
+echo "Using time limit ${time_limit} minutes and 1 task per job"
 echo "Config: ${config}"
 echo "Data path: ${data_path}"
 echo "Output path: ${output_path}"
@@ -58,7 +54,7 @@ sbatch \
   --partition="${partition}" \
   --array="0-${max_array_id}%${max_concurrent}" \
   --time="${time_limit}" \
-  --ntasks="${max_tasks}" \
+  --ntasks=1 \
   --output="${output_path}/slurm_%A_%a.out" \
   --export=ALL,SIF_PATH="${sif_path}" \
   "${run_script}" "${config}" "${data_path}" "${output_path}"

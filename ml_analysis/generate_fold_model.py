@@ -3,8 +3,6 @@ from datetime import datetime
 import os
 import tempfile
 import time
-import multiprocessing as mp
-from multiprocessing import freeze_support
 
 import cloudpickle
 import pandas as pd
@@ -18,13 +16,12 @@ from pathlib import Path
 from statistics import mean
 
 import optuna
-from dask.distributed import Client
+from dask.distributed import Client, LocalCluster
 import dask
 from distributed import worker_client, performance_report, get_task_stream
 from sklearn.metrics import matthews_corrcoef, r2_score, d2_absolute_error_score
 from sklearn.model_selection import StratifiedKFold
 
-from helper.SlurmMemRunner import SLURMMemRunner
 from  helper.feature_selection import get_selection_HPO_space, get_feature_selection, precompute_feature_selection, \
      transform_dict_to_var_dict
 from  helper.input_parser import parse_input
@@ -130,25 +127,21 @@ def build_transform_config(method: str) -> dict:
     return {"method": method}
 
 
-def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, multi_objective: bool, foldNo : int, transformation: str):
+def main(worker_count : int, pathData: str, pathOutput: str, features: str, task: str, model: str, modelHPO: bool, selectorHPO: bool, hpo_its: int, multi_objective: bool, foldNo : int, transformation: str):
     warnings.simplefilter("ignore", UserWarning)
     cores = int(os.getenv("OMP_NUM_THREADS", "1"))
-    scheduler_options = {
-        "interface": "ib0",
-    }
-    worker_options = {
-        "local_directory": "$TMPDIR/",
-        "nthreads": 1,
-        "interface": "ib0",
-        "memory_limit": f"{cores * int(os.getenv('SLURM_MEM_PER_CPU', 2000))}MB",
-    }
-    scheduler_path = Path(os.path.expandvars("$HOME") + "/tmp/scheduler_files")
-    scheduler_path.mkdir(parents=True, exist_ok=True)
+    local_dir = os.path.expandvars(os.getenv("TMPDIR", "/tmp"))
+    worker_memory_mb = cores * int(os.getenv("SLURM_MEM_PER_CPU", "2000"))
 
-    with (SLURMMemRunner(scheduler_file=str(scheduler_path)+f"/scheduler-{{job_id}}_{foldNo}.json", in_proc_id=in_proc_id, fold_no=foldNo,
-                      worker_options=worker_options, scheduler_options=scheduler_options) as runner):
-        scheduler_file = Path(runner.scheduler_file)
-        with Client(runner, direct_to_workers=True) as client:
+    with LocalCluster(
+        n_workers=worker_count,
+        threads_per_worker=1,
+        processes=True,
+        memory_limit=f"{worker_memory_mb}MB",
+        local_directory=local_dir,
+        silence_logs="error",
+    ) as cluster:
+        with Client(cluster, direct_to_workers=True) as client:
             Path(pathOutput).mkdir(parents=True, exist_ok=True)
             run_config = {
                 "name": create_run_name(features, task, model, modelHPO, selectorHPO, hpo_its, multi_objective, foldNo) + f"#{transformation}",
@@ -233,7 +226,7 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
                     sampler = TPESampler(seed=None, multivariate=True, group=True, constant_liar=True, categorical_distance_func=categorical_distance_function())
                     study = optuna.create_study(study_name=run_config["name"], storage=storage, directions=["maximize", "minimize"], sampler=sampler) if multi_objective else optuna.create_study(study_name=run_config["name"], storage=storage, direction="maximize", sampler=sampler)
 
-                    n_jobs = 25 #2 less than tasks for scheduler and main-node
+                    n_jobs = max(1, min(25, worker_count - 1))
 
                     lock = dask.distributed.Lock("LOCK_COUNTER_VAR")
                     counter = dask.distributed.Variable()
@@ -293,24 +286,14 @@ def main(in_proc_id: int, worker_count : int, pathData: str, pathOutput: str, fe
             print(f"{datetime.now()}   Exported model at {path}")
 
     print(f"{datetime.now()}  Shutdown main-client completed")
-    scheduler_file.unlink(missing_ok=True)
 
 
 if __name__ == '__main__':
-    freeze_support()
     args = parse_input()
-    cpus_per_node = int(os.getenv("SLURM_CPUS_ON_NODE", 128)) // int(os.getenv("OMP_NUM_THREADS", 2))
-    no_nodes = int(os.getenv("SLURM_JOB_NUM_NODES", 1))
-    worker_count = cpus_per_node*no_nodes - 2
-    if worker_count < 25:
-        raise ValueError("Not enough worker, needs at least 25")
-    print(f"Starting {worker_count} workers with {int(os.getenv('OMP_NUM_THREADS', 2))} cores per worker")
+    cores_per_worker = int(os.getenv("OMP_NUM_THREADS", 2))
+    cpus_per_node = int(os.getenv("SLURM_CPUS_ON_NODE", str(os.cpu_count() or 1)))
+    worker_count = max(1, cpus_per_node // cores_per_worker - 1)
+    print(f"Starting local dask cluster with {worker_count} workers and {cores_per_worker} cores per worker")
 
     function_args = (worker_count, os.environ.get("HOME")+"/"+os.path.expandvars(args.pathData), os.environ.get("HOME")+"/"+os.path.expandvars(args.pathOutput), args.features, args.task, args.model, args.modelHPO, args.selectorHPO, args.HPOits, args.multiObjective, args.foldNo, args.transformation)
-
-    ctx = mp.get_context("spawn")
-    processes = [ctx.Process(target=main, args=((i,)+function_args), daemon=False) for i in range(cpus_per_node)]
-    for p in processes:
-        p.start()
-    for p in processes:
-        exit_value = p.join()
+    main(*function_args)
