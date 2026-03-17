@@ -18,7 +18,9 @@ fi
 config_path="$1"
 data_path="$2"
 output_path="$3"
-line_no=$((SLURM_ARRAY_TASK_ID + 2))
+config_offset="${CONFIG_OFFSET:-0}"
+config_id=$((config_offset + SLURM_ARRAY_TASK_ID))
+line_no=$((config_id + 2))
 
 if [[ "${data_path}" != /* ]]; then
   data_path="$HOME/${data_path}"
@@ -34,14 +36,14 @@ fi
 
 line="$(sed -n "${line_no}p" "${config_path}")"
 if [[ -z "${line}" ]]; then
-  echo "No config row for array index ${SLURM_ARRAY_TASK_ID} (line ${line_no})" 1>&2
+  echo "No config row for array index ${SLURM_ARRAY_TASK_ID} with offset ${config_offset} (config id ${config_id}, line ${line_no})" 1>&2
   exit 1
 fi
 
 read -r experiment_no name task_count runtime fold_no feature task model hpo_its bool_model_hpo bool_selector_hpo bool_multi_objective transformation <<< "${line}"
 
-if [[ "${experiment_no}" != "${SLURM_ARRAY_TASK_ID}" ]]; then
-  echo "Warning: config id ${experiment_no} does not match SLURM_ARRAY_TASK_ID ${SLURM_ARRAY_TASK_ID}" 1>&2
+if [[ "${experiment_no}" != "${config_id}" ]]; then
+  echo "Warning: config id ${experiment_no} does not match resolved config id ${config_id} (array ${SLURM_ARRAY_TASK_ID}, offset ${config_offset})" 1>&2
 fi
 
 if [[ "${bool_model_hpo}" == "True" ]]; then
@@ -62,13 +64,18 @@ else
   multi_objective_flag="--no-multiObjective"
 fi
 
-sif_path="${SIF_PATH:-$HOME/containers/ml_analysis_ft_v1.sif}"
+hard_root="${HARD_ROOT:-$HOME/fe4femo-feature_transformation}"
+sif_path="${SIF_PATH:-${hard_root}/ml_analysis/ml_analysis_ft_v1.sif}"
 
 export DASK_LOGGING__DISTRIBUTED=WARN
 export OMP_NUM_THREADS="${OMP_NUM_THREADS:-2}"
+export PYTHONWARNINGS="${PYTHONWARNINGS:-ignore}"
+export JOBLIB_TEMP_FOLDER="${JOBLIB_TEMP_FOLDER:-${TMPDIR:-/tmp}}"
+export TMPDIR="${TMPDIR:-/tmp}"
 
 echo "JOB_ID=${SLURM_JOB_ID}"
 echo "ARRAY_TASK_ID=${SLURM_ARRAY_TASK_ID}"
+echo "CONFIG_OFFSET=${config_offset}"
 echo "EXPERIMENT_ID=${experiment_no}"
 echo "RUN_NAME=${name}"
 echo "RUNTIME_MIN=${runtime}"
@@ -85,11 +92,27 @@ if [[ ! -f "${sif_path}" ]]; then
   exit 1
 fi
 
+# Copy SIF to node-local scratch to avoid squashfuse failures over NFS.
+local_sif="${TMPDIR:-/tmp}/ml_analysis_ft_v1.sif"
+echo "Copying SIF to local scratch: ${local_sif}"
+cp "${sif_path}" "${local_sif}"
+sif_path="${local_sif}"
+
+data_arg="${data_path}"
+output_arg="${output_path}"
+
+# The container entrypoint prefixes HOME internally, so pass HOME-relative paths.
+if [[ "${data_arg}" == "$HOME/"* ]]; then
+  data_arg="${data_arg#"$HOME/"}"
+fi
+if [[ "${output_arg}" == "$HOME/"* ]]; then
+  output_arg="${output_arg#"$HOME/"}"
+fi
+
 srun \
   --exact \
   -n 1 \
-  singularity run \
-  --bind /scratch:/scratch \
+  /usr/bin/apptainer run \
   --bind "$HOME:$HOME" \
   "${sif_path}" \
   --foldNo "${fold_no}" \
@@ -101,5 +124,5 @@ srun \
   "${selector_hpo_flag}" \
   "${multi_objective_flag}" \
   --transformation "${transformation}" \
-  "${data_path}" \
-  "${output_path}"
+  "${data_arg}" \
+  "${output_arg}"

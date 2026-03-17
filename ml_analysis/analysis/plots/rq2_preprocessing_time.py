@@ -1,13 +1,15 @@
-import pandas as pd
-import numpy as np
-import seaborn as sns
-import seaborn.objects as so
+from pathlib import Path
+
 import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
 
 from analysis.plots.plot_helper import add_median_labels
 
-path = "/mnt/e/Uni/Thesis/fe4femo-feature_transformation/ml_analysis/out/rq2_runtime_dataset.csv"
-out_path = "/mnt/e/Uni/Thesis/fe4femo-feature_transformation/ml_analysis/out/rq2_transformation_runtime.pdf"
+
+base = Path("/mnt/e/Uni/Thesis/fe4femo-feature_transformation/ml_analysis/out")
+path = base / "rq2_preprocessing_dataset.csv"
+out_path = base / "rq2_transformation_preprocessing_runtime.pdf"
 
 TRANSFORMATION_LABELS = {
     "none": "None",
@@ -21,19 +23,19 @@ TRANSFORMATION_LABELS = {
     "bin-ordinal": "Ordinal Binning",
 }
 
+
 sns.set_theme(style="whitegrid", palette="colorblind")
 
 df = pd.read_csv(path)
-df = df[df["State"] == "COMPLETED"].copy()
 df["transformation_label"] = df["transformation"].map(TRANSFORMATION_LABELS).fillna(df["transformation"])
 
 transformation_order = (
-    df.groupby("transformation_label")["elapsed_seconds"].median().sort_values().index.tolist()
+    df.groupby("transformation_label")["preprocessing_seconds"].median().sort_values().index.tolist()
 )
 
 plot = sns.catplot(
     df,
-    x="elapsed_seconds",
+    x="preprocessing_seconds",
     y="transformation_label",
     estimator="median",
     errorbar="ci",
@@ -45,16 +47,12 @@ plot = sns.catplot(
     medianprops={"linewidth": 2},
 )
 plot.set(
-    xlabel="End-to-End Runtime per Evaluation [s]",
+    xlabel="Preprocessing Runtime [s]",
     ylabel="Transformation",
 )
 
 for ax in plot.axes.flat:
-    add_median_labels(ax, size='xx-small', fmt=1, scientific=False, boxen=False)
+    add_median_labels(ax, size="xx-small", fmt=2, scientific=False, boxen=False)
 
 plot.tight_layout()
-
-#plot = sns.barplot(df, x="feature_time", y="feature_selector", hue="ml_task", log_scale=True)
-
-#plt.show()
 plot.savefig(out_path)

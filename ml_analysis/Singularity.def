@@ -2,14 +2,22 @@ Bootstrap: docker
 From: continuumio/miniconda3:24.9.2-0
 
 %files
-    . /app
+    environment.yml /app/environment.yml
+    generate_fold_model.py /app/generate_fold_model.py
+    helper /app/helper
+    external /app/external
+    slurm_scripts /app/slurm_scripts
 
 %post
     set -e
+    export TMPDIR=/root/build-tmp
+    export PIP_CACHE_DIR=/root/pip-cache
+    mkdir -p "$TMPDIR" "$PIP_CACHE_DIR"
     cd /app
     conda env create -f environment.yml
     conda clean -afy
     rm -rf /root/.cache/pip/
+    rm -rf "$TMPDIR" "$PIP_CACHE_DIR"
     mkdir -p /in /out
 
 %environment

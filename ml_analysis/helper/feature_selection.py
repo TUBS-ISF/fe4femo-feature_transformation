@@ -177,10 +177,7 @@ def extract_fold_list(precomputed : dict) -> list[Variable]:
     else:
         raise Exception("No folds in precomputed!")
     
-def apply_feature_transformation():  #todo: transfer scaling for impute_and_scaling
-    None
     
-
 def get_feature_selection(precomputed:dict, features : str, isClassification : bool, selector_args, estimator, group_dict : dict[str, list[str]], parallelism : int = 1, verbose = False, dask_parallel : bool = False):
     y_train = precomputed["y_train"].get().result()
     X_train = precomputed["X_train"].get().result()
@@ -251,6 +248,74 @@ def get_feature_selection(precomputed:dict, features : str, isClassification : b
             selected_feature_names_list = [ retained_features & set(v) for k, v in group_dict.items() if selector_args[k]]
             selected_feature_names = list(itertools.chain.from_iterable(selected_feature_names_list))
             return X_train[selected_feature_names], X_test[selected_feature_names]
+        case _:
+            raise ValueError("Invalid Feature Subset")
+
+
+def get_selection_default_args(features: str, group_dict: dict[str, list[str]], no_features: int) -> dict[str, Any]:
+    max_features = max(1, math.ceil(no_features / 3.0))
+    min_features = min(5, max_features)
+    match features:
+        case "all" | "SATzilla" | "SATfeatPy" | "FMBA" | "FM_Chara" | "prefilter" | "SVD-entropy":
+            return {}
+        case "kbest-mutalinfo":
+            return {
+                "k": max_features,
+                "n_neighbors": 5,
+            }
+        case "multisurf":
+            return {
+                "n_features_to_select": max_features,
+            }
+        case "mRMR":
+            return {
+                "K": max_features,
+                "relevance": "f",
+                "denominator": "mean",
+            }
+        case "RFE":
+            return {
+                "step": 0.1,
+                "n_features_to_select": max_features,
+            }
+        case "genetic":
+            return {
+                "selective_pressure": 2,
+                "elitism": 2,
+                "mutation_rate": 0.1,
+                "population_size": 20,
+                "n_iteration": 30,
+            }
+        case "harris-hawks":
+            return {
+                "population_size": 10,
+                "beta": 1.0,
+                "n_iteration": 20,
+            }
+        case "HFMOEA":
+            return {
+                "topk": max(min_features - 1, 1),
+                "pop_size": 60,
+                "max_gen": 100,
+                "mutation_probability": 0.1,
+            }
+        case "embedded-tree":
+            return {
+                "e_n_estimators": 100,
+                "e_max_depth": 50,
+                "e_max_features": max_features,
+            }
+        case "NDFS":
+            return {
+                "alpha": 1.0,
+                "beta": 1.0,
+                "n_clusters": min(10, max_features),
+                "n_features_to_select": max_features,
+            }
+        case "optuna-combined":
+            return {
+                group_name: True for group_name in group_dict.keys()
+            }
         case _:
             raise ValueError("Invalid Feature Subset")
 

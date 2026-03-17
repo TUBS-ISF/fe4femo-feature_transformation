@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-partition="${1:-multiple_il}"
+partition="${1:-iai}"
 max_concurrent="${4:-50}"
 # Pragmatic hardcoded root for HPC runs; override with HARD_ROOT if needed.
 hard_root="${HARD_ROOT:-$HOME/fe4femo-feature_transformation}"
@@ -50,11 +50,45 @@ if [[ "${DRY_RUN:-0}" == "1" ]]; then
   exit 0
 fi
 
-sbatch \
-  --partition="${partition}" \
-  --array="0-${max_array_id}%${max_concurrent}" \
-  --time="${time_limit}" \
-  --ntasks=1 \
-  --output="${output_path}/slurm_%A_%a.out" \
-  --export=ALL,SIF_PATH="${sif_path}" \
-  "${run_script}" "${config}" "${data_path}" "${output_path}"
+max_array_size_raw="$(scontrol show config 2>/dev/null | awk -F= '/MaxArraySize/ {gsub(/ /,"",$2); print $2; exit}')"
+if [[ -z "${max_array_size_raw}" || ! "${max_array_size_raw}" =~ ^[0-9]+$ || "${max_array_size_raw}" -le 0 ]]; then
+  max_array_size=$((max_array_id + 1))
+else
+  max_array_size="${max_array_size_raw}"
+fi
+
+echo "Detected MaxArraySize=${max_array_size}"
+
+chunk_size="${max_array_size}"
+start=0
+dependency=""
+
+while [[ "${start}" -le "${max_array_id}" ]]; do
+  end=$((start + chunk_size - 1))
+  if [[ "${end}" -gt "${max_array_id}" ]]; then
+    end="${max_array_id}"
+  fi
+
+  array_spec="${start}-${end}%${max_concurrent}"
+  echo "Submitting chunk array ${array_spec}"
+
+  sbatch_args=(
+    --partition="${partition}"
+    --array="${array_spec}"
+    --time="${time_limit}"
+    --ntasks=1
+    --output="${output_path}/slurm_%A_%a.out"
+    --export=ALL,SIF_PATH="${sif_path}",CONFIG_OFFSET="${start}"
+  )
+
+  # Chain chunks so global concurrency remains bounded by max_concurrent.
+  if [[ -n "${dependency}" ]]; then
+    sbatch_args+=(--dependency="afterany:${dependency}")
+  fi
+
+  output="$(sbatch "${sbatch_args[@]}" "${run_script}" "${config}" "${data_path}" "${output_path}")"
+  echo "${output}"
+  dependency="$(echo "${output}" | awk '{print $4}')"
+
+  start=$((end + 1))
+done

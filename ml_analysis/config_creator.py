@@ -23,6 +23,23 @@ SELECTED_FEATURES = None
 SELECTED_MODELS = None
 SELECTED_TRANSFORMATIONS = None
 
+EXCLUDED_FEATURES = {"multisurf", "SVD-entropy"}
+
+INVALID_FEATURE_TRANSFORMATIONS = {
+    ("SATzilla", "pca"),
+    ("SATzilla", "nystroem-rbf"),
+    ("SATzilla", "bin-ordinal"),
+    ("SATfeatPy", "pca"),
+    ("SATfeatPy", "nystroem-rbf"),
+    ("SATfeatPy", "bin-ordinal"),
+    ("FM_Chara", "pca"),
+    ("FM_Chara", "nystroem-rbf"),
+    ("FM_Chara", "bin-ordinal"),
+    ("FMBA", "pca"),
+    ("FMBA", "nystroem-rbf"),
+    ("FMBA", "bin-ordinal"),
+}
+
 
 def is_modelHPO(feature: str) -> bool:
     return INCLUDE_HPO
@@ -77,8 +94,12 @@ def get_HPO_its(multi_objective: bool) -> int:
         return 150
 
 
-def check_valid(feature: str, model: str, task: str, multi_objective: bool) -> bool:
+def check_valid(feature: str, model: str, task: str, multi_objective: bool, transform: str) -> bool:
+    if feature in EXCLUDED_FEATURES:
+        return False
     if feature == "RFE" and not (model == "gradboostForest" or model == "randomForest" or model == "adaboost"):
+        return False
+    if (feature, transform) in INVALID_FEATURE_TRANSFORMATIONS:
         return False
     if multi_objective and feature not in ["optuna-combined"]:
         return False
@@ -93,7 +114,9 @@ if __name__ == '__main__':
     if FIXED_TASK not in get_task_list():
         raise ValueError(f"Task '{FIXED_TASK}' not found in get_task_list()")
 
-    selected_features = SELECTED_FEATURES if SELECTED_FEATURES is not None else get_non_heavy_feature_list()
+    selected_features = SELECTED_FEATURES if SELECTED_FEATURES is not None else [
+        feature for feature in get_non_heavy_feature_list() if feature not in EXCLUDED_FEATURES
+    ]
     selected_models = SELECTED_MODELS if SELECTED_MODELS is not None else get_model_list()
     selected_transformations = SELECTED_TRANSFORMATIONS if SELECTED_TRANSFORMATIONS is not None else get_transformation_list()
 
@@ -108,7 +131,7 @@ if __name__ == '__main__':
             objective_modes,
             selected_transformations,
         )
-        if check_valid(feature, model, FIXED_TASK, multi_objective) and check_desired(feature, model, FIXED_TASK, multi_objective)
+        if check_valid(feature, model, FIXED_TASK, multi_objective, transform) and check_desired(feature, model, FIXED_TASK, multi_objective)
     ]
 
     combinations.sort(key=lambda c: int(get_runtime(get_HPO_its(c[4]), c[1], INDIVIDUAL_FOLDS, c[4])))

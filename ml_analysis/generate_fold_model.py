@@ -22,8 +22,8 @@ from distributed import worker_client, performance_report, get_task_stream
 from sklearn.metrics import matthews_corrcoef, r2_score, d2_absolute_error_score
 from sklearn.model_selection import StratifiedKFold
 
-from  helper.feature_selection import get_selection_HPO_space, get_feature_selection, precompute_feature_selection, \
-     transform_dict_to_var_dict
+from  helper.feature_selection import get_selection_HPO_space, get_selection_default_args, get_feature_selection, \
+     precompute_feature_selection, transform_dict_to_var_dict
 from  helper.input_parser import parse_input
 from  helper.load_dataset import generate_xy_split, get_dataset, get_flat_models, is_task_classification, \
     load_feature_groups, load_feature_group_times
@@ -139,7 +139,6 @@ def main(worker_count : int, pathData: str, pathOutput: str, features: str, task
         processes=True,
         memory_limit=f"{worker_memory_mb}MB",
         local_directory=local_dir,
-        silence_logs="error",
     ) as cluster:
         with Client(cluster, direct_to_workers=True) as client:
             Path(pathOutput).mkdir(parents=True, exist_ok=True)
@@ -259,7 +258,7 @@ def main(worker_count : int, pathData: str, pathOutput: str, features: str, task
 
                 else:
                     model_config = {}
-                    selector_config = {}
+                    selector_config = get_selection_default_args(features, feature_groups, X_train.shape[1])
                     verbose=True
                     easy_model = True
 
@@ -291,8 +290,13 @@ def main(worker_count : int, pathData: str, pathOutput: str, features: str, task
 if __name__ == '__main__':
     args = parse_input()
     cores_per_worker = int(os.getenv("OMP_NUM_THREADS", 2))
-    cpus_per_node = int(os.getenv("SLURM_CPUS_ON_NODE", str(os.cpu_count() or 1)))
-    worker_count = max(1, cpus_per_node // cores_per_worker - 1)
+    cpus_for_job = int(
+        os.getenv(
+            "SLURM_CPUS_PER_TASK",
+            os.getenv("SLURM_CPUS_ON_NODE", str(os.cpu_count() or 1)),
+        )
+    )
+    worker_count = max(1, min(8, cpus_for_job // cores_per_worker))
     print(f"Starting local dask cluster with {worker_count} workers and {cores_per_worker} cores per worker")
 
     function_args = (worker_count, os.environ.get("HOME")+"/"+os.path.expandvars(args.pathData), os.environ.get("HOME")+"/"+os.path.expandvars(args.pathOutput), args.features, args.task, args.model, args.modelHPO, args.selectorHPO, args.HPOits, args.multiObjective, args.foldNo, args.transformation)

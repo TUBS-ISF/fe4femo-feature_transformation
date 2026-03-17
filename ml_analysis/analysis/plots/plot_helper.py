@@ -6,6 +6,26 @@ import matplotlib.pyplot as plt
 
 import matplotlib.patheffects as path_effects
 
+
+TRANSFORMATION_LABELS = {
+    "none": "None",
+    "standardize": "Standardize",
+    "minmax": "Min-Max",
+    "signed-log1p": "Signed log1p",
+    "quantile-normal": "Quantile Normalization",
+    "yeo-johnson": "Yeo-Johnson",
+    "pca": "PCA",
+    "nystroem-rbf": "Nystroem RBF",
+    "bin-ordinal": "Ordinal Binning",
+}
+
+
+def add_transformation_labels(df: pd.DataFrame, source_col: str = "transformation",
+                              target_col: str = "transformation_label") -> pd.DataFrame:
+    df = df.copy()
+    df[target_col] = df[source_col].map(TRANSFORMATION_LABELS).fillna(df[source_col])
+    return df
+
 # https://stackoverflow.com/a/63295846
 def add_median_labels(ax: plt.Axes, fmt:int = 2, size='x-small', boxen=False, scientific=False) -> None:
     fmt = f".{fmt}{"E" if scientific else "f"}"
